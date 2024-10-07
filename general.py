@@ -2196,7 +2196,19 @@ class Manager(Optimizer):
             # 获取所有列的名字
             columns = data_df.columns
             # 创建一个字典，所有列都设置为 float，除了 Manager.Category_Index 列
-            convert_dict = {col: float for col in columns if col != Manager.Category_Index}
+            convert_dict = {}
+
+            for col in columns:
+                if col == Manager.Category_Index:
+                    convert_dict[col] = str
+                else:
+                    try:
+                        # 尝试将每一列转换为 float
+                        data_df[col].astype(float)
+                        convert_dict[col] = float
+                    except ValueError:
+                        convert_dict[col] = str
+
             # 应用astype()，传递字典
             data_df = data_df.astype(convert_dict)
 
@@ -2270,7 +2282,19 @@ class Manager(Optimizer):
                     # 获取所有列的名字
                     columns = data_df.columns
                     # 创建一个字典，所有列都设置为 float，除了 Manager.Category_Index 列
-                    convert_dict = {col: float for col in columns if col != Manager.Category_Index}
+                    convert_dict = {}
+
+                    for col in columns:
+                        if col == Manager.Category_Index:
+                            convert_dict[col] = str
+                        else:
+                            try:
+                                # 尝试将每一列转换为 float
+                                data_df[col].astype(float)
+                                convert_dict[col] = float
+                            except ValueError:
+                                convert_dict[col] = str
+
                     # 应用astype()，传递字典
                     data_df = data_df.astype(convert_dict)
 
@@ -2467,7 +2491,19 @@ class Manager(Optimizer):
             # 获取所有列的名字
             columns = data_df.columns
             # 创建一个字典，所有列都设置为 float，除了 Manager.Category_Index 列
-            convert_dict = {col: float for col in columns if col != Manager.Category_Index}
+            convert_dict = {}
+
+            for col in columns:
+                if col == Manager.Category_Index:
+                    convert_dict[col] = str
+                else:
+                    try:
+                        # 尝试将每一列转换为 float
+                        data_df[col].astype(float)
+                        convert_dict[col] = float
+                    except ValueError:
+                        convert_dict[col] = str
+
             # 应用astype()，传递字典
             data_df = data_df.astype(convert_dict)
 
@@ -2526,7 +2562,19 @@ class Manager(Optimizer):
                     # 获取所有列的名字
                     columns = data_df.columns
                     # 创建一个字典，所有列都设置为 float，除了 Manager.Category_Index 列
-                    convert_dict = {col: float for col in columns if col != Manager.Category_Index}
+                    convert_dict = {}
+
+                    for col in columns:
+                        if col == Manager.Category_Index:
+                            convert_dict[col] = str
+                        else:
+                            try:
+                                # 尝试将每一列转换为 float
+                                data_df[col].astype(float)
+                                convert_dict[col] = float
+                            except ValueError:
+                                convert_dict[col] = str
+
                     # 应用astype()，传递字典
                     data_df = data_df.astype(convert_dict)
 

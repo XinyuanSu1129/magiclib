@@ -1,5 +1,5 @@
 
-__version__ = '6.1.0'
+__version__ = '6.1.1'
 
 __all__ = ['general', 'grapher', 'projector', 'performer', 'inspector', 'accessor', 'author', 'potter']
 
@@ -232,6 +232,7 @@ MAGIC
                 The method pca_analysis() in class Statistics of the module grapher is optimized.
                 Add method clear_data() in class Function.
                 Converts data to float format when reading txt and Excel files, except for the category column.
+--> 6.1.1       24-10-16 20:29 Fixed an issue with PDF card reading path error in class XRD.
                     
                     
  ------ Needing ------

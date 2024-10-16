@@ -351,13 +351,13 @@ class XRD(Keyword):
         if pdf_path is not None:
             self.pdf_path = pdf_path
         else:
-            self.pdf_path = os.path.join(XRD.Standard_Database, '/PDF_card')
+            self.pdf_path = os.path.join(XRD.Standard_Database, 'PDF_card')
 
         # PDF 卡片匹配规制路径
         if match_path is not None:
             self.match_path = match_path
         else:
-            self.match_path = os.path.join(XRD.Standard_Database, '/PDF_card/PDF_match.xlsx')
+            self.match_path = os.path.join(XRD.Standard_Database, 'PDF_card/PDF_match.xlsx')
 
         # self.__read_pdf
         self.pdf_data_dic = None

@@ -3797,7 +3797,7 @@ class Manager(Optimizer):
         return target_file_dic, target_plot_dic
 
     # 8 打印变量名称和内容
-    def to_reality(self, variable=None, search: str = 'current', color: str = 'brightmagenta',
+    def to_reality(self, variable: Union[str, bool, None] = None, search: str = 'current', color: str = 'brightmagenta',
                    total_width: int = 120, name_width: int = 20, only_df: bool = True,
                    print_what: str = 'all', print_result: bool = True, print_max_rows: Optional[int] = None) -> str:
         """
@@ -3807,7 +3807,8 @@ class Manager(Optimizer):
         文本颜色改变：
         \033[97m (所变颜色) + Hello (需要变色的文本内容）+ \033[0m
 
-        :param variable: 需要打印名称及内容的变量，默认为 self.data_dic，只有当 search != 'current' 时才有效
+        :param variable: (str, bool) 需要打印名称及内容的变量，默认为 self.data_dic，只有当 search != 'current' 时才有效，
+                         当 variable == True，且 search 为 'class', 'local' 或 'global' 时，为查找当前环境下的变量
         :param search: (str) 检索范围，有 'current', 'class', 'local' 和 'global'，分别表示类内部，局部和全局，默认为 'current'
         :param color: (str) 字体的颜色，默认为亮洋红色
         :param total_width: (int) 标题总宽度
@@ -3890,6 +3891,7 @@ class Manager(Optimizer):
 
         print_name = None
         print_value = None
+        name_str = ''
 
         # 在类中寻找变量时
         if search == 'current':
@@ -3905,25 +3907,58 @@ class Manager(Optimizer):
         elif search == 'class':
 
             for name, value in vars(self).items():
-                if value is variable:  # 指向同一变量
+
+                if variable is True and not isinstance(variable, str):  # variable 为 True 时，查找当前环境下所有变量名
+                    name_str += name + '\n'  # 将 name 追加到字符串并换行
+
+                elif name == variable:  # 比较属性名是否等于传入的变量名
                     print_name = self.__class__.__name__ + "." + name
-                    print_value = dict(value)
+
+                    # 如果值是可以被直接打印的，就打印出来
+                    if isinstance(value, dict):
+                        print_value = value  # 如果已经是字典，直接使用
+                    elif hasattr(value, 'to_dict'):  # 对于支持 to_dict 的对象，例如 Pandas DataFrame
+                        print_value = value.to_dict()
+                    else:
+                        print_value = value  # 对于其他类型，直接打印
 
         # 在局部中寻找变量时
         elif search == 'local':
 
             for name, value in locals().items():
-                if value is variable:  # 指向同一变量
-                    print_name = name
-                    print_value = dict(value)
+
+                if variable is True and not isinstance(variable, str):  # variable 为 True 时，查找当前环境下所有变量名
+                    name_str += name + '\n'  # 将 name 追加到字符串并换行
+
+                elif name == variable:  # 比较属性名是否等于传入的变量名
+                    print_name = self.__class__.__name__ + "." + name
+
+                    # 如果值是可以被直接打印的，就打印出来
+                    if isinstance(value, dict):
+                        print_value = value  # 如果已经是字典，直接使用
+                    elif hasattr(value, 'to_dict'):  # 对于支持 to_dict 的对象，例如 Pandas DataFrame
+                        print_value = value.to_dict()
+                    else:
+                        print_value = value  # 对于其他类型，直接打印
 
         # 在全局中寻找变量时
         elif search == 'global':
 
             for name, value in globals().items():
-                if value == variable:  # 内容相同即可
-                    print_name = name
-                    print_value = dict(value)
+
+                if variable is True and not isinstance(variable, str):  # variable 为 True 时，查找当前环境下所有变量名
+                    name_str += name + '\n'  # 将 name 追加到字符串并换行
+
+                elif name == variable:  # 比较属性名是否等于传入的变量名
+                    print_name = self.__class__.__name__ + "." + name
+
+                    # 如果值是可以被直接打印的，就打印出来
+                    if isinstance(value, dict):
+                        print_value = value  # 如果已经是字典，直接使用
+                    elif hasattr(value, 'to_dict'):  # 对于支持 to_dict 的对象，例如 Pandas DataFrame
+                        print_value = value.to_dict()
+                    else:
+                        print_value = value  # 对于其他类型，直接打印
 
         # 都不为时则报错
         else:
@@ -3932,11 +3967,15 @@ class Manager(Optimizer):
             raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
                              f"the variable 'search' can only be one of 'current', 'class', 'local', or 'global'.")
 
-        if print_name is None:
+        if print_name is None and variable is isinstance(variable, str):
             class_name = self.__class__.__name__  # 获取类名
             method_name = inspect.currentframe().f_code.co_name  # 获取方法名
             raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
                              f"the following variable was not found in the {search} variables:\n{variable}")
+
+        if variable is True and not isinstance(variable, str) and search != 'current':
+            print_name = f'variable in {search}'
+            print_value = name_str
 
         # 检查 print_what 的赋值
         if print_what not in ['all', 'name', 'value']:
@@ -6112,8 +6151,8 @@ class Module(Optimizer):
         Attention: After reduce_precision, the deleted x-coordinate interval is only one point
                   -> Increase the precision of interval_disperse.
 
-        :param x_shrinking_factor: (float) 横坐标的紧缩因子，应为 0 到 1 之间
-        :param y_shrinking_factor: (float) 纵坐标的紧缩因子，应为 0 到 1 之间
+        :param x_shrinking_factor: (float) 横坐标的紧缩因子，应为 0 到 1 之间，数值越大，点越紧密
+        :param y_shrinking_factor: (float) 纵坐标的紧缩因子，应为 0 到 1 之间，数值越大，点越紧密
         :param x_distribution_limit: (float) 横坐标最大允许限度，建议为 0 到 1 之间，默认为原区间
         :param y_distribution_limit: (float) 纵坐标最大允许限度，默认为原区间
         :param tendency: (bool) 纵坐标的趋势，为 'up' 时上升，为 'down' 时下降

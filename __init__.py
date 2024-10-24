@@ -234,6 +234,7 @@ MAGIC
                 Converts data to float format when reading txt and Excel files, except for the category column.
 --> 6.1.1       24-10-16 20:29 Fixed an issue with PDF card reading path error in class XRD.
 --> 6.1.2       24-10-24 11:50 Fixed a bug that found a valid line when reading a file, in class Manager.
+                In the '__init__.py' file, correctly rename locate_key() to locate_point()
                     
                     
  ------ Needing ------
@@ -349,7 +350,7 @@ random_dict()
 
 ------ Magic ------
 smooth_curve()
-locate_key()
+locate_point()
 improve_precision()
 reduce_precision()
 normalize_data()

@@ -3,6 +3,7 @@ magiclib / general
 
 Attention:
 1. statements should be written in detail
+2. When adding a method in the classes Optimizer, Module, and Magic, it is necessary to include self.current_dic.
 """
 
 
@@ -3796,7 +3797,7 @@ class Manager(Optimizer):
         return target_file_dic, target_plot_dic
 
     # 8 打印变量名称和内容
-    def to_reality(self, variable=None, search: str = 'current', color: str = 'brightmagenta',
+    def to_reality(self, variable: Union[str, bool, None] = None, search: str = 'current', color: str = 'brightmagenta',
                    total_width: int = 120, name_width: int = 20, only_df: bool = True,
                    print_what: str = 'all', print_result: bool = True, print_max_rows: Optional[int] = None) -> str:
         """
@@ -3806,7 +3807,8 @@ class Manager(Optimizer):
         文本颜色改变：
         \033[97m (所变颜色) + Hello (需要变色的文本内容）+ \033[0m
 
-        :param variable: 需要打印名称及内容的变量，默认为 self.data_dic，只有当 search != 'current' 时才有效
+        :param variable: (str, bool) 需要打印名称及内容的变量，默认为 self.data_dic，只有当 search != 'current' 时才有效，
+                         当 variable == True，且 search 为 'class', 'local' 或 'global' 时，为查找当前环境下的变量
         :param search: (str) 检索范围，有 'current', 'class', 'local' 和 'global'，分别表示类内部，局部和全局，默认为 'current'
         :param color: (str) 字体的颜色，默认为亮洋红色
         :param total_width: (int) 标题总宽度
@@ -3823,7 +3825,7 @@ class Manager(Optimizer):
         if variable is not None:
             variable = variable
         else:
-            variable = self.data_dic
+            variable = self.current_dic
 
         # 更改显示的最大行数
         max_rows = pd.get_option('display.max_rows')  # 查看当前最大显示行数的配置
@@ -3889,6 +3891,7 @@ class Manager(Optimizer):
 
         print_name = None
         print_value = None
+        name_str = ''
 
         # 在类中寻找变量时
         if search == 'current':
@@ -3904,25 +3907,58 @@ class Manager(Optimizer):
         elif search == 'class':
 
             for name, value in vars(self).items():
-                if value is variable:  # 指向同一变量
+
+                if variable is True and not isinstance(variable, str):  # variable 为 True 时，查找当前环境下所有变量名
+                    name_str += name + '\n'  # 将 name 追加到字符串并换行
+
+                elif name == variable:  # 比较属性名是否等于传入的变量名
                     print_name = self.__class__.__name__ + "." + name
-                    print_value = dict(value)
+
+                    # 如果值是可以被直接打印的，就打印出来
+                    if isinstance(value, dict):
+                        print_value = value  # 如果已经是字典，直接使用
+                    elif hasattr(value, 'to_dict'):  # 对于支持 to_dict 的对象，例如 Pandas DataFrame
+                        print_value = value.to_dict()
+                    else:
+                        print_value = value  # 对于其他类型，直接打印
 
         # 在局部中寻找变量时
         elif search == 'local':
 
             for name, value in locals().items():
-                if value is variable:  # 指向同一变量
-                    print_name = name
-                    print_value = dict(value)
+
+                if variable is True and not isinstance(variable, str):  # variable 为 True 时，查找当前环境下所有变量名
+                    name_str += name + '\n'  # 将 name 追加到字符串并换行
+
+                elif name == variable:  # 比较属性名是否等于传入的变量名
+                    print_name = self.__class__.__name__ + "." + name
+
+                    # 如果值是可以被直接打印的，就打印出来
+                    if isinstance(value, dict):
+                        print_value = value  # 如果已经是字典，直接使用
+                    elif hasattr(value, 'to_dict'):  # 对于支持 to_dict 的对象，例如 Pandas DataFrame
+                        print_value = value.to_dict()
+                    else:
+                        print_value = value  # 对于其他类型，直接打印
 
         # 在全局中寻找变量时
         elif search == 'global':
 
             for name, value in globals().items():
-                if value == variable:  # 内容相同即可
-                    print_name = name
-                    print_value = dict(value)
+
+                if variable is True and not isinstance(variable, str):  # variable 为 True 时，查找当前环境下所有变量名
+                    name_str += name + '\n'  # 将 name 追加到字符串并换行
+
+                elif name == variable:  # 比较属性名是否等于传入的变量名
+                    print_name = self.__class__.__name__ + "." + name
+
+                    # 如果值是可以被直接打印的，就打印出来
+                    if isinstance(value, dict):
+                        print_value = value  # 如果已经是字典，直接使用
+                    elif hasattr(value, 'to_dict'):  # 对于支持 to_dict 的对象，例如 Pandas DataFrame
+                        print_value = value.to_dict()
+                    else:
+                        print_value = value  # 对于其他类型，直接打印
 
         # 都不为时则报错
         else:
@@ -3931,11 +3967,15 @@ class Manager(Optimizer):
             raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
                              f"the variable 'search' can only be one of 'current', 'class', 'local', or 'global'.")
 
-        if print_name is None:
+        if print_name is None and variable is isinstance(variable, str):
             class_name = self.__class__.__name__  # 获取类名
             method_name = inspect.currentframe().f_code.co_name  # 获取方法名
             raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
                              f"the following variable was not found in the {search} variables:\n{variable}")
+
+        if variable is True and not isinstance(variable, str) and search != 'current':
+            print_name = f'variable in {search}'
+            print_value = name_str
 
         # 检查 print_what 的赋值
         if print_what not in ['all', 'name', 'value']:
@@ -5431,6 +5471,8 @@ class Module(Optimizer):
         self.sf_append_point_dic = None  # (dict) key 为所用数据的 title，value 为添加的坐标的 DataFrame 组成的 list
         # random_dict()
         self.random_dic = None  # (dict) key 和 value 与 data_dic 一致，长度与 num_pairs 参数有关
+        # move_points()
+        self.moved_dic = None  # (dict) key 为所用数据的 title，value 移动后数据的 DataFrame
 
     # 自定义选点
     def custom_point(self, data_dic: Optional[dict] = None, **kwargs: Union[Tuple[float, float]]) \
@@ -6111,8 +6153,8 @@ class Module(Optimizer):
         Attention: After reduce_precision, the deleted x-coordinate interval is only one point
                   -> Increase the precision of interval_disperse.
 
-        :param x_shrinking_factor: (float) 横坐标的紧缩因子，应为 0 到 1 之间
-        :param y_shrinking_factor: (float) 纵坐标的紧缩因子，应为 0 到 1 之间
+        :param x_shrinking_factor: (float) 横坐标的紧缩因子，应为 0 到 1 之间，数值越大，点越紧密
+        :param y_shrinking_factor: (float) 纵坐标的紧缩因子，应为 0 到 1 之间，数值越大，点越紧密
         :param x_distribution_limit: (float) 横坐标最大允许限度，建议为 0 到 1 之间，默认为原区间
         :param y_distribution_limit: (float) 纵坐标最大允许限度，默认为原区间
         :param tendency: (bool) 纵坐标的趋势，为 'up' 时上升，为 'down' 时下降
@@ -6265,8 +6307,8 @@ class Module(Optimizer):
 
         return sf_appended_dic, sf_append_point_dic
 
-    # 随机取 key - value 在 dict 中
-    def random_dict(self, data_dic: Optional[DataFrame] = None, num_pairs: int = 1) -> dict:
+    # 随机取键值对在 dict 中
+    def random_dict(self, data_dic: Optional[DataFrame] = None, num_pairs: int = 1) -> Dict[str, DataFrame]:
         """
         在 dict 中随机取键值对
         Randomly select key-value pairs from a dictionary.
@@ -6296,6 +6338,97 @@ class Module(Optimizer):
         self.current_dic = 'random_dic'
 
         return random_dic
+
+    # 移动一个方法的点
+    def move_points(self, data_dic: Optional[DataFrame] = None, peg_x: Optional[float] = None,
+                    direction: Optional[str] = None, moving_direction: Optional[str] = None,
+                    difference_value: Optional[float] = None) -> Dict[str, DataFrame]:
+        """
+        根据给定的 peg_x 参考点、方向、移动方向以及差值对点进行移动
+        The points are moved based on the given peg_x reference point, direction, movement direction, and difference.
+
+        :param data_dic: (dict) key 为 title，value 为 DataFrame
+        :param peg_x: (float) 用于筛选的横坐标参考点
+        :param direction: (str) 筛选方向，只能是 'up', 'down', 'left', 'right'
+        :param moving_direction: (str) 移动的方向，只能是 'up', 'down', 'left', 'right'
+        :param difference_value: (float) 移动的距离
+
+        :return moved_dic: (dict) key 为 title，value 为移动后的 DataFrame
+        """
+
+        # 将需要处理的数据赋给 data_dic
+        if data_dic is not None:
+            data_dic = copy.deepcopy(data_dic)
+        else:
+            # 使用循环打印 self.dic_order 列表中的属性值
+            for attr_name in self.dic_order:
+                selected_data_dic = getattr(self, attr_name)
+                if selected_data_dic is not None:
+                    data_dic = copy.deepcopy(selected_data_dic)
+                    break
+
+        valid_directions = ['up', 'down', 'left', 'right']
+
+        # 检查最后四个变量是否被赋值
+        class_name = self.__class__.__name__  # 获取类名
+        method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+        if peg_x is None or direction is None or moving_direction is None or difference_value is None:
+            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                             f"All of the following parameters must be provided: peg_x, direction, moving_direction, "
+                             f"and difference_value.")
+
+        # 检查输入的方向是否合法
+        if direction not in valid_directions:
+            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                             f"Invalid direction: {direction}. Valid directions are {valid_directions}.")
+        if moving_direction not in valid_directions:
+            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                             f"Invalid moving direction: {moving_direction}. Valid directions are {valid_directions}.")
+        if not isinstance(difference_value, (float, int)):
+            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                             f"difference_value must be a float or int.")
+
+        moved_dic = {}  # 用于存储移动后的 DataFrame
+
+        for title, data_df in data_dic.items():
+
+            # 确保 DataFrame 至少有两列，一列是横坐标，一列是纵坐标
+            if data_df.shape[1] < 2:
+                raise ValueError(f"DataFrame for {title} must have at least two columns (x and y coordinates).")
+
+            # 找到与 peg_x 最接近的点
+            closest_idx = (data_df.iloc[:, 0] - peg_x).abs().idxmin()
+            closest_x = data_df.iloc[closest_idx, 0]
+
+            # 根据 direction 选择点：'up' 和 'down' 根据纵坐标选择，'left' 和 'right' 根据横坐标选择
+            selected_df = None
+            if direction == 'up':
+                selected_df = data_df[data_df.iloc[:, 1] > data_df.iloc[closest_idx, 1]]  # 选择纵坐标比参考点大的点
+            elif direction == 'down':
+                selected_df = data_df[data_df.iloc[:, 1] < data_df.iloc[closest_idx, 1]]  # 选择纵坐标比参考点小的点
+            elif direction == 'left':
+                selected_df = data_df[data_df.iloc[:, 0] < closest_x]  # 选择横坐标比参考点小的点
+            elif direction == 'right':
+                selected_df = data_df[data_df.iloc[:, 0] > closest_x]  # 选择横坐标比参考点大的点
+
+            # 根据 moving_direction 移动点
+            if moving_direction == 'up':
+                selected_df.loc[:, selected_df.columns[1]] += difference_value  # 纵坐标加上差值
+            elif moving_direction == 'down':
+                selected_df.loc[:, selected_df.columns[1]] -= difference_value  # 纵坐标减去差值
+            elif moving_direction == 'left':
+                selected_df.loc[:, selected_df.columns[0]] -= difference_value  # 横坐标减去差值
+            elif moving_direction == 'right':
+                selected_df.loc[:, selected_df.columns[0]] += difference_value  # 横坐标加上差值
+
+            # 将移动后的点更新到原始 DataFrame 中
+            data_df.update(selected_df)
+            moved_dic[str(title)] = pd.DataFrame(data_df).reset_index(drop=True)  # 确保是 DataFrame，并重新设置索引
+
+            self.moved_dic = moved_dic
+            self.current_dic = 'moved_dic'
+
+        return moved_dic
 
 
 """ 魔法方法 """

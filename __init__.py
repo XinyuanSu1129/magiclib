@@ -233,8 +233,13 @@ MAGIC
                 Add method clear_data() in class Function.
                 Converts data to float format when reading txt and Excel files, except for the category column.
 --> 6.1.1       24-10-16 20:29 Fixed an issue with PDF card reading path error in class XRD.
---> 6.1.2       24-10-24 11:50 Fixed a bug that found a valid line when reading a file, in class Manager.
-                In the '__init__.py' file, correctly rename locate_key() to locate_point()
+--> 6.1.2       24-10-24 16:30 Fixed a bug that found a valid line when reading a file, in read_txt() of class Manager.
+                In the '__init__.py' file, correctly rename locate_key() to locate_point().
+                Updated functionality for method to_reality() in class Manager.
+                Add comment "When adding a method in the classes Optimizer, Module, and Magic, 
+                it is necessary to include self.current_dic."
+                Optimized partial comments in module general.
+                Add a new method move_points() to class Module.
                     
                     
  ------ Needing ------
@@ -347,6 +352,7 @@ control_plateau()
 SF_remove()
 SF_append()
 random_dict()
+move_points()
 
 ------ Magic ------
 smooth_curve()

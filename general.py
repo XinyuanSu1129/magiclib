@@ -3,6 +3,7 @@ magiclib / general
 
 Attention:
 1. statements should be written in detail
+2. When adding a method in the classes Optimizer, Module, and Magic, it is necessary to include self.current_dic.
 """
 
 
@@ -3823,7 +3824,7 @@ class Manager(Optimizer):
         if variable is not None:
             variable = variable
         else:
-            variable = self.data_dic
+            variable = self.current_dic
 
         # 更改显示的最大行数
         max_rows = pd.get_option('display.max_rows')  # 查看当前最大显示行数的配置

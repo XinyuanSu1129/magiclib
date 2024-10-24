@@ -235,6 +235,9 @@ MAGIC
 --> 6.1.1       24-10-16 20:29 Fixed an issue with PDF card reading path error in class XRD.
 --> 6.1.2       24-10-24 11:50 Fixed a bug that found a valid line when reading a file, in class Manager.
                 In the '__init__.py' file, correctly rename locate_key() to locate_point()
+                Fixed a bug where method to_reality() could not print property values correctly, in class Manager.
+                Add comment "When adding a method in the classes Optimizer, Module, and Magic, 
+                it is necessary to include self.current_dic."
                     
                     
  ------ Needing ------

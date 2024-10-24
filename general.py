@@ -2175,7 +2175,7 @@ class Manager(Optimizer):
                 lines = f.readlines()  # 读取 TXT 文件
 
             # 找到有效行
-            pattern = re.compile(pattern=r'-?\d+(\.\d+)?\s+-?\d+(\.\d+)?')
+            pattern = re.compile(pattern=r'\s*-?\d+(\.\d+)?')  # 空格开头，匹配带正负号的小数数字
             valid_lines = [line for line in lines if pattern.match(line)]  # 运用正则表达式找到以数字开头的行
             # 将读取到的为 DataFrame 数据
             data_df = pd.DataFrame([re.split(delimiter, line.strip()) for line in valid_lines])
@@ -2261,7 +2261,7 @@ class Manager(Optimizer):
                         lines = f.readlines()  # 读取 TXT 文件
 
                     # 找到有效行
-                    pattern = re.compile(pattern=r'^\s*-?\d')
+                    pattern = re.compile(pattern=r'\s*-?\d+(\.\d+)?')  # 空格开头，匹配带正负号的小数数字
                     valid_lines = [line for line in lines if pattern.match(line)]  # 运用正则表达式找到以数字开头的行
                     # 从有效行创建 DataFrame
                     data_df = pd.DataFrame([re.split(delimiter, line.strip()) for line in valid_lines])

@@ -1,5 +1,5 @@
 
-__version__ = '6.1.1'
+__version__ = '6.1.2'
 
 __all__ = ['general', 'grapher', 'projector', 'performer', 'inspector', 'accessor', 'author', 'potter']
 
@@ -233,6 +233,7 @@ MAGIC
                 Add method clear_data() in class Function.
                 Converts data to float format when reading txt and Excel files, except for the category column.
 --> 6.1.1       24-10-16 20:29 Fixed an issue with PDF card reading path error in class XRD.
+--> 6.1.2       24-10-24 11:50 Fixed a bug that found a valid line when reading a file, in class Manager.
                     
                     
  ------ Needing ------

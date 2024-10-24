@@ -5471,6 +5471,8 @@ class Module(Optimizer):
         self.sf_append_point_dic = None  # (dict) key 为所用数据的 title，value 为添加的坐标的 DataFrame 组成的 list
         # random_dict()
         self.random_dic = None  # (dict) key 和 value 与 data_dic 一致，长度与 num_pairs 参数有关
+        # move_points()
+        self.moved_dic = None  # (dict) key 为所用数据的 title，value 移动后数据的 DataFrame
 
     # 自定义选点
     def custom_point(self, data_dic: Optional[dict] = None, **kwargs: Union[Tuple[float, float]]) \
@@ -6305,8 +6307,8 @@ class Module(Optimizer):
 
         return sf_appended_dic, sf_append_point_dic
 
-    # 随机取 key - value 在 dict 中
-    def random_dict(self, data_dic: Optional[DataFrame] = None, num_pairs: int = 1) -> dict:
+    # 随机取键值对在 dict 中
+    def random_dict(self, data_dic: Optional[DataFrame] = None, num_pairs: int = 1) -> Dict[str, DataFrame]:
         """
         在 dict 中随机取键值对
         Randomly select key-value pairs from a dictionary.
@@ -6336,6 +6338,97 @@ class Module(Optimizer):
         self.current_dic = 'random_dic'
 
         return random_dic
+
+    # 移动一个方法的点
+    def move_points(self, data_dic: Optional[DataFrame] = None, peg_x: Optional[float] = None,
+                    direction: Optional[str] = None, moving_direction: Optional[str] = None,
+                    difference_value: Optional[float] = None) -> Dict[str, DataFrame]:
+        """
+        根据给定的 peg_x 参考点、方向、移动方向以及差值对点进行移动
+        The points are moved based on the given peg_x reference point, direction, movement direction, and difference.
+
+        :param data_dic: (dict) key 为 title，value 为 DataFrame
+        :param peg_x: (float) 用于筛选的横坐标参考点
+        :param direction: (str) 筛选方向，只能是 'up', 'down', 'left', 'right'
+        :param moving_direction: (str) 移动的方向，只能是 'up', 'down', 'left', 'right'
+        :param difference_value: (float) 移动的距离
+
+        :return moved_dic: (dict) key 为 title，value 为移动后的 DataFrame
+        """
+
+        # 将需要处理的数据赋给 data_dic
+        if data_dic is not None:
+            data_dic = copy.deepcopy(data_dic)
+        else:
+            # 使用循环打印 self.dic_order 列表中的属性值
+            for attr_name in self.dic_order:
+                selected_data_dic = getattr(self, attr_name)
+                if selected_data_dic is not None:
+                    data_dic = copy.deepcopy(selected_data_dic)
+                    break
+
+        valid_directions = ['up', 'down', 'left', 'right']
+
+        # 检查最后四个变量是否被赋值
+        class_name = self.__class__.__name__  # 获取类名
+        method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+        if peg_x is None or direction is None or moving_direction is None or difference_value is None:
+            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                             f"All of the following parameters must be provided: peg_x, direction, moving_direction, "
+                             f"and difference_value.")
+
+        # 检查输入的方向是否合法
+        if direction not in valid_directions:
+            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                             f"Invalid direction: {direction}. Valid directions are {valid_directions}.")
+        if moving_direction not in valid_directions:
+            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                             f"Invalid moving direction: {moving_direction}. Valid directions are {valid_directions}.")
+        if not isinstance(difference_value, (float, int)):
+            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                             f"difference_value must be a float or int.")
+
+        moved_dic = {}  # 用于存储移动后的 DataFrame
+
+        for title, data_df in data_dic.items():
+
+            # 确保 DataFrame 至少有两列，一列是横坐标，一列是纵坐标
+            if data_df.shape[1] < 2:
+                raise ValueError(f"DataFrame for {title} must have at least two columns (x and y coordinates).")
+
+            # 找到与 peg_x 最接近的点
+            closest_idx = (data_df.iloc[:, 0] - peg_x).abs().idxmin()
+            closest_x = data_df.iloc[closest_idx, 0]
+
+            # 根据 direction 选择点：'up' 和 'down' 根据纵坐标选择，'left' 和 'right' 根据横坐标选择
+            selected_df = None
+            if direction == 'up':
+                selected_df = data_df[data_df.iloc[:, 1] > data_df.iloc[closest_idx, 1]]  # 选择纵坐标比参考点大的点
+            elif direction == 'down':
+                selected_df = data_df[data_df.iloc[:, 1] < data_df.iloc[closest_idx, 1]]  # 选择纵坐标比参考点小的点
+            elif direction == 'left':
+                selected_df = data_df[data_df.iloc[:, 0] < closest_x]  # 选择横坐标比参考点小的点
+            elif direction == 'right':
+                selected_df = data_df[data_df.iloc[:, 0] > closest_x]  # 选择横坐标比参考点大的点
+
+            # 根据 moving_direction 移动点
+            if moving_direction == 'up':
+                selected_df.loc[:, selected_df.columns[1]] += difference_value  # 纵坐标加上差值
+            elif moving_direction == 'down':
+                selected_df.loc[:, selected_df.columns[1]] -= difference_value  # 纵坐标减去差值
+            elif moving_direction == 'left':
+                selected_df.loc[:, selected_df.columns[0]] -= difference_value  # 横坐标减去差值
+            elif moving_direction == 'right':
+                selected_df.loc[:, selected_df.columns[0]] += difference_value  # 横坐标加上差值
+
+            # 将移动后的点更新到原始 DataFrame 中
+            data_df.update(selected_df)
+            moved_dic[str(title)] = pd.DataFrame(data_df).reset_index(drop=True)  # 确保是 DataFrame，并重新设置索引
+
+            self.moved_dic = moved_dic
+            self.current_dic = 'moved_dic'
+
+        return moved_dic
 
 
 """ 魔法方法 """

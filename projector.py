@@ -65,7 +65,7 @@ class Keyword(ABC):
     def magic_plot(cls, save_path: Optional[str] = None, **kwargs):
         pass
 
-    # 读取 JSON 文件
+    #  存储成 JSON 文件
     @abstractmethod
     def save_json(self):
         pass
@@ -137,7 +137,7 @@ class Tensile(Keyword):
     def magic_plot(cls, save_path: Optional[str] = None, **kwargs):
         pass
 
-    # 读取 JSON 文件
+    #  存储成 JSON 文件
     def save_json(self):
         pass
 
@@ -208,7 +208,7 @@ class Compression(Keyword):
     def magic_plot(cls, save_path: Optional[str] = None, **kwargs):
         pass
 
-    # 读取 JSON 文件
+    #  存储成 JSON 文件
     def save_json(self):
         pass
 
@@ -283,7 +283,7 @@ class Torsion(Keyword):
     def magic_plot(cls, save_path: Optional[str] = None, **kwargs):
         pass
 
-    # 读取 JSON 文件
+    #  存储成 JSON 文件
     def save_json(self):
         pass
 
@@ -424,7 +424,7 @@ class XRD(Keyword):
     def magic_plot(cls, save_path: Optional[str] = None, **kwargs):
         pass
 
-    # 读取 JSON 文件
+    #  存储成 JSON 文件
     def save_json(self):
         pass
 
@@ -1252,7 +1252,7 @@ class Raman(Keyword):
     def magic_plot(cls, save_path: Optional[str] = None, **kwargs):
         pass
 
-    # 读取 JSON 文件
+    #  存储成 JSON 文件
     def save_json(self):
         pass
 
@@ -1382,7 +1382,7 @@ class TEA(Keyword):
     def magic_plot(cls, save_path: Optional[str] = None, **kwargs):
         pass
 
-    # 读取 JSON 文件
+    #  存储成 JSON 文件
     def save_json(self):
         pass
 
@@ -1391,7 +1391,7 @@ class TEA(Keyword):
                         left_color: Union[str, tuple] = '#FF6347', left_style: str = '-',
                         right_color: Union[str, tuple] = '#6495ED', right_style: str = '-.',
                         background_color: Optional[str] = 'Greens', background_transparency: Optional[float] = 0.15,
-                        **kwargs) -> None:
+                        dpi: int = 600, **kwargs) -> None:
         """
         绘制热膨胀及其一阶导数曲线
         Plotting the Thermal Expansion and Its First Derivative Curve.
@@ -1404,6 +1404,7 @@ class TEA(Keyword):
         :param right_style: (str) 右轴曲线，即一阶导数曲线的风格，默认为点画线
         :param background_color: (str / tuple) 设置图片的背景颜色，默认为 'Greens'
         :param background_transparency: (float) 背景色的透明度，只有存在背景色时才有意义，默认为 0.15
+        :param dpi: (int) 图片保存的精度，只有在需要保存时才有意义，默认为 dpi=600
 
         :return: None
 
@@ -1888,7 +1889,7 @@ class XPS(Keyword):
     def magic_plot(cls, save_path: Optional[str] = None, **kwargs):
         pass
 
-    # 读取 JSON 文件
+    #  存储成 JSON 文件
     def save_json(self):
         pass
 
@@ -2094,7 +2095,7 @@ class Mapping(Keyword):
     def magic_plot(cls, save_path: Optional[str] = None, **kwargs):
         pass
 
-    # 读取 JSON 文件
+    #  存储成 JSON 文件
     def save_json(self):
         pass
 
@@ -2562,7 +2563,7 @@ class XRF(Keyword):
     def magic_plot(cls, save_path: Optional[str] = None, **kwargs):
         pass
 
-    # 读取 JSON 文件
+    #  存储成 JSON 文件
     def save_json(self):
         pass
 

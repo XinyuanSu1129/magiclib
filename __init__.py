@@ -1,5 +1,5 @@
 
-__version__ = '6.1.2'
+__version__ = '6.1.3'
 
 __all__ = ['general', 'grapher', 'projector', 'performer', 'inspector', 'accessor', 'author', 'potter']
 
@@ -240,6 +240,8 @@ MAGIC
                 it is necessary to include self.current_dic."
                 Optimized partial comments in module general.
                 Add a new method move_points() to class Module.
+--> 6.1.3       24-10-25 13:31 Add a new method handle_duplicate_x() to class Module.
+                Changed how the classes Manager, Module, and Magic dictionary are read.
                     
                     
  ------ Needing ------
@@ -353,6 +355,7 @@ SF_remove()
 SF_append()
 random_dict()
 move_points()
+handle_duplicate_x()
 
 ------ Magic ------
 smooth_curve()

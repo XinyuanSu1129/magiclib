@@ -85,8 +85,6 @@ class Function:
         self.y_list = y_list
         self.x_label = x_label
         self.y_label = y_label
-        self.dic_order = ['realized_dic', 'fitting_dic', 'balanced_dic', 'adjusted_dic',
-                          'normalized_dic', 'dispersed_dic', 'smoothing_dic', 'data_dic']
 
         # 数据初始化分配
         if type(self) == Function:  # 当 self 为 Function 的直接实例时为真
@@ -695,8 +693,6 @@ class Optimizer(Function):
         self.y_list = y_list
         self.x_label = x_label
         self.y_label = y_label
-        self.dic_order = ['realized_dic', 'fitting_dic', 'balanced_dic', 'adjusted_dic',
-                          'normalized_dic', 'dispersed_dic', 'smoothing_dic', 'data_dic']
 
         self.current_dic = 'data_dic'
 
@@ -2051,9 +2047,6 @@ class Manager(Optimizer):
         # 10 realize_data()
         self.realized_dic = None  # (dict) value 为真实后的 DataFrame 数据
 
-        self.dic_order = ['realized_dic', 'fitting_dic', 'balanced_dic', 'adjusted_dic',
-                          'normalized_dic', 'dispersed_dic', 'smoothing_dic', 'data_dic']
-
     # 1 TXT 文件的读取
     def read_txt(self, txt_path: Optional[str] = None, file_pattern: Optional[str] = None,
                  increasing_order: Optional[int] = None, delete_nan: Optional[bool] = None,
@@ -2892,11 +2885,8 @@ class Manager(Optimizer):
             elif data_df is not None:  # 只有 data_df 被赋值时
                 data_dic = {'Untitled': data_df}
             else:
-                for data_dic_name in self.dic_order:  # 使用循环打印 self.dic_order 列表中的属性值
-                    selected_data_dic = getattr(self, data_dic_name)
-                    if selected_data_dic is not None:
-                        data_dic = copy.deepcopy(selected_data_dic)
-                        break
+                # 使用 getattr 来动态获取属性
+                data_dic = copy.deepcopy(getattr(self, self.current_dic))
 
             if data_dic is None:  # 两个均未被赋值时
                 class_name = self.__class__.__name__  # 获取类名
@@ -3018,11 +3008,8 @@ class Manager(Optimizer):
             elif data_df is not None:  # 只有 data_df 被赋值时
                 data_dic = {'Untitled': data_df}
             else:
-                for data_dic_name in self.dic_order:  # 使用循环打印 self.dic_order 列表中的属性值
-                    selected_data_dic = getattr(self, data_dic_name)
-                    if selected_data_dic is not None:
-                        data_dic = copy.deepcopy(selected_data_dic)
-                        break
+                # 使用 getattr 来动态获取属性
+                data_dic = copy.deepcopy(getattr(self, self.current_dic))
 
             if data_dic is None:  # 两个均未被赋值时
                 class_name = self.__class__.__name__  # 获取类名
@@ -3075,6 +3062,7 @@ class Manager(Optimizer):
         Store the data in the form of JSON.
 
         自动检查是否已储存过，若已储存，则会跳过该组数据 (通过 title 进行检查)
+        Automatically checks if it has been saved, and if it has, the set of data is skipped (checked by title).
 
         :param keyword: (str) 存储的实验数据的类型，默认为 self.keyword 中的类型
         :param data_dic: (dict)  key 为 title， value 数据的 DataFrame，默认为 smoothing_dic 数据优先
@@ -4100,17 +4088,17 @@ class Manager(Optimizer):
         - fill_alpha: (float) 填充透明度，默认为 0.4，只有在 fill_area 为 True 时才有意义
 
         # 标记部分 (27)
-        - x_marker_range: (tuple) 以 x 轴区域标记，可接受 list 和 tuple，当为 list 时表示闭区间，当为 tuple 时表示开区间
-        - x_marker: (str) 以 x 轴区域标记时的标记符号，只有当 x_marker_range 被赋值时才有意义
-        - x_marker_color: (str / tuple) 以 x 轴区域标记时的颜色，默认为红色，只有当 x_marker_range 被赋值时才有意义
-        - x_marker_size: (int) 以 x 轴区域标记时的标记大小，只有当 x_marker_range 被赋值时才有意义
-        - x_marker_interval: (int) 对于以 x 轴区域标记，每几个点标记一个，默认为 1 表示全标记，
+        - x_marker_range: (tuple) 以 X 轴区域标记，可接受 list 和 tuple，当为 list 时表示闭区间，当为 tuple 时表示开区间
+        - x_marker: (str) 以 X 轴区域标记时的标记符号，只有当 x_marker_range 被赋值时才有意义
+        - x_marker_color: (str / tuple) 以 X 轴区域标记时的颜色，默认为红色，只有当 x_marker_range 被赋值时才有意义
+        - x_marker_size: (int) 以 X 轴区域标记时的标记大小，只有当 x_marker_range 被赋值时才有意义
+        - x_marker_interval: (int) 对于以 X 轴区域标记，每几个点标记一个，默认为 1 表示全标记，
                                  只有当 x_marker_range 被赋值时才有意义
-        - y_marker_range: (tuple) y 轴区域标记，可接受 list 和 tuple，当为 list 时表示闭区间，当为 tuple 时表示开区间
+        - y_marker_range: (tuple) Y 轴区域标记，可接受 list 和 tuple，当为 list 时表示闭区间，当为 tuple 时表示开区间
         - y_marker: (str) 以y轴区域标记时的标记符号，只有当 y_marker_range 被赋值时才有意义
-        - y_marker_color: (str / tuple) 以 y 轴区域标记时的颜色，默认为蓝色，只有当 y_marker_range 被赋值时才有意义
-        - y_marker_size: (int) 以 y 轴区域标记时的标记大小，只有当 y_marker_range 被赋值时才有意义
-        - y_marker_interval: (int) 对于以 y 轴区域标记，每几个点标记一个，默认为 1 表示全标记，
+        - y_marker_color: (str / tuple) 以 Y 轴区域标记时的颜色，默认为蓝色，只有当 y_marker_range 被赋值时才有意义
+        - y_marker_size: (int) 以 Y 轴区域标记时的标记大小，只有当 y_marker_range 被赋值时才有意义
+        - y_marker_interval: (int) 对于以 Y 轴区域标记，每几个点标记一个，默认为 1 表示全标记，
                                  只有当 y_marker_range 被赋值时才有意义
         - expression: (str) 表达式，用以表达式标记
         - expression_marker: (str) 表达式标记时的符号，只有当 expression 被赋值时才有意义
@@ -4147,11 +4135,8 @@ class Manager(Optimizer):
             elif data_df is not None:  # 只有 data_df 被赋值时
                 data_dic = {'Untitled': data_df}
             else:
-                for data_dic_name in self.dic_order:  # 使用循环打印 self.dic_order 列表中的属性值
-                    selected_data_dic = getattr(self, data_dic_name)
-                    if selected_data_dic is not None:
-                        data_dic = copy.deepcopy(selected_data_dic)
-                        break
+                # 使用 getattr 来动态获取属性
+                data_dic = copy.deepcopy(getattr(self, self.current_dic))
 
             # 当 save_path == True 时，沿用 self.save_path 的设置，此项为默认项
             if save_path is True:
@@ -4554,7 +4539,7 @@ class Manager(Optimizer):
                                     and i % x_marker_interval == 0:
                                 x_indices.append(i)
 
-                    # 标记符合 x 范围的点
+                    # 标记符合 X 范围的点
                     plt.scatter(np.array(data_df[x_label])[x_indices],
                                 np.array(data_df[y_label])[x_indices],
                                 marker=x_marker,  # 设置标记的符号
@@ -4578,7 +4563,7 @@ class Manager(Optimizer):
                                     and i % y_marker_interval == 0:
                                 y_indices.append(i)
 
-                    # 标记符合 y 范围的点
+                    # 标记符合 Y 范围的点
                     plt.scatter(np.array(data_df[x_label])[y_indices],
                                 np.array(data_df[y_label])[y_indices],
                                 marker=y_marker,  # 设置标记的符号
@@ -4781,17 +4766,17 @@ class Manager(Optimizer):
         - edge_colors: (tuple / list) 散点的内部颜色，透明色为 'none'
 
         # 标记部分 (27)
-        - x_marker_range: (tuple) 以 x 轴区域标记，可接受 list 和 tuple，当为 list 时表示闭区间，当为 tuple 时表示开区间
-        - x_marker: (str) 以 x 轴区域标记时的标记符号，只有当 x_marker_range 被赋值时才有意义
-        - x_marker_color: (str / tuple) 以 x 轴区域标记时的颜色，默认为红色，只有当 x_marker_range 被赋值时才有意义
-        - x_marker_size: (int) 以 x 轴区域标记时的标记大小，只有当 x_marker_range 被赋值时才有意义
-        - x_marker_interval: (int) 对于以 x 轴区域标记，每几个点标记一个，默认为 1 表示全标记，
+        - x_marker_range: (tuple) 以 X 轴区域标记，可接受 list 和 tuple，当为 list 时表示闭区间，当为 tuple 时表示开区间
+        - x_marker: (str) 以 X 轴区域标记时的标记符号，只有当 x_marker_range 被赋值时才有意义
+        - x_marker_color: (str / tuple) 以 X 轴区域标记时的颜色，默认为红色，只有当 x_marker_range 被赋值时才有意义
+        - x_marker_size: (int) 以 X 轴区域标记时的标记大小，只有当 x_marker_range 被赋值时才有意义
+        - x_marker_interval: (int) 对于以 X 轴区域标记，每几个点标记一个，默认为 1 表示全标记，
                                  只有当 x_marker_range 被赋值时才有意义
-        - y_marker_range: (tuple) y 轴区域标记，可接受 list 和 tuple，当为 list 时表示闭区间，当为 tuple 时表示开区间
+        - y_marker_range: (tuple) Y 轴区域标记，可接受 list 和 tuple，当为 list 时表示闭区间，当为 tuple 时表示开区间
         - y_marker: (str) 以y轴区域标记时的标记符号，只有当 y_marker_range 被赋值时才有意义
-        - y_marker_color: (str / tuple) 以 y 轴区域标记时的颜色，默认为蓝色，只有当 y_marker_range 被赋值时才有意义
-        - y_marker_size: (int) 以 y 轴区域标记时的标记大小，只有当 y_marker_range 被赋值时才有意义
-        - y_marker_interval: (int) 对于以 y 轴区域标记，每几个点标记一个，默认为 1 表示全标记，
+        - y_marker_color: (str / tuple) 以 Y 轴区域标记时的颜色，默认为蓝色，只有当 y_marker_range 被赋值时才有意义
+        - y_marker_size: (int) 以 Y 轴区域标记时的标记大小，只有当 y_marker_range 被赋值时才有意义
+        - y_marker_interval: (int) 对于以 Y 轴区域标记，每几个点标记一个，默认为 1 表示全标记，
                                  只有当 y_marker_range 被赋值时才有意义
         - expression: (str) 表达式，用以表达式标记
         - expression_marker: (str) 表达式标记时的符号，只有当 expression 被赋值时才有意义
@@ -4828,11 +4813,8 @@ class Manager(Optimizer):
             elif data_df is not None:  # 只有 data_df 被赋值时
                 data_dic = {'Untitled': data_df}
             else:
-                for data_dic_name in self.dic_order:  # 使用循环打印 self.dic_order 列表中的属性值
-                    selected_data_dic = getattr(self, data_dic_name)
-                    if selected_data_dic is not None:
-                        data_dic = copy.deepcopy(selected_data_dic)
-                        break
+                # 使用 getattr 来动态获取属性
+                data_dic = copy.deepcopy(getattr(self, self.current_dic))
 
             # 当 save_path == True 时，沿用 self.save_path 的设置，此项为默认项
             if save_path is True:
@@ -5235,7 +5217,7 @@ class Manager(Optimizer):
                                     and i % x_marker_interval == 0:
                                 x_indices.append(i)
 
-                    # 标记符合 x 范围的点
+                    # 标记符合 X 范围的点
                     plt.scatter(np.array(data_df[x_label])[x_indices],
                                 np.array(data_df[y_label])[x_indices],
                                 marker=x_marker,  # 设置标记的符号
@@ -5259,7 +5241,7 @@ class Manager(Optimizer):
                                     and i % y_marker_interval == 0:
                                 y_indices.append(i)
 
-                    # 标记符合 y 范围的点
+                    # 标记符合 Y 范围的点
                     plt.scatter(np.array(data_df[x_label])[y_indices],
                                 np.array(data_df[y_label])[y_indices],
                                 marker=y_marker,  # 设置标记的符号
@@ -5415,7 +5397,7 @@ class Module(Optimizer):
     5. 输出前均需要进行排序和更新行索引
     6. 如果坐标输出多项，则用 tuple 输出
     7. 手动点用 data_dic，自动随机用 data_dic
-    8. 数据的检索顺序与 self.dic_order 相关，且不会改变 self.data_dic
+    8. 数据的检索顺序与 self.current_dic 相关，且不会改变 self.data_dic
 
     Attention:
     1. When deleting a point, return to the deleted table (important) and record the deleted point
@@ -5427,7 +5409,7 @@ class Module(Optimizer):
     5. Sort and update the row index before output
     6. If the coordinates output multiple items, use the tuple output
     7. data_dic is selected manually and data_dic is selected automatically
-    8. The retrieval order of the data is related to self.dic_order and does not change self.data_dic
+    8. The retrieval order of the data is related to self.current_dic and does not change self.data_dic
     """
 
     # 初始化
@@ -5445,9 +5427,6 @@ class Module(Optimizer):
         # 数据初始化分配
         if type(self) == Module:  # 当 self 为 Module 的直接实例时为真
             self.data_init()
-
-        self.dic_order = ['realized_dic', 'fitting_dic', 'balanced_dic', 'adjusted_dic',
-                          'normalized_dic', 'dispersed_dic', 'smoothing_dic', 'data_dic']
 
         # custom_point()
         self.custom_dic = None  # (dict) key 为所用数据的 title，value 为标记数据的 DataFrame
@@ -5473,6 +5452,8 @@ class Module(Optimizer):
         self.random_dic = None  # (dict) key 和 value 与 data_dic 一致，长度与 num_pairs 参数有关
         # move_points()
         self.moved_dic = None  # (dict) key 为所用数据的 title，value 移动后数据的 DataFrame
+        # handle_duplicate_x()
+        self.handled_dic = None  # (dict)  key 为所用数据的 title，value 处理相同 X 数据后的 DataFrame
 
     # 自定义选点
     def custom_point(self, data_dic: Optional[dict] = None, **kwargs: Union[Tuple[float, float]]) \
@@ -5495,12 +5476,8 @@ class Module(Optimizer):
         if data_dic is not None:
             data_dic = copy.deepcopy(data_dic)
         else:
-            # 使用循环打印 self.dic_order 列表中的属性值
-            for attr_name in self.dic_order:
-                selected_data_dic = getattr(self, attr_name)
-                if selected_data_dic is not None:
-                    data_dic = copy.deepcopy(selected_data_dic)
-                    break
+            # 使用 getattr 来动态获取属性
+            data_dic = copy.deepcopy(getattr(self, self.current_dic))
 
         # 检查关键字，并提取坐标
         pattern = r'^custom_point(_\d+)?$'  # 正则表达式
@@ -5579,12 +5556,8 @@ class Module(Optimizer):
         if data_dic is not None:
             data_dic = copy.deepcopy(data_dic)
         else:
-            # 使用循环打印 self.dic_order 列表中的属性值
-            for attr_name in self.dic_order:
-                selected_data_dic = getattr(self, attr_name)
-                if selected_data_dic is not None:
-                    data_dic = copy.deepcopy(selected_data_dic)
-                    break
+            # 使用 getattr 来动态获取属性
+            data_dic = copy.deepcopy(getattr(self, self.current_dic))
 
         # 检查关键字，并提取坐标
         pattern = r'^remove_point(_\d+)?$'  # 正则表达式
@@ -5711,12 +5684,8 @@ class Module(Optimizer):
         if data_dic is not None:
             data_dic = copy.deepcopy(data_dic)
         else:
-            # 使用循环打印 self.dic_order 列表中的属性值
-            for attr_name in self.dic_order:
-                selected_data_dic = getattr(self, attr_name)
-                if selected_data_dic is not None:
-                    data_dic = copy.deepcopy(selected_data_dic)
-                    break
+            # 使用 getattr 来动态获取属性
+            data_dic = copy.deepcopy(getattr(self, self.current_dic))
 
         # 检查关键字，并提取坐标
         pattern = r'^append(_scope)?_point(_\d+)?$'  # 正则表达式
@@ -5830,12 +5799,8 @@ class Module(Optimizer):
         if data_dic is not None:
             data_dic = copy.deepcopy(data_dic)
         else:
-            # 使用循环打印 self.dic_order 列表中的属性值
-            for attr_name in self.dic_order:
-                selected_data_dic = getattr(self, attr_name)
-                if selected_data_dic is not None:
-                    data_dic = copy.deepcopy(selected_data_dic)
-                    break
+            # 使用 getattr 来动态获取属性
+            data_dic = copy.deepcopy(getattr(self, self.current_dic))
 
         peak_dic = {}
 
@@ -5911,12 +5876,8 @@ class Module(Optimizer):
         if data_dic is not None:
             data_dic = copy.deepcopy(data_dic)
         else:
-            # 使用循环打印 self.dic_order 列表中的属性值
-            for attr_name in self.dic_order:
-                selected_data_dic = getattr(self, attr_name)
-                if selected_data_dic is not None:
-                    data_dic = copy.deepcopy(selected_data_dic)
-                    break
+            # 使用 getattr 来动态获取属性
+            data_dic = copy.deepcopy(getattr(self, self.current_dic))
 
         peak_dic = {}
 
@@ -5966,12 +5927,8 @@ class Module(Optimizer):
         if data_dic is not None:
             data_dic = copy.deepcopy(data_dic)
         else:
-            # 使用循环打印 self.dic_order 列表中的属性值
-            for attr_name in self.dic_order:
-                selected_data_dic = getattr(self, attr_name)
-                if selected_data_dic is not None:
-                    data_dic = copy.deepcopy(selected_data_dic)
-                    break
+            # 使用 getattr 来动态获取属性
+            data_dic = copy.deepcopy(getattr(self, self.current_dic))
 
         # 初始化最终的 dict 结果
         fragment_dic = {}
@@ -6055,12 +6012,8 @@ class Module(Optimizer):
         if data_dic is not None:
             data_dic = copy.deepcopy(data_dic)
         else:
-            # 使用循环打印 self.dic_order 列表中的属性值
-            for attr_name in self.dic_order:
-                selected_data_dic = getattr(self, attr_name)
-                if selected_data_dic is not None:
-                    data_dic = copy.deepcopy(selected_data_dic)
-                    break
+            # 使用 getattr 来动态获取属性
+            data_dic = copy.deepcopy(getattr(self, self.current_dic))
 
         # 解析 remove_section
         (percent_start, percent_end), percent_remove, num_sections = remove_section
@@ -6323,12 +6276,8 @@ class Module(Optimizer):
         if data_dic is not None:
             data_dic = copy.deepcopy(data_dic)
         else:
-            # 使用循环打印 self.dic_order 列表中的属性值
-            for attr_name in self.dic_order:
-                selected_data_dic = getattr(self, attr_name)
-                if selected_data_dic is not None:
-                    data_dic = copy.deepcopy(selected_data_dic)
-                    break
+            # 使用 getattr 来动态获取属性
+            data_dic = copy.deepcopy(getattr(self, self.current_dic))
 
         # 随机抽取
         keys = list(data_dic.keys())
@@ -6360,12 +6309,8 @@ class Module(Optimizer):
         if data_dic is not None:
             data_dic = copy.deepcopy(data_dic)
         else:
-            # 使用循环打印 self.dic_order 列表中的属性值
-            for attr_name in self.dic_order:
-                selected_data_dic = getattr(self, attr_name)
-                if selected_data_dic is not None:
-                    data_dic = copy.deepcopy(selected_data_dic)
-                    break
+            # 使用 getattr 来动态获取属性
+            data_dic = copy.deepcopy(getattr(self, self.current_dic))
 
         valid_directions = ['up', 'down', 'left', 'right']
 
@@ -6430,6 +6375,65 @@ class Module(Optimizer):
 
         return moved_dic
 
+    # 处理 X 值相同的点
+    def handle_duplicate_x(self, data_dic: Optional[Dict[str, DataFrame]] = None,
+                           operation: Optional[str] = None) -> Dict[str, DataFrame]:
+        """
+        根据 operation 参数处理 DataFrame 中重复的 x 值。
+        Depending on the operation ('up', 'down', 'delete'), it either keeps the upper, lower point or deletes both.
+
+        :param data_dic: (dict) key 为 title，value 为 DataFrame
+        :param operation: (str) 操作类型，只能是 'up', 'down', 'delete'
+
+        :return handled_dic: (dict) key 为 title，value 为处理后的 DataFrame
+        """
+
+        # 将需要处理的数据赋给 data_dic
+        if data_dic is not None:
+            data_dic = copy.deepcopy(data_dic)
+        else:
+            # 使用 getattr 来动态获取属性
+            data_dic = copy.deepcopy(getattr(self, self.current_dic))
+
+        # 检查输入的 operation 是否合法
+        valid_operations = ['up', 'down', 'delete']
+        class_name = self.__class__.__name__  # 获取类名
+        method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+
+        if operation not in valid_operations:
+            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                             f"Invalid operation: {operation}. Valid operations are {valid_operations}.")
+
+        handled_dic = {}
+
+        for title, data_df in data_dic.items():
+            # 确保 DataFrame 至少有两列，一列是 x 坐标，一列是 y 坐标
+            if data_df.shape[1] < 2:
+                raise ValueError(f"DataFrame for {title} must have at least two columns (x and y coordinates).")
+
+            # 找到重复的 x 值
+            duplicated_x = data_df[data_df.duplicated(subset=data_df.columns[0], keep=False)]
+
+            if not duplicated_x.empty:
+                # 如果 operation 是 'up'，保留上面的点 (保留第一个)
+                if operation == 'up':
+                    data_df = data_df.drop_duplicates(subset=data_df.columns[0], keep='first')
+
+                # 如果 operation 是 'down'，保留下面的点 (保留最后一个)
+                elif operation == 'down':
+                    data_df = data_df.drop_duplicates(subset=data_df.columns[0], keep='last')
+
+                # 如果 operation 是 'delete'，删除重复的点
+                elif operation == 'delete':
+                    data_df = data_df.drop_duplicates(subset=data_df.columns[0], keep=False)
+
+            # 更新处理后的 DataFrame 到结果字典
+            handled_dic[str(title)] = pd.DataFrame(data_df).reset_index(drop=True)
+            self.handled_dic = handled_dic
+            self.current_dic = 'handled_dic'
+
+        return handled_dic
+
 
 """ 魔法方法 """
 class Magic(Manager, Module):
@@ -6451,7 +6455,7 @@ class Magic(Manager, Module):
     2. 返回的结果只是为了其它数据获取的需要，类属性中的结果对曲线的操作要更重要
     3. 所有点输入均为 list 包含 tuple 类型，返回均为 DataFrame 类型
     4. 只有输入的参数不为 dict 其余均为 dict 格式
-    5. 数据的检索顺序与 self.dic_order 相关，且不会改变 self.data_dic
+    5. 数据的检索顺序与 self.current_dic 相关，且不会改变 self.data_dic
 
     Attention:
     1. All methods use temporary variables to store results first to improve the readability
@@ -6460,7 +6464,7 @@ class Magic(Manager, Module):
        and the result in the class attribute is more important for the operation of the curve
     3. All entries are of the tuple type and the DataFrame type is returned
     4. Only the entered parameters are not dict. All other parameters are dict
-    5. The retrieval order of the data is related to self.dic_order and does not change self.data_dic
+    5. The retrieval order of the data is related to self.current_dic and does not change self.data_dic
     """
 
     # 0 初始化
@@ -6567,9 +6571,6 @@ class Magic(Manager, Module):
         # 10 realize_data()
         self.realized_dic = None  # (dict) value 为真实后的 DataFrame 数据
 
-        self.dic_order = ['realized_dic', 'fitting_dic', 'balanced_dic', 'adjusted_dic',
-                          'normalized_dic', 'dispersed_dic', 'smoothing_dic', 'data_dic']
-
     # 1 平滑
     def smooth_curve(self, data_dic: Optional[Dict[str, DataFrame]] = None, degree_smoothing: int = 3,
                      smooth_smoothing: Optional[float] = 0.05, weight_dic: Optional[Dict[str, list]] = None) \
@@ -6594,12 +6595,8 @@ class Magic(Manager, Module):
         if data_dic is not None:
             data_dic = copy.deepcopy(data_dic)
         else:
-            # 使用循环打印 self.dic_order 列表中的属性值
-            for attr_name in self.dic_order:
-                selected_data_dic = getattr(self, attr_name)
-                if selected_data_dic is not None:
-                    data_dic = copy.deepcopy(selected_data_dic)
-                    break
+            # 使用 getattr 来动态获取属性
+            data_dic = copy.deepcopy(getattr(self, self.current_dic))
 
         spline_smoothing_dic = {}
 
@@ -6614,9 +6611,27 @@ class Magic(Manager, Module):
             else:
                 weight = None
 
-            # 获取 DataFrame 中的 x 和 y 列数据
-            x_section = data_df.iloc[:, 0].values  # 获取 DataFrame 的 x 列数据
-            y_section = data_df.iloc[:, 1].values  # 获取 DataFrame 的 y 列数据
+            # 获取 DataFrame 中的 X 和 Y 列数据
+            x_section = data_df.iloc[:, 0].values  # 获取 DataFrame 的 X 列数据
+            y_section = data_df.iloc[:, 1].values  # 获取 DataFrame 的 Y 列数据
+
+            # 检查 x_section 是否有重复值
+            unique_x_section, counts = np.unique(x_section, return_counts=True)
+            duplicates = unique_x_section[counts > 1]
+
+            if len(duplicates) > 0:
+                class_name = self.__class__.__name__  # 获取类名
+                method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+                raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                                 f"x_section contains duplicate values: {duplicates}")
+
+            # 添加检查权重列表的长度是否与数据量一致
+            if weight is not None and len(weight) != len(x_section):
+                class_name = self.__class__.__name__  # 获取类名
+                method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+                raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                                 f"The length of weight_list for '{title}' ({len(weight_list)}) does not match "
+                                 f"the data length ({len(x_section)}).")
 
             # 使用 UnivariateSpline 进行曲线拟合
             smoothing_spline = UnivariateSpline(x_section, y_section, k=degree_smoothing, s=smooth_smoothing, w=weight)
@@ -6848,12 +6863,8 @@ class Magic(Manager, Module):
         if data_dic is not None:
             data_dic = copy.deepcopy(data_dic)
         else:
-            # 使用循环打印 self.dic_order 列表中的属性值
-            for attr_name in self.dic_order:
-                selected_data_dic = getattr(self, attr_name)
-                if selected_data_dic is not None:
-                    data_dic = copy.deepcopy(selected_data_dic)
-                    break
+            # 使用 getattr 来动态获取属性
+            data_dic = copy.deepcopy(getattr(self, self.current_dic))
 
         self.interval_disperse = interval_disperse
         dispersed_dic = {}
@@ -6923,12 +6934,8 @@ class Magic(Manager, Module):
         if data_dic is not None:
             data_dic = copy.deepcopy(data_dic)
         else:
-            # 使用循环打印 self.dic_order 列表中的属性值
-            for attr_name in self.dic_order:
-                selected_data_dic = getattr(self, attr_name)
-                if selected_data_dic is not None:
-                    data_dic = copy.deepcopy(selected_data_dic)
-                    break
+            # 使用 getattr 来动态获取属性
+            data_dic = copy.deepcopy(getattr(self, self.current_dic))
 
         # 将需要处理的 key_point 赋给 key_point_dic
         if key_point_dic is not None:
@@ -7007,8 +7014,9 @@ class Magic(Manager, Module):
             data_df.reset_index(drop=True, inplace=True)
             normalized_dic[title] = data_df
 
-        self.normalized_dic = normalized_dic
         self.normalize_rule_dic = normalize_rule_dic
+        self.normalized_dic = normalized_dic
+        self.current_dic = 'normalized_dic'
 
         key_normalized_dic = {}
 
@@ -7106,7 +7114,6 @@ class Magic(Manager, Module):
             key_normalized_dic = None
 
         self.key_normalized_dic = key_normalized_dic
-        self.current_dic = 'key_normalized_dic'
 
         return normalized_dic, key_normalized_dic
 
@@ -7143,12 +7150,8 @@ class Magic(Manager, Module):
         if data_dic is not None:
             data_dic = copy.deepcopy(data_dic)
         else:
-            # 使用循环打印 self.dic_order 列表中的属性值
-            for attr_name in self.dic_order:
-                selected_data_dic = getattr(self, attr_name)
-                if selected_data_dic is not None:
-                    data_dic = copy.deepcopy(selected_data_dic)
-                    break
+            # 使用 getattr 来动态获取属性
+            data_dic = copy.deepcopy(getattr(self, self.current_dic))
 
         adjusted_dic = {}
         adjust_rule_dic = {}
@@ -7236,8 +7239,9 @@ class Magic(Manager, Module):
             data_df.reset_index(drop=True, inplace=True)
             adjusted_dic[title] = data_df
 
-        self.adjusted_dic = adjusted_dic
         self.adjust_rule_dic = adjust_rule_dic
+        self.adjusted_dic = adjusted_dic
+        self.current_dic = 'adjusted_dic'
 
         key_adjusted_dic = {}
 
@@ -7313,7 +7317,6 @@ class Magic(Manager, Module):
             key_adjusted_dic = None
 
         self.key_adjusted_dic = key_adjusted_dic
-        self.current_dic = 'key_adjusted_dic'
 
         return adjusted_dic, key_adjusted_dic
 
@@ -7350,12 +7353,8 @@ class Magic(Manager, Module):
         if data_dic is not None:
             data_dic = copy.deepcopy(data_dic)
         else:
-            # 使用循环打印 self.dic_order 列表中的属性值
-            for attr_name in self.dic_order:
-                selected_data_dic = getattr(self, attr_name)
-                if selected_data_dic is not None:
-                    data_dic = copy.deepcopy(selected_data_dic)
-                    break
+            # 使用 getattr 来动态获取属性
+            data_dic = copy.deepcopy(getattr(self, self.current_dic))
 
         # 将需要处理的 key_point 赋给 key_point_dic
         if key_point_dic is not None:
@@ -7444,16 +7443,16 @@ class Magic(Manager, Module):
                 weight_list_dic[title] = weight_list
                 balanced_dic = copy.deepcopy(data_dic)
 
-        self.balanced_dic = balanced_dic
         self.weight_list_dic = weight_list_dic
+        self.balanced_dic = balanced_dic
         self.current_dic = 'balanced_dic'
 
         return balanced_dic, weight_list_dic
 
     # 8 拟合曲线
     def fit_curve(self, data_dic: Optional[Dict[str, DataFrame]] = None, degree_fitting: int = 4,
-                  smooth_fitting: Optional[float] = 0.05, weight_dic: Optional[Dict[str, list]] = None) \
-            -> Dict[str, any]:
+                  smooth_fitting: Optional[float] = 0.05, add_weight: bool = True,
+                  weight_dic: Optional[Dict[str, list]] = None) -> Dict[str, any]:
         """
         使用 UnivariateSpline 进行曲线拟合，所用精度为原数据精度
         Perform curve fitting using UnivariateSpline with the accuracy of the original data.
@@ -7464,7 +7463,8 @@ class Magic(Manager, Module):
         :param data_dic: (dict) 若被赋值，则将会对该 dict 进行操作，其中 key 为数据的 title，value 为数据的 DataFrame 表格
         :param degree_fitting: (int) 曲线阶数，越大越平滑，1 <= degree <= 5，推荐为 4
         :param smooth_fitting: (float) 平滑因子，越小越接近原数据， 推荐越小越好:0, 0.05
-        :param weight_dic: (dict) 权重参数的 dict，若被赋值则会用来加权
+        :param add_weight: (bool) 是否添加权重，默认为 True
+        :param weight_dic: (dict) 权重参数的 dict，若被赋值则会用来加权，只有当 add_weight is True 时才有效
 
         :return spline_fitting_dic: (dict) 曲线的 dict ，其中 key 为数据的 title，value 为曲线的 scipy
         例如：spline_fitting_dic = {'title1': scipy1, 'title2': scipy2}
@@ -7474,12 +7474,8 @@ class Magic(Manager, Module):
         if data_dic is not None:
             data_dic = copy.deepcopy(data_dic)
         else:
-            # 使用循环打印 self.dic_order 列表中的属性值
-            for attr_name in self.dic_order:
-                selected_data_dic = getattr(self, attr_name)
-                if selected_data_dic is not None:
-                    data_dic = copy.deepcopy(selected_data_dic)
-                    break
+            # 使用 getattr 来动态获取属性
+            data_dic = copy.deepcopy(getattr(self, self.current_dic))
 
         # 没有外加权重的情况下，用 self.assign_weight_list
         if weight_dic is not None:
@@ -7493,9 +7489,33 @@ class Magic(Manager, Module):
         for title, data_df in data_dic.items():
             weight_list = weight_dic[title]
 
-            # 获取 DataFrame 中的 x 和 y 列数据
+            # 检查是否添加权重
+            if add_weight:
+                weight_list = weight_list
+            else:
+                weight_list = None
+
+            # 获取 DataFrame 中的 X 和 Y 列数据
             x_section = data_df.iloc[:, 0].values
             y_section = data_df.iloc[:, 1].values
+
+            # 检查 x_section 是否有重复值
+            unique_x_section, counts = np.unique(x_section, return_counts=True)
+            duplicates = unique_x_section[counts > 1]
+
+            if len(duplicates) > 0:
+                class_name = self.__class__.__name__  # 获取类名
+                method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+                raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                                 f"x_section contains duplicate values: {duplicates}")
+
+            # 添加检查权重列表的长度是否与数据量一致
+            if weight_list is not None and len(weight) != len(x_section):
+                class_name = self.__class__.__name__  # 获取类名
+                method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+                raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                                 f"The length of weight_list for '{title}' ({len(weight_list)}) does not match "
+                                 f"the data length ({len(x_section)}).")
 
             # 使用 UnivariateSpline 进行曲线拟合
             spline_fitting = UnivariateSpline(x_section, y_section, k=degree_fitting, s=smooth_fitting, w=weight_list)
@@ -7582,12 +7602,8 @@ class Magic(Manager, Module):
         if data_dic is not None:
             data_dic = copy.deepcopy(data_dic)
         else:
-            # 使用循环打印 self.dic_order 列表中的属性值
-            for attr_name in self.dic_order:
-                selected_data_dic = getattr(self, attr_name)
-                if selected_data_dic is not None:
-                    data_dic = copy.deepcopy(selected_data_dic)
-                    break
+            # 使用 getattr 来动态获取属性
+            data_dic = copy.deepcopy(getattr(self, self.current_dic))
 
         realized_dic = {}
         column_names = [self.x_label, self.y_label]

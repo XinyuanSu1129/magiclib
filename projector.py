@@ -1350,7 +1350,7 @@ class TEA(Keyword):
 
         :param save_path: (str) 文件的保存路径
         :param show_in_one: (bool) 是否将所有图绘制在一张图像中，默认为否
-        :param show_peak: (bool) 是否打印峰值信息，默认为是
+        :param show_peak: (bool) 是否打印峰值信息，默认为 True
         :param kwargs: 可加的关键词参数
 
         :return: None
@@ -1397,7 +1397,7 @@ class TEA(Keyword):
         Plotting the Thermal Expansion and Its First Derivative Curve.
 
         :param save_path: (str) 文件的保存路径
-        :param show_peak: (bool) 是否打印峰值信息，默认为是
+        :param show_peak: (bool) 是否打印峰值信息，默认为 True
         :param left_color: (str / tuple) 左轴曲线，即原始曲线的颜色，默认为亮红色 (Tomato色)
         :param left_style: (str) 左轴曲线，即原始曲线的风格，默认为线条
         :param right_color: (str / tuple) 右轴曲线，即一阶导数曲线的颜色，默认为亮蓝色 (Cornflower Blue色)

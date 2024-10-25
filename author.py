@@ -48,7 +48,7 @@ class Helper:
         Attention: 1. English is searched by the letters together, without checking for correct spelling.
                    2. Don't check punctuation or other emojis.
 
-        :param show_print: (str) 是否打印结果，默认为是
+        :param show_print: (bool) 是否打印结果，默认为 True
 
         :return num_english_words: (int) 英文本文内容的词数
         :return num_chinese_characters: (int) 中文本文内容的字数
@@ -96,7 +96,7 @@ class Helper:
                       each sentence is consistent.
                    2. Any number of associated whitespace characters are ignored after each period.
 
-        :param show_print: (str) 是否打印结果，默认为是
+        :param show_print: (bool) 是否打印结果，默认为 True
 
         :return output_text: (str) 包含所有需要打印内容的字符串
         """
@@ -172,7 +172,7 @@ class Helper:
                    3. The beginning and ending newlines are deleted, and the extra newline character is deleted
                       so that it remains one.
 
-        :param show_print: (str) 是否打印结果，默认为是
+        :param show_print: (bool) 是否打印结果，默认为 True
 
         :return output_text: (str) 包含所有需要打印内容的字符串
         """

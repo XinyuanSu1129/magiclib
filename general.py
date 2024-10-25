@@ -279,7 +279,7 @@ class Function:
         Check the encoding types of TXT files or all TXT files in a directory.
 
         :param path: (str) TXT 文件路径或目录路径
-        :param show: (bool) 是否打印，默认为是
+        :param show: (bool) 是否打印，默认为 True
 
         :return: results: (str) 返回文件编码的结果
         """
@@ -334,7 +334,7 @@ class Function:
 
         :param path: (str) TXT 文件路径或目录路径
         :param target_encoding: (str) 目标编码类型，默认为 UTF-16
-        :param show: (bool)  是否打印更改编码类型的文件，默认为是
+        :param show: (bool)  是否打印更改编码类型的文件，默认为 True
 
         :return: None
         """
@@ -388,7 +388,7 @@ class Function:
         :param path: (str) 需要更改扩展名的文件的目录路径
         :param old_extension: (str) 旧扩展名，无需加点
         :param new_extension: (str) 新扩展名，无需加点
-        :param show: (bool) 是否打印更改扩展名的文件，默认为是
+        :param show: (bool) 是否打印更改扩展名的文件，默认为 True
 
         :return: None
         """
@@ -5790,7 +5790,7 @@ class Module(Optimizer):
         :param data_dic: (dict) key 为 title，value 为 DataFrame
         :param x_threshold: (float) 差值的搜索范围，满足条件的点应当在这个范围内达到大于 y_threshold 的要求。默认为 0.05
         :param y_threshold: (float) 区间内最大最小值的差与整个函数最大最小值的差，需要大于这个比例。默认为 0.1
-        :param show: (bool)是否展示图像，默认为是
+        :param show: (bool)是否展示图像，默认为 True
 
         :return peak_dic: (dict) 输出的 dict ，key 为 title，value 为每个数据的峰值点的 X 坐标
         """
@@ -5918,7 +5918,7 @@ class Module(Optimizer):
         :param data_dic: (dict) key 为 title，value 为 DataFrame
         :param x_threshold: (float) 平台最小的 X 轴向距离，为比例，默认为 0.1
         :param y_threshold: (float) 平台最大最小值差与函数最大最小差的比例，需要小于这个值，默认为 0.05
-        :param show: (bool)是否展示图像，默认为是
+        :param show: (bool)是否展示图像，默认为 True
 
         :return fragment_dic: (dict) 输出的 dict ，key 为 title，value 为每个数据的 list 形式的平台区间的 X 坐标
         """
@@ -6918,7 +6918,7 @@ class Magic(Manager, Module):
         :param x_max_limit: (float) 横坐标标准化的目标值
         :param y_min_limit: (float) 横坐标标准化的目标值
         :param y_max_limit: (float) 纵坐标标准化的目标值
-        :param normalize_key: (bool) 是否标准化特殊点 key，默认为是
+        :param normalize_key: (bool) 是否标准化特殊点 key，默认为 True
 
         :return normalized_dic: (dic) 标准化后的 dic，其中 key 为数据的 title，value 为标准后的 DataFrame
         :return key_normalized_dic: (dic) 特殊点 key 标准化后的 dic，其中 key 为数据的 title，
@@ -7132,10 +7132,10 @@ class Magic(Manager, Module):
 
         :param data_dic: (dict) 若被赋值，则将会对该 dict 进行操作，其中 key 为数据的 title，value 为数据的 DataFrame 表格
         :param key_point_dic: (dict) 若被赋值，则将会对该 dict 进行操作，其中 key 为数据的 title，value 为一个包含特殊点的 dict
-        :param point_original: (float) 放缩的标准点，与 point_target 中允许 1 个元素值为 None，默认为 (x_max, y_max)
-        :param locate_point_original: (bool) 是否开起寻点，默认为是
-        :param point_target: (tuple) 需要放缩到的目标坐标，与 point_original 中允许 1 个元素值为 None，默认为 (x_max, y_max)
-        :param adjust_key: (bool) 是否放缩特殊点 key，默认为是
+        :param point_original: (float) 放缩的标准点，与 point_target 中允许 1 个元素值为 None，默认为 Y 最大值点对应的坐标
+        :param locate_point_original: (bool) 是否开起寻点，默认为 True
+        :param point_target: (tuple) 需要放缩到的目标坐标，与 point_original 中允许 1 个元素值为 None，默认为 Y 最大值点对应的坐标
+        :param adjust_key: (bool) 是否放缩特殊点 key，默认为 True
 
         :return adjusted_dic: (dic) 放缩后的 dic，其中 key 为数据的 title，value 为放缩后的 DataFrame
         :return key_adjusted_dic: (dic) 特殊点 key 放缩后的 dic，其中 key 为数据的 title，value 为特殊点 key 放缩后的 DataFrame

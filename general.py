@@ -7591,7 +7591,7 @@ class Magic(Manager, Module):
         return fitting_dic
 
     # 10 真实化
-    def realize_data(self, data_dic: Optional[Dict[str, DataFrame]] = None, noise_level: float = 0.01,
+    def realize_data(self, data_dic: Optional[Dict[str, DataFrame]] = None, noise_level: float = 0,
                      protected_column: Optional[int] = 0, interval_realize: int = 0) -> Dict[str, DataFrame]:
         """
         给数据添加噪声，使得数据更加真实
@@ -7601,7 +7601,7 @@ class Magic(Manager, Module):
                   noise_level = 0.01, protected_column =0, interval_disperse = 1, weight = None
 
         :param data_dic: (dict) 若被赋值，则将会对该 dict 进行操作，其中 key 为数据的 title，value 为数据的 DataFrame 表格
-        :param noise_level: (float) 噪声等级，越小越接近原数据
+        :param noise_level: (float) 噪声等级，越小越接近原数据，此项为正态分布中的标准差，默认为 0
         :param protected_column: (int) 需要保护的列索引，默认为 0，表示保护第一列
         :param interval_realize: (int) 噪声点的间隔（默认为 0，表示每个点都加噪声）
 

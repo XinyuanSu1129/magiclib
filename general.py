@@ -7487,11 +7487,10 @@ class Magic(Manager, Module):
 
         # 遍历 dict 以完成所有数据的处理
         for title, data_df in data_dic.items():
-            weight_list = weight_dic[title]
 
             # 检查是否添加权重
             if add_weight:
-                weight_list = weight_list
+                weight_list = weight_dic[title]
             else:
                 weight_list = None
 

@@ -7321,10 +7321,10 @@ class Magic(Manager, Module):
         return adjusted_dic, key_adjusted_dic
 
     # 7 加权
-    def assign_weight(self, data_dic: Optional[Dict[str, DataFrame]] = None, key_point_dic: Optional[dict] = None,
-                      common_weight: float = 1, extremum_weight: float = 1.5, inflection_weight: float = 1.2,
-                      max_weight: float = 2, min_weight: float = 2, assign_key: bool = True) \
-            -> Tuple[Dict[str, DataFrame], Optional[Dict[str, list]]]:
+    def assign_weight(self, data_dic: Optional[Dict[str, DataFrame]] = None, add_key_dic: bool = True,
+                      key_point_dic: Optional[dict] = None, common_weight: float = 1, extremum_weight: float = 1.5,
+                      inflection_weight: float = 1.2, max_weight: float = 2, min_weight: float = 2,
+                      assign_key: bool = True) -> Tuple[Dict[str, DataFrame], Optional[Dict[str, list]]]:
         """
         将所有特殊点与普通点整合到一个 DataFrame 表格中，并根据输入的参数计算权重
         Integrate all special points and normal points into one DataFrame table,
@@ -7335,6 +7335,7 @@ class Magic(Manager, Module):
                     max_weight = 2, min_weight = 2
 
         :param data_dic: (dict) 若被赋值，则将会对该 dict 进行操作，其中 key 为数据的 title，value 为数据的 DataFrame 表格
+        :param add_key_dic: (bool) 是否添加权重点，以下参数只有当 add_key_dic is True 时才有意义，默认为 True
         :param key_point_dic: (dict) 若被赋值，则将会对该 dict 进行操作，其中 key 为数据的 title，value 为一个包含特殊点的 dict
         :param common_weight: (float) 普通点的权重
         :param extremum_weight:(float) 极值点的权重
@@ -7344,7 +7345,7 @@ class Magic(Manager, Module):
         :param assign_key: (bool) 是否赋予特殊点 key 以权重
 
         :return balanced_dic: (dict) 包含所有坐标的 DataFrame 组成的 dict，key 为 title，value 为整合后的 DataFrame
-        return weight_dic: (dict) 权重的列表的 dict，key 为 title，value 为权重的 list
+        :return weight_dic: (dict) 权重的列表的 dict，key 为 title，value 为权重的 list
         例如：balanced_dic = {'title1': DataFrame1, 'title2': DataFrame2}
              weight_list_dic = {'title1': weight_list1, 'title2': weight_list2}
         """
@@ -7356,11 +7357,21 @@ class Magic(Manager, Module):
             # 使用 getattr 来动态获取属性
             data_dic = copy.deepcopy(getattr(self, self.current_dic))
 
-        # 将需要处理的 key_point 赋给 key_point_dic
-        if key_point_dic is not None:
-            key_point_dic = copy.deepcopy(key_point_dic)
+        # 检查是否需要加权
+        if add_key_dic:
+            # 将需要处理的 key_point 赋给 key_point_dic
+            if key_point_dic is not None:
+                key_point_dic = copy.deepcopy(key_point_dic)
+            else:
+                key_point_dic = copy.deepcopy(self.key_adjusted_dic)
         else:
-            key_point_dic = copy.deepcopy(self.key_adjusted_dic)
+            balanced_dic = data_dic  # 两个属性均不变
+            weight_list_dic = self.weight_list_dic
+            self.weight_list_dic = weight_list_dic
+            self.balanced_dic = balanced_dic
+            self.current_dic = 'balanced_dic'
+
+            return balanced_dic, weight_list_dic
 
         balanced_dic = {}
         weight_list_dic = {}

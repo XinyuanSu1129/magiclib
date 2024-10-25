@@ -242,6 +242,7 @@ MAGIC
                 Add a new method move_points() to class Module.
 --> 6.1.3       24-10-25 13:31 Add a new method handle_duplicate_x() to class Module.
                 Changed how the classes Manager, Module, and Magic dictionary are read.
+                Added the option to choose whether to be weighted or not, in the class Magic.
                     
                     
  ------ Needing ------

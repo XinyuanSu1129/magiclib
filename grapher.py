@@ -1381,7 +1381,7 @@ class Plotter(general.Manager):
     # 山脊图
     def plot_ridge(self, data_dic: Optional[dict] = None, save_path: Union[bool, str] = True, dpi: int = 600,
                    x_label: Optional[str] = None, y_label: Optional[str] = None, bar_label: Optional[str] = None,
-                   colors: all = None, overlap: float = 1, show_bar: bool = True,
+                   colors: all = None, overlap: float = 1, show_bar: bool = True, custom_order: Optional[list] = None,
                    bar_ticks: Union[list, tuple, None] = None, x_range: Union[list, tuple, None] = None,
                    **kwargs) -> None:
         """
@@ -1398,6 +1398,7 @@ class Plotter(general.Manager):
         :param colors: (str) 颜色色系的名称，建议用渐变色调色板
         :param overlap: (float) 峰面积的大小，默认为 1
         :param show_bar: (bool) 是否显示色条，默认为 True
+        :param custom_order: (list) 自定义显示山脊的顺序，从上至下
         :param bar_ticks: (list / tuple) 自定义色条刻度标签，只有 show_bar == True 时才有意义
         :param x_range: (list / tuple) X 轴的最大最小值，需要两项同时输入
         :param kwargs: 绘制山脊图时的关键字参数
@@ -1490,6 +1491,9 @@ class Plotter(general.Manager):
                     raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
                                      f"The length of bar_ticks ({number_bar_ticks}) must be the same as the number of "
                                      f"different categories in the original data ({unique_values_count})")
+
+            data_df[Statistics.Category_Index] = pd.Categorical(data_df[Statistics.Category_Index],
+                                                                categories=custom_order, ordered=True)  # 自定义顺序
 
             # 创建 joyplot
             fig, axes = joypy.joyplot(

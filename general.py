@@ -1685,7 +1685,8 @@ class Optimizer(Function):
 
     # 对 DataFrame 中的数据进行排序
     def sort_df(self, data_dic: Optional[Dict[str, DataFrame]] = None, sort_axis: str = 'row',
-                ascending: bool = True, overwrite: bool = True) -> Dict[str, DataFrame]:
+                ascending: bool = True, position: [Union[List[int], Tuple[int], None]] = None,
+                overwrite: bool = True) -> Dict[str, DataFrame]:
         """
         对 DataFrame 进行排序
         Sort the DataFrame.
@@ -1693,6 +1694,7 @@ class Optimizer(Function):
         :param data_dic: (dict) 输入长度为 1 的数据 dict ，其中 key 是数据的名称，value 是 DataFrame 表格
         :param sort_axis: (str) 排序的方向，'row' 或 'column'，默认为 'row'
         :param ascending: (bool) 是否为升序，默认为 True
+        :param position: (list / tuple) 需要进行排序的行 / 列，默认为 None，表示所有的行 / 列
         :param overwrite: (bool) 是否覆盖原 data_dic 数据，默认为 True
 
         :return: sorted_dic: (dict) 排序之后的 dict
@@ -1707,16 +1709,27 @@ class Optimizer(Function):
         sorted_dic = {}
         for title, data_df in data_dic.items():
 
+            # 初始化 sorted_df 为原 DataFrame 的副本
+            sorted_df = data_df.copy()
+
+            # 确保 position 是一个 list 类型，支持 list 或 tuple
+            positions = list(position) if position is not None else range(len(data_df))
+
             # 对 DataFrame 进行排序
             if sort_axis == 'row':
-                # 按行排序，每行内部排序
-                sorted_df = pd.DataFrame([sorted(row, reverse=not ascending)
-                                          for row in data_df.values], columns=data_df.columns)
+                # 如果提供了 position 参数，排序指定的行
+                for i in positions:
+                    if i < len(data_df):  # 防止越界
+                        # 按行进行排序，确保排序后是 pandas Series
+                        sorted_df.iloc[i, :] = pd.Series(sorted(data_df.iloc[i, :], reverse=not ascending),
+                                                         index=data_df.columns)
             elif sort_axis == 'column':
-                # 对每一列进行排序，然后重新组合
-                sorted_cols = [data_df[col].sort_values(ascending=ascending).reset_index(drop=True)
-                               for col in data_df.columns]
-                sorted_df = pd.concat(sorted_cols, axis=1)
+                # 如果提供了 position 参数，排序指定的列
+                for i in positions:
+                    if i < len(data_df.columns):  # 防止越界
+                        # 按列进行排序，确保排序后是 pandas Series
+                        sorted_df.iloc[:, i] = pd.Series(sorted(data_df.iloc[:, i], reverse=not ascending),
+                                                         index=data_df.index)
             else:
                 class_name = self.__class__.__name__  # 获取类名
                 method_name = inspect.currentframe().f_code.co_name  # 获取方法名

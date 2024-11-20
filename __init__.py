@@ -1,5 +1,5 @@
 
-__version__ = '6.1.3'
+__version__ = '6.1.4'
 
 __all__ = ['general', 'grapher', 'projector', 'performer', 'inspector', 'accessor', 'author', 'potter']
 
@@ -243,6 +243,7 @@ MAGIC
 --> 6.1.3       24-10-25 13:31 Add a new method handle_duplicate_x() to class Module.
                 Changed how the classes Manager, Module, and Magic dictionary are read.
                 Added the option to choose whether to be weighted or not, in the class Magic.
+--> 6.1.4       24-11-20 11:00 The method sort_df () is optimized, and the plot_ridge () is also optimized.
                     
                     
  ------ Needing ------

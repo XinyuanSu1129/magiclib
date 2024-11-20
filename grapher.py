@@ -184,7 +184,7 @@ class Statistics(general.Manager):
         # 若 save_path 为 False 时，本图形不保存
         elif save_path is False:
             save_path = None
-        # 当有指定的 save_path 时，save_path 将会被其赋值，若 save_path == '' 则保存在运行的py文件的目录下
+        # 当有指定的 save_path 时，save_path 将会被其赋值，若 save_path == '' 则保存在运行的 py 文件的目录下
         else:
             save_path = save_path
 
@@ -489,7 +489,7 @@ class Plotter(general.Manager):
             # 若 save_path 为 False 时，本图形不保存
             elif save_path is False:
                 save_path = None
-            # 当有指定的 save_path 时，save_path 将会被其赋值，若 save_path == '' 则保存在运行的py文件的目录下
+            # 当有指定的 save_path 时，save_path 将会被其赋值，若 save_path == '' 则保存在运行的 py 文件的目录下
             else:
                 save_path = save_path
 
@@ -639,7 +639,7 @@ class Plotter(general.Manager):
             # 若 save_path 为 False 时，本图形不保存
             elif save_path is False:
                 save_path = None
-            # 当有指定的 save_path 时，save_path 将会被其赋值，若 save_path == '' 则保存在运行的py文件的目录下
+            # 当有指定的 save_path 时，save_path 将会被其赋值，若 save_path == '' 则保存在运行的 py 文件的目录下
             else:
                 save_path = save_path
 
@@ -789,7 +789,7 @@ class Plotter(general.Manager):
             # 若 save_path 为 False 时，本图形不保存
             elif save_path is False:
                 save_path = None
-            # 当有指定的 save_path 时，save_path 将会被其赋值，若 save_path == '' 则保存在运行的py文件的目录下
+            # 当有指定的 save_path 时，save_path 将会被其赋值，若 save_path == '' 则保存在运行的 py 文件的目录下
             else:
                 save_path = save_path
 
@@ -982,7 +982,7 @@ class Plotter(general.Manager):
             # 若 save_path 为 False 时，本图形不保存
             elif save_path is False:
                 save_path = None
-            # 当有指定的 save_path 时，save_path 将会被其赋值，若 save_path == '' 则保存在运行的py文件的目录下
+            # 当有指定的 save_path 时，save_path 将会被其赋值，若 save_path == '' 则保存在运行的 py 文件的目录下
             else:
                 save_path = save_path
 
@@ -1220,7 +1220,7 @@ class Plotter(general.Manager):
             # 若 save_path 为 False 时，本图形不保存
             elif save_path is False:
                 save_path = None
-            # 当有指定的 save_path 时，save_path 将会被其赋值，若 save_path == '' 则保存在运行的py文件的目录下
+            # 当有指定的 save_path 时，save_path 将会被其赋值，若 save_path == '' 则保存在运行的 py 文件的目录下
             else:
                 save_path = save_path
 
@@ -1385,7 +1385,7 @@ class Plotter(general.Manager):
                    bar_ticks: Union[list, tuple, None] = None, x_range: Union[list, tuple, None] = None,
                    **kwargs) -> None:
         """
-        绘制山脊图，并可以调节横坐标，自定义纵坐标，还可以添加色条。数据要求第一列为标识列
+        绘制山脊图，并可以调节横坐标，自定义纵坐标，还可以添加色条。数据要求只有两列，其中第一列为数据值，第二列为标识 category
         Draw the ridge map, adjust the horizontal coordinate, customize the vertical coordinate,
         and also add color bars. The data requires the first column to identify the column
 
@@ -1425,7 +1425,7 @@ class Plotter(general.Manager):
             # 若 save_path 为 False 时，本图形不保存
             elif save_path is False:
                 save_path = None
-            # 当有指定的 save_path 时，save_path 将会被其赋值，若 save_path == '' 则保存在运行的py文件的目录下
+            # 当有指定的 save_path 时，save_path 将会被其赋值，若 save_path == '' 则保存在运行的 py 文件的目录下
             else:
                 save_path = save_path
 
@@ -1475,10 +1475,12 @@ class Plotter(general.Manager):
 
         for title, data_df in data_dic.items():
 
-            column_first, column_second = data_df.columns[:2]  # 建议第一列为 category
+            print(data_df)
+
+            column_first, column_second = data_df.columns[:2]  # 第二列为 category
 
             # 计算 column_first 中不同数据的数量
-            unique_values_count = data_df[column_first].nunique()
+            unique_values_count = data_df[column_second].nunique()
             if bar_ticks is not None:
                 # 计算 bar_ticks 的长度
                 number_bar_ticks = len(bar_ticks)
@@ -1492,8 +1494,8 @@ class Plotter(general.Manager):
             # 创建 joyplot
             fig, axes = joypy.joyplot(
                 data_df,
-                by=column_first,
-                column=column_second,
+                by=column_second,
+                column=column_first,
 
                 figsize=width_height,
                 colormap=color_palette_reversed,  # 使用反转后的 color_palette，因为原图绘制是反的
@@ -1585,8 +1587,8 @@ class Plotter(general.Manager):
 
                 # 创建色条
                 sm = ScalarMappable(cmap=cmap,
-                                    norm=Normalize(vmin=data_df[column_second].min(),
-                                                   vmax=data_df[column_second].max()))
+                                    norm=Normalize(vmin=data_df[column_first].min(),
+                                                   vmax=data_df[column_first].max()))
                 sm.set_array([])  # 只是为了通过 matplotlib 的检查
                 cbar = fig.colorbar(sm, ax=axes, orientation='vertical', fraction=0.05, pad=0.03)
                 cbar.set_label(bar_label,
@@ -1706,7 +1708,7 @@ class Plotter(general.Manager):
             # 若 save_path 为 False 时，本图形不保存
             elif save_path is False:
                 save_path = None
-            # 当有指定的 save_path 时，save_path 将会被其赋值，若 save_path == '' 则保存在运行的py文件的目录下
+            # 当有指定的 save_path 时，save_path 将会被其赋值，若 save_path == '' 则保存在运行的 py 文件的目录下
             else:
                 save_path = save_path
 
@@ -1905,7 +1907,7 @@ class Plotter(general.Manager):
             # 若 save_path 为 False 时，本图形不保存
             elif save_path is False:
                 save_path = None
-            # 当有指定的 save_path 时，save_path 将会被其赋值，若 save_path == '' 则保存在运行的py文件的目录下
+            # 当有指定的 save_path 时，save_path 将会被其赋值，若 save_path == '' 则保存在运行的 py 文件的目录下
             else:
                 save_path = save_path
 
@@ -2099,7 +2101,7 @@ class Plotter(general.Manager):
             # 若 save_path 为 False 时，本图形不保存
             elif save_path is False:
                 save_path = None
-            # 当有指定的 save_path 时，save_path 将会被其赋值，若 save_path == '' 则保存在运行的py文件的目录下
+            # 当有指定的 save_path 时，save_path 将会被其赋值，若 save_path == '' 则保存在运行的 py 文件的目录下
             else:
                 save_path = save_path
 
@@ -2289,7 +2291,7 @@ class Plotter(general.Manager):
             # 若 save_path 为 False 时，本图形不保存
             elif save_path is False:
                 save_path = None
-            # 当有指定的 save_path 时，save_path 将会被其赋值，若 save_path == '' 则保存在运行的py文件的目录下
+            # 当有指定的 save_path 时，save_path 将会被其赋值，若 save_path == '' 则保存在运行的 py 文件的目录下
             else:
                 save_path = save_path
 
@@ -2478,7 +2480,7 @@ class Plotter(general.Manager):
         # 若 save_path 为 False 时，本图形不保存
         elif save_path is False:
             save_path = None
-        # 当有指定的 save_path 时，save_path 将会被其赋值，若 save_path == '' 则保存在运行的py文件的目录下
+        # 当有指定的 save_path 时，save_path 将会被其赋值，若 save_path == '' 则保存在运行的 py 文件的目录下
         else:
             save_path = save_path
 
@@ -2719,7 +2721,7 @@ class Fitter(general.Manager):
             # 若 save_path 为 False 时，本图形不保存
             elif save_path is False:
                 save_path = None
-            # 当有指定的 save_path 时，save_path 将会被其赋值，若 save_path == '' 则保存在运行的py文件的目录下
+            # 当有指定的 save_path 时，save_path 将会被其赋值，若 save_path == '' 则保存在运行的 py 文件的目录下
             else:
                 save_path = save_path
 
@@ -2929,7 +2931,7 @@ class Fitter(general.Manager):
             # 若 save_path 为 False 时，本图形不保存
             elif save_path is False:
                 save_path = None
-            # 当有指定的 save_path 时，save_path 将会被其赋值，若 save_path == '' 则保存在运行的py文件的目录下
+            # 当有指定的 save_path 时，save_path 将会被其赋值，若 save_path == '' 则保存在运行的 py 文件的目录下
             else:
                 save_path = save_path
 
@@ -3187,7 +3189,7 @@ class Fitter(general.Manager):
             # 若 save_path 为 False 时，本图形不保存
             elif save_path is False:
                 save_path = None
-            # 当有指定的 save_path 时，save_path 将会被其赋值，若 save_path == '' 则保存在运行的py文件的目录下
+            # 当有指定的 save_path 时，save_path 将会被其赋值，若 save_path == '' 则保存在运行的 py 文件的目录下
             else:
                 save_path = save_path
 
@@ -3613,7 +3615,7 @@ class Fitter(general.Manager):
             # 若 save_path 为 False 时，本图形不保存
             elif save_path is False:
                 save_path = None
-            # 当有指定的 save_path 时，save_path 将会被其赋值，若 save_path == '' 则保存在运行的py文件的目录下
+            # 当有指定的 save_path 时，save_path 将会被其赋值，若 save_path == '' 则保存在运行的 py 文件的目录下
             else:
                 save_path = save_path
 
@@ -4018,7 +4020,7 @@ class Fitter(general.Manager):
             # 若 save_path 为 False 时，本图形不保存
             elif save_path is False:
                 save_path = None
-            # 当有指定的 save_path 时，save_path 将会被其赋值，若 save_path == '' 则保存在运行的py文件的目录下
+            # 当有指定的 save_path 时，save_path 将会被其赋值，若 save_path == '' 则保存在运行的 py 文件的目录下
             else:
                 save_path = save_path
 

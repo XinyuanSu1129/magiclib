@@ -90,7 +90,7 @@ class Constructor(general.Magic):
         if magic_database is not None:
             self.magic_database = magic_database
         else:
-            self.magic_database = general.Magic_Database
+            self.magic_database = self.Magic_Database
 
         # 数据初始化分配 和 数据类型导入
         if type(self) == Constructor:  # 当 self 为 Constructor 的直接实例时为真

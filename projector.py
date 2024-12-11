@@ -48,6 +48,7 @@ class Keyword(ABC):
     # 使用全局变量作为类属性的默认值
     Magic_Database = general.Magic_Database
     Standard_Database = general.Standard_Database
+    interval_time = general.interval_time
 
     # 读取原生文件
     @abstractmethod
@@ -586,7 +587,7 @@ class XRD(Keyword):
                 plt.savefig(fname=full_file_path, dpi=dpi)  # 使用完整路径将散点图保存到指定的路径
 
             plt.show()  # 显示图形
-            time.sleep(general.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
+            time.sleep(self.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
 
         # 打印 PDF 卡片的详细信息
         if print_detail:
@@ -746,7 +747,7 @@ class XRD(Keyword):
             plt.savefig(fname=full_file_path, dpi=dpi)  # 使用完整路径将散点图保存到指定的路径
 
         plt.show()  # 显示图形
-        time.sleep(general.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
+        time.sleep(self.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
 
         return None
 
@@ -1514,7 +1515,7 @@ class TEA(Keyword):
                 plt.savefig(fname=full_file_path, dpi=dpi)  # 使用完整路径将散点图保存到指定的路径
 
             plt.show()  # 显示图形
-            time.sleep(general.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
+            time.sleep(self.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
 
         if show_peak:
             for title, data_df in data_dic.items():
@@ -1849,7 +1850,7 @@ class XPS(Keyword):
                 plt.savefig(fname=full_file_path, dpi=dpi)  # 使用完整路径将散点图保存到指定的路径
 
             plt.show()
-            time.sleep(general.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
+            time.sleep(self.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
 
         # 判断是否打印信息
         if show_information:
@@ -2298,7 +2299,7 @@ class Mapping(Keyword):
                 plt.savefig(fname=full_file_path, dpi=dpi)  # 使用完整路径将散点图保存到指定的路径
 
             plt.show()
-            time.sleep(general.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
+            time.sleep(self.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
 
         self.result_image_dic = result_image_dic
 

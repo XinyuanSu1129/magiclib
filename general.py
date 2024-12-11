@@ -4,6 +4,7 @@ magiclib / general
 Attention:
 1. statements should be written in detail
 2. When adding a method in the classes Optimizer, Module, and Magic, it is necessary to include self.current_dic.
+3. Please place the package (magiclib) in the same directory as the database (Database).
 """
 
 
@@ -436,7 +437,7 @@ class Function:
             plt.title('Normal Distribution')
             plt.grid(True)
             plt.show()
-            time.sleep(Manager.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
+            time.sleep(self.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
 
         # 将 numpy 数组转换为列表
         point_normal_list = point_normal_array.tolist()
@@ -483,7 +484,7 @@ class Function:
             plt.legend()
             plt.grid(True)
             plt.show()
-            time.sleep(Manager.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
+            time.sleep(self.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
 
         return std
 
@@ -524,7 +525,7 @@ class Function:
             plt.legend()
             plt.grid(True)
             plt.show()
-            time.sleep(Manager.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
+            time.sleep(self.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
 
         return probability
 
@@ -661,6 +662,10 @@ class Optimizer(Function):
     Attention:
     The default data only operates on self.data_dic
     """
+
+    # 使用全局变量作为类属性的默认值
+    Magic_Database = Magic_Database
+    Category_Index = Category_Index
 
     # 初始化
     def __init__(self, data_dic: Optional[dict] = None, data_df: Optional[DataFrame] = None,
@@ -849,9 +854,9 @@ class Optimizer(Function):
 
             for col in columns_to_modify:
 
-                # 检查并删除 Manager.Category_Index 列
-                if Manager.Category_Index in data_df.columns:
-                    data_df = data_df.drop(columns=Manager.Category_Index)
+                # 检查并删除 self.Category_Index 列
+                if self.Category_Index in data_df.columns:
+                    data_df = data_df.drop(columns=self.Category_Index)
 
                 mean_val = noisy_df[col].mean()  # 计算列的均值
                 noise_scale = mean_val * noise_percentage  # 根据均值计算噪声的标准差
@@ -1153,12 +1158,12 @@ class Optimizer(Function):
 
         return scaled_dic
 
-    # 将长度为 1 的 dict 中的 DataFrame 按照 Manager.Category_Index 进行分开
+    # 将长度为 1 的 dict 中的 DataFrame 按照 self.Category_Index 进行分开
     def separate_df_by_category(self, data_dic: Optional[Dict[str, DataFrame]] = None, overwrite: bool = True)\
             -> Dict[str, DataFrame]:
         """
-        将 dict 中的数据按照 Manager.Category_Index 分开
-        Separate the data in the dict by Manager.Category_Index.
+        将 dict 中的数据按照 self.Category_Index 分开
+        Separate the data in the dict by self.Category_Index.
 
         :param data_dic: (dict) 长度为 1 需要分开的 dict
         :param overwrite: (bool) 是否覆盖原 data_dic 数据，默认为 True
@@ -1182,17 +1187,17 @@ class Optimizer(Function):
         # 获取 dict 的唯一键
         data_df = list(data_dic.values())[0]
 
-        # 检查是否存在 Manager.Category_Index 列
-        if Manager.Category_Index not in data_df.columns:
+        # 检查是否存在 self.Category_Index 列
+        if self.Category_Index not in data_df.columns:
             class_name = self.__class__.__name__  # 获取类名
             method_name = inspect.currentframe().f_code.co_name  # 获取方法名
             raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
-                             f"Error: {Manager.Category_Index} column not found in the table.")
+                             f"Error: {self.Category_Index} column not found in the table.")
 
-        # 按 Manager.Category_Index 列的值分割 DataFrame
-        categories = data_df[Manager.Category_Index].unique()
-        separated_dic = {cat: data_df[data_df[Manager.Category_Index] == cat].
-        drop(columns=Manager.Category_Index).reset_index(drop=True) for cat in
+        # 按 self.Category_Index 列的值分割 DataFrame
+        categories = data_df[self.Category_Index].unique()
+        separated_dic = {cat: data_df[data_df[self.Category_Index] == cat].
+        drop(columns=self.Category_Index).reset_index(drop=True) for cat in
                               categories}
 
         # 覆盖原数据
@@ -1483,7 +1488,7 @@ class Optimizer(Function):
             # 重置索引，避免在concat时产生NaN
             df.reset_index(drop=True, inplace=True)
             # 添加类别列
-            df[Manager.Category_Index] = category
+            df[self.Category_Index] = category
             # 将更新后的DataFrame添加到列表中
             dfs.append(df)
 
@@ -1508,7 +1513,7 @@ class Optimizer(Function):
         """
         转换长度为 1 的 dict，在宽格式和长格式之间自动转换
         Converts a dict of length 1 with Manager.
-        Category_Index to automatically convert between wide and long formats.
+        self.Category_Index to automatically convert between wide and long formats.
 
         :param data_dic: (dict) 输入长度为 1 的数据 dict ，其中 key 是数据的名称，value 是 DataFrame 表格
         :param overwrite: (bool) 是否覆盖原 data_dic 数据，默认为 True
@@ -1526,10 +1531,10 @@ class Optimizer(Function):
         key = list(data_dic.keys())[0]
         df = list(data_dic.values())[0]
 
-        # 如果存在 Manager.Category_Index 列，则假定 DataFrame 为长格式，需要转换为宽格式
-        if Manager.Category_Index in df.columns:
+        # 如果存在 self.Category_Index 列，则假定 DataFrame 为长格式，需要转换为宽格式
+        if self.Category_Index in df.columns:
             # 使用 pivot 方法将长格式转为宽格式
-            wide_df = df.pivot_table(index=df.index, columns=Manager.Category_Index, values=df.columns[0],
+            wide_df = df.pivot_table(index=df.index, columns=self.Category_Index, values=df.columns[0],
                                      aggfunc='first')
 
             # 重设索引，并将可能产生的多级列简化为单级
@@ -1545,20 +1550,20 @@ class Optimizer(Function):
             # 构建新的字典
             converted_dic = {key: wide_df}
 
-        # 如果不存在 Manager.Category_Index 列，则假定 DataFrame 为宽格式，需要转换为长格式
+        # 如果不存在 self.Category_Index 列，则假定 DataFrame 为宽格式，需要转换为长格式
         else:
             # 从宽格式转换到长格式
-            long_df = df.melt(var_name=Manager.Category_Index, value_name='content')
+            long_df = df.melt(var_name=self.Category_Index, value_name='content')
 
-            # 按 Manager.Category_Index 分组，然后裁剪，以确保所有类别长度一致
-            grouped = long_df.groupby(Manager.Category_Index)
+            # 按 self.Category_Index 分组，然后裁剪，以确保所有类别长度一致
+            grouped = long_df.groupby(self.Category_Index)
             min_length = grouped.size().min()
             adjusted_long_df = pd.concat([group_df.iloc[:min_length] for _, group_df in grouped])
 
-            # 调整列的顺序，确保 Manager.Category_Index 列在第二列
-            cols = adjusted_long_df.columns.drop(Manager.Category_Index).tolist()
-            # 将 Manager.Category_Index 列插入到第一列的位置，即索引 1（Python 是从 0 开始计数的）
-            cols.insert(1, Manager.Category_Index)
+            # 调整列的顺序，确保 self.Category_Index 列在第二列
+            cols = adjusted_long_df.columns.drop(self.Category_Index).tolist()
+            # 将 self.Category_Index 列插入到第一列的位置，即索引 1（Python 是从 0 开始计数的）
+            cols.insert(1, self.Category_Index)
             adjusted_long_df = adjusted_long_df[cols]
 
             # 删除旧索引，创建一个从 0 开始的新索引
@@ -1867,10 +1872,10 @@ class Manager(Optimizer):
     Category_Index = Category_Index
 
     # 字体，大小及加粗
-    Font_title = {'family': 'Times New Roman', 'weight': 'bold', 'size': 22}
-    Font_ticket = {'family': 'Times New Roman', 'weight': 'bold', 'size': 18}
-    Font_legend = {'family': 'Times New Roman', 'weight': 'bold', 'size': 16}
-    Font_mark = {'family': 'Times New Roman', 'weight': 'bold', 'size': 12}
+    font_title = {'family': 'Times New Roman', 'weight': 'bold', 'size': 22}
+    font_ticket = {'family': 'Times New Roman', 'weight': 'bold', 'size': 18}
+    font_legend = {'family': 'Times New Roman', 'weight': 'bold', 'size': 16}
+    font_mark = {'family': 'Times New Roman', 'weight': 'bold', 'size': 12}
 
     # 程序休息时间
     interval_time = interval_time
@@ -1931,7 +1936,7 @@ class Manager(Optimizer):
         if magic_database is not None:
             self.magic_database = magic_database
         else:
-            self.magic_database = Manager.Magic_Database
+            self.magic_database = self.Magic_Database
 
         # file 共有参数 (5，算上 x_label & y_label)
         self.increasing_order = None
@@ -1983,12 +1988,6 @@ class Manager(Optimizer):
         self.point_color = None
         self.point_style = None
         self.point_size = None
-
-        # 字体，大小及加粗
-        self.font_title = Manager.Font_title
-        self.font_ticket = Manager.Font_ticket
-        self.font_legend = Manager.Font_legend
-        self.font_mark = Manager.Font_mark
 
         # 二十种常用的配色方案
         self.color_palette = [
@@ -2202,11 +2201,11 @@ class Manager(Optimizer):
 
             # 获取所有列的名字
             columns = data_df.columns
-            # 创建一个字典，所有列都设置为 float，除了 Manager.Category_Index 列
+            # 创建一个字典，所有列都设置为 float，除了 self.Category_Index 列
             convert_dict = {}
 
             for col in columns:
-                if col == Manager.Category_Index:
+                if col == self.Category_Index:
                     convert_dict[col] = str
                 else:
                     try:
@@ -2288,11 +2287,11 @@ class Manager(Optimizer):
 
                     # 获取所有列的名字
                     columns = data_df.columns
-                    # 创建一个字典，所有列都设置为 float，除了 Manager.Category_Index 列
+                    # 创建一个字典，所有列都设置为 float，除了 self.Category_Index 列
                     convert_dict = {}
 
                     for col in columns:
-                        if col == Manager.Category_Index:
+                        if col == self.Category_Index:
                             convert_dict[col] = str
                         else:
                             try:
@@ -2497,11 +2496,11 @@ class Manager(Optimizer):
 
             # 获取所有列的名字
             columns = data_df.columns
-            # 创建一个字典，所有列都设置为 float，除了 Manager.Category_Index 列
+            # 创建一个字典，所有列都设置为 float，除了 self.Category_Index 列
             convert_dict = {}
 
             for col in columns:
-                if col == Manager.Category_Index:
+                if col == self.Category_Index:
                     convert_dict[col] = str
                 else:
                     try:
@@ -2568,11 +2567,11 @@ class Manager(Optimizer):
 
                     # 获取所有列的名字
                     columns = data_df.columns
-                    # 创建一个字典，所有列都设置为 float，除了 Manager.Category_Index 列
+                    # 创建一个字典，所有列都设置为 float，除了 self.Category_Index 列
                     convert_dict = {}
 
                     for col in columns:
-                        if col == Manager.Category_Index:
+                        if col == self.Category_Index:
                             convert_dict[col] = str
                         else:
                             try:
@@ -4675,7 +4674,7 @@ class Manager(Optimizer):
                 # 判断是否显示图像
                 if show:
                     plt.show()  # 显示图像
-                    time.sleep(Manager.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
+                    time.sleep(self.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
                 else:
                     plt.close()  # 清楚图像，以免对之后的作图进行干扰
 
@@ -4700,7 +4699,7 @@ class Manager(Optimizer):
             # 判断是否显示图像
             if show:
                 plt.show()  # 显示图像
-                time.sleep(Manager.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
+                time.sleep(self.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
             else:
                 plt.close()  # 清楚图像，以免对之后的作图进行干扰
 
@@ -5353,7 +5352,7 @@ class Manager(Optimizer):
                 # 判断是否显示图像
                 if show:
                     plt.show()  # 显示图像
-                    time.sleep(Manager.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
+                    time.sleep(self.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
                 else:
                     plt.close()  # 清楚图像，以免对之后的作图进行干扰
 
@@ -5378,7 +5377,7 @@ class Manager(Optimizer):
             # 判断是否显示图像
             if show:
                 plt.show()  # 显示图像
-                time.sleep(Manager.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
+                time.sleep(self.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
             else:
                 plt.close()  # 清楚图像，以免对之后的作图进行干扰
 
@@ -5858,7 +5857,7 @@ class Module(Optimizer):
                 plt.title(f'{title}')
                 # 展示图像
                 plt.show()
-                time.sleep(Manager.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
+                time.sleep(self.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
 
         return peak_dic
 
@@ -5912,7 +5911,7 @@ class Module(Optimizer):
                 plt.scatter(x[peaks], y[peaks], color='red', marker='^')  # 高亮显示峰值
                 plt.title(f'{title}')
                 plt.show()
-                time.sleep(Manager.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
+                time.sleep(self.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
 
         return peak_dic
 
@@ -5993,7 +5992,7 @@ class Module(Optimizer):
                 plt.title(f'{title}')
                 # 展示图像
                 plt.show()
-                time.sleep(Manager.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
+                time.sleep(self.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
 
         return fragment_dic
 
@@ -6543,7 +6542,7 @@ class Magic(Manager, Module):
         if magic_database is not None:
             self.magic_database = magic_database
         else:
-            self.magic_database = Manager.Magic_Database
+            self.magic_database = self.Magic_Database
 
         # 数据初始化分配 和 数据类型导入
         if type(self) == Magic:  # 当 self 为 Magic 的直接实例时为真

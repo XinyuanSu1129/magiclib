@@ -128,7 +128,7 @@ class Statistics(general.Manager):
         if magic_database is not None:
             self.magic_database = magic_database
         else:
-            self.magic_database = general.Magic_Database
+            self.magic_database = self.Magic_Database
 
         # 数据初始化分配
         if type(self) == Statistics:  # 当 self 为 Statistics 的直接实例时为真
@@ -437,7 +437,7 @@ class Plotter(general.Manager):
         if magic_database is not None:
             self.magic_database = magic_database
         else:
-            self.magic_database = general.Magic_Database
+            self.magic_database = self.Magic_Database
 
         # 数据初始化分配
         if type(self) == Plotter:  # 当 self 为 Plotter 的直接实例时为真
@@ -590,7 +590,7 @@ class Plotter(general.Manager):
                 plt.savefig(fname=full_file_path, dpi=dpi)  # 使用完整路径将散点图保存到指定的路径
 
             plt.show()  # 显示图像
-            time.sleep(general.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
+            time.sleep(self.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
 
         return None
 
@@ -732,7 +732,7 @@ class Plotter(general.Manager):
                 plt.savefig(fname=full_file_path, dpi=dpi)  # 使用完整路径将散点图保存到指定的路径
 
             plt.show()  # 显示图像
-            time.sleep(general.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
+            time.sleep(self.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
 
         return None
 
@@ -927,7 +927,7 @@ class Plotter(general.Manager):
                 plt.savefig(fname=full_file_path, dpi=dpi)  # 使用完整路径将散点图保存到指定的路径
 
             plt.show()  # 显示图形
-            time.sleep(general.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
+            time.sleep(self.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
 
         return None
 
@@ -1164,7 +1164,7 @@ class Plotter(general.Manager):
                 plt.savefig(fname=full_file_path, dpi=dpi)  # 使用完整路径将散点图保存到指定的路径
 
             plt.show()  # 显示图形
-            time.sleep(general.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
+            time.sleep(self.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
 
         return None
 
@@ -1374,7 +1374,7 @@ class Plotter(general.Manager):
                 plt.savefig(fname=full_file_path, dpi=dpi)  # 使用完整路径将散点图保存到指定的路径
 
             plt.show()  # 显示图形
-            time.sleep(general.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
+            time.sleep(self.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
 
         return None
 
@@ -1655,7 +1655,7 @@ class Plotter(general.Manager):
                 plt.savefig(fname=full_file_path, dpi=dpi)  # 使用完整路径将散点图保存到指定的路径
 
             plt.show()  # 显示图形
-            time.sleep(general.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
+            time.sleep(self.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
 
         return None
 
@@ -1859,7 +1859,7 @@ class Plotter(general.Manager):
                 plt.savefig(fname=full_file_path, dpi=dpi)  # 使用完整路径将散点图保存到指定的路径
 
             plt.show()  # 显示图形
-            time.sleep(general.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
+            time.sleep(self.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
 
         return None
 
@@ -2049,7 +2049,7 @@ class Plotter(general.Manager):
                 plt.savefig(fname=full_file_path, dpi=dpi)  # 使用完整路径将散点图保存到指定的路径
 
             plt.show()  # 显示图形
-            time.sleep(general.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
+            time.sleep(self.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
 
         return None
 
@@ -2241,7 +2241,7 @@ class Plotter(general.Manager):
                 plt.savefig(fname=full_file_path, dpi=dpi)  # 使用完整路径将散点图保存到指定的路径
 
             plt.show()  # 显示图像
-            time.sleep(general.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
+            time.sleep(self.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
 
         return None
 
@@ -2439,7 +2439,7 @@ class Plotter(general.Manager):
                 plt.savefig(fname=full_file_path, dpi=dpi)  # 使用完整路径将散点图保存到指定的路径
 
             plt.show()  # 显示图形
-            time.sleep(general.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
+            time.sleep(self.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
 
         return None
 
@@ -2585,7 +2585,7 @@ class Plotter(general.Manager):
             plt.savefig(fname=full_file_path, dpi=dpi)  # 使用完整路径将散点图保存到指定的路径
 
         plt.show()
-        time.sleep(general.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
+        time.sleep(self.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
 
         return None
 
@@ -2665,7 +2665,7 @@ class Fitter(general.Manager):
         if magic_database is not None:
             self.magic_database = magic_database
         else:
-            self.magic_database = general.Magic_Database
+            self.magic_database = self.Magic_Database
 
         # 数据初始化分配
         if type(self) == Fitter:  # 当 self 为 Fitter 的直接实例时为真
@@ -2846,7 +2846,7 @@ class Fitter(general.Manager):
                 plt.savefig(fname=full_file_path, dpi=dpi)  # 使用完整路径将散点图保存到指定的路径
 
             plt.show()  # 显示图像
-            time.sleep(general.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
+            time.sleep(self.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
 
         # 打印公式
         if True:
@@ -3090,7 +3090,7 @@ class Fitter(general.Manager):
                 plt.savefig(fname=full_file_path, dpi=dpi)  # 使用完整路径将散点图保存到指定的路径
 
             plt.show()  # 显示图像
-            time.sleep(general.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
+            time.sleep(self.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
 
         # 打印优化的参数值
         param_values = ", ".join(  # 警告为 IDE 误解
@@ -3509,7 +3509,7 @@ class Fitter(general.Manager):
                 plt.savefig(fname=full_file_path, dpi=dpi)  # 使用完整路径将散点图保存到指定的路径
 
             plt.show()  # 显示图像
-            time.sleep(general.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
+            time.sleep(self.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
 
         # 打印优化的参数值
         if function_model is not None:
@@ -3923,7 +3923,7 @@ class Fitter(general.Manager):
                     plt.savefig(fname=full_file_path, dpi=dpi)  # 使用完整路径将散点图保存到指定的路径
 
                 plt.show()  # 显示图像
-                time.sleep(general.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
+                time.sleep(self.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
 
             # 打印优化的参数值
             if function_model is not None:
@@ -4307,6 +4307,6 @@ class Fitter(general.Manager):
                     plt.savefig(fname=full_file_path, dpi=dpi)  # 使用完整路径将散点图保存到指定的路径
 
                 plt.show()
-                time.sleep(general.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
+                time.sleep(self.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
 
         return None

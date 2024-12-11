@@ -111,7 +111,7 @@ class PotteryBase(general.Manager):
         if magic_database is not None:
             self.magic_database = magic_database
         else:
-            self.magic_database = general.Magic_Database
+            self.magic_database = self.Magic_Database
 
         # 特有参数的初始化
         self.site = site  # 遗址
@@ -2269,7 +2269,7 @@ class Pottery(PotteryBase):
         if magic_database is not None:
             self.magic_database = magic_database
         else:
-            self.magic_database = general.Magic_Database
+            self.magic_database = self.Magic_Database
 
         # 特有参数的初始化
         self.site = site

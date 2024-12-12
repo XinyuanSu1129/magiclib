@@ -14,6 +14,7 @@ import os
 import copy
 import time
 import json
+import shutil
 import random
 import chardet
 import inspect
@@ -646,6 +647,109 @@ class Function:
             print("Corresponding hex value:", hex_value)
 
         return rgb_value, hex_value
+
+    # 复制文件到目标文件夹 (不包括文件夹)
+    @staticmethod
+    def copy_files(source_path: str, destination_path: str, search_all: bool = False, ignore_list: list = None) -> None:
+        """
+        根据指定的参数将文件从源目录复制到目标目录。
+        Copies files from the source directory to the destination directory based on the specified parameters.
+
+        :param source_path: (str) 文件 (夹) 来源的目录，此路径必需是目录
+        :param destination_path: (str) 文件 (夹) 复制到的路径，此路径必需是目录
+        :param search_all: (bool) 是否搜寻来源目录的所有子文件夹，默认为 False.
+        :param ignore_list: (list) 需要忽略的文件或文件夹，默认为 None。如果提供，将自动包含 '.DS_Store'。
+                            该忽略如果是路径的情况下只会记录最后的文件 / 文件夹名 (而无视其路径)，如果忽略了一个文件夹也只算一次忽略。
+                            如果搜寻所有文件，也可以输入目录名称来忽略这个目录下的所有文件。
+
+        :return: None
+        """
+
+        # 检查 source_path 是否为文件夹
+        if not os.path.isdir(source_path):
+            class_name = self.__class__.__name__  # 获取类名
+            method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                             f"source path '{source_path}' must be a directory.")
+
+        # 检查 destination_path 是否为文件夹
+        if not os.path.isdir(destination_path):
+            class_name = self.__class__.__name__  # 获取类名
+            method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                             f"destination path '{destination_path}' must be a directory.")
+
+        # 初始化忽略列表，自动包含 '.DS_Store'
+        if ignore_list is None:
+            ignore_list = []
+        # 提取 '.DS_Store' 的标准形式并加入忽略列表
+        ds_store_path = os.path.join(source_path, '.DS_Store')  # 构建完整路径
+        if ds_store_path not in ignore_list and '.DS_Store' not in ignore_list:
+            ignore_list.append('.DS_Store')
+        # 将忽略项标准化为文件名或相对于 source_path 的路径
+        normalized_ignore_list = set()  # 使用 set 避免重复
+        for item in ignore_list:
+            # 如果是完整路径，提取文件名
+            if os.path.isabs(item):
+                normalized_ignore_list.add(os.path.basename(item))
+            else:
+                normalized_ignore_list.add(item)
+        ignore_set = list(normalized_ignore_list)
+
+        # 初始化文件列表和忽略计数
+        files_to_copy = []
+        ignored_items = []
+
+        # 搜索文件
+        if not search_all:  # 只在顶层寻找文件
+            for entry in os.listdir(source_path):
+                entry_path = os.path.join(source_path, entry)
+                if os.path.isfile(entry_path) and entry not in ignore_set:
+                    files_to_copy.append(entry_path)
+                elif entry in ignore_set and entry != '.DS_Store':  # 忽略但不包括 .DS_Store
+                    ignored_items.append(entry_path)
+        else:  # 递归搜索所有子文件夹
+            for root, _, files in os.walk(source_path):
+                for file in files:
+                    if file not in ignore_set:
+                        files_to_copy.append(os.path.join(root, file))
+                    elif file != '.DS_Store':  # 忽略但不包括 .DS_Store
+                        ignored_items.append(os.path.join(root, file))
+
+        # 检查是否有文件需要复制
+        if not files_to_copy:
+            print(f"\033[31mNo files to copy from \033[34m{source_path}\033[0m to \033[34m{destination_path}\033[0m.")
+            return None
+
+        # 复制文件到目标路径
+        copied_count = 0
+        for file in files_to_copy:
+            base_name = os.path.basename(file)
+            destination_file = os.path.join(destination_path, base_name)
+
+            # 检查文件名冲突
+            if os.path.exists(destination_file):
+                base, ext = os.path.splitext(base_name)
+                counter = 1
+                while os.path.exists(destination_file):
+                    destination_file = os.path.join(destination_path, f"{base}_{counter}{ext}")
+                    counter += 1
+
+            shutil.copy2(file, destination_file)  # 使用 copy2 保留文件元数据
+            copied_count += 1
+
+        # 打印忽略和复制信息
+        if ignored_items:
+            print(
+                f"Copied \033[32m{copied_count}\033[0m files to \033[34m{destination_path}\033[0m, "
+                f"and ignored \033[33m{len(ignored_items)}\033[0m other items."
+            )
+        else:
+            print(
+                f"Copied \033[32m{copied_count}\033[0m files to \033[34m{destination_path}\033[0m."
+            )
+
+        return None
 
 
 """ 优化系统 """

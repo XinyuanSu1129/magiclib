@@ -244,8 +244,9 @@ MAGIC
                 Changed how the classes Manager, Module, and Magic dictionary are read.
                 Added the option to choose whether to be weighted or not, in the class Magic.
 --> 6.1.4       24-11-20 11:00 The method sort_df () is optimized, and the plot_ridge () is also optimized.
---> 6.1.5       24-12-11 11:55 All class attributes are optimized 
+--> 6.1.5       24-12-12 16:00 All class attributes are optimized 
                 so that they can be changed normally when instantiated.
+                Add a new method copy_files() to class Function.
                     
                     
  ------ Needing ------
@@ -307,6 +308,7 @@ calculate_probability()
 get_subdirectories()
 sort_data()
 find_most_color_pixel()
+copy_files()
 
 ------ Optimizer ------
 Magic_Database

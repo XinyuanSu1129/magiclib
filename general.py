@@ -3909,7 +3909,7 @@ class Manager(Optimizer):
         Print variable names and contents in bold text.
 
         文本颜色改变：
-        \033[97m (所变颜色) + Hello (需要变色的文本内容）+ \033[0m
+        \033[31m (红色)，(所变颜色) + Hello (需要变色的文本内容）+ \033[0m
 
         :param variable: (str, bool) 需要打印名称及内容的变量，默认为 self.data_dic，只有当 search != 'current' 时才有效，
                          当 variable == True，且 search 为 'class', 'local' 或 'global' 时，为查找当前环境下的变量

@@ -1,5 +1,5 @@
 
-__version__ = '6.1.5'
+__version__ = '6.1.6'
 
 __all__ = ['general', 'grapher', 'projector', 'performer', 'inspector', 'accessor', 'author', 'potter']
 
@@ -247,11 +247,15 @@ MAGIC
 --> 6.1.5       24-12-12 16:00 All class attributes are optimized 
                 so that they can be changed normally when instantiated.
                 Add a new method copy_files() to class Function.
+--> 6.1.6       24-12-27 Add a new method fitting_multiple_functional_after_fetching() to class Fitting.
+                Fixed a bug in method fitting_multiple_functional().
+                Added a new class Word in the module Author and added the method format_word_document () to it.
                     
                     
  ------ Needing ------
 
---> Added the ability to map in the current directory in module potter, and added the ability to read images.
+--> Figure do not appear properly in the grid when drawing heat maps.
+--> method format_word_document() cannot format the text correctlyin class Author.
 --> Supplement the author content of the module.
 --> Supplement the pottery content of the module.
 
@@ -403,6 +407,7 @@ plot_function()
 polynomial_fitting()
 univariate_fitting()
 fitting_functional_after_fetching()
+fitting_multiple_functional_after_fetching()
 multivariable_fitting()
 fitting_multiple_functional()
 fitting_multiple_according_model()
@@ -561,10 +566,17 @@ Jiangzhai_XRD()
 
 / / / / / * author * / / / / /
 
+Style
+
 ------ Helper ------
 count_words()
 compare_text()
 normalize_spaces()
+
+------ Word ------
+Style
+
+format_word_document()
 
 
 / / / / / * potter * / / / / /

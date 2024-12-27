@@ -9,10 +9,80 @@ Attention:
 # 导入顺序不同有可能导致程序异常
 ''' from . import general'''
 
+import os
 import re
 import inspect
 import difflib
+from docx import Document
+from docx.shared import Pt, Cm
+from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_PARAGRAPH_ALIGNMENT
 from typing import Union, Tuple, Optional, List, Dict, Text
+
+Style = {
+    "main_title": {
+        "font": {
+            "font_name": "Times New Roman",
+            "font_size": 16,
+            "bold": True
+        },
+        "paragraph": {
+            "alignment": "center"  # 居中对齐
+        }
+    },
+    "secondary_title": {
+        "font": {
+            "font_name": "Times New Roman",
+            "font_size": 12,
+            "bold": True
+        },
+        "paragraph": {
+            "alignment": "justify"  # 两端对齐
+        }
+    },
+    "tertiary_title": {
+        "font": {
+            "font_name": "Times New Roman",
+            "font_size": 12,
+            "bold": False
+        },
+        "paragraph": {
+            "alignment": "justify"  # 两端对齐
+        }
+    },
+    "body_text": {
+        "font": {
+            "font_name": "Times New Roman",
+            "font_size": 12,
+            "bold": False
+        },
+        "paragraph": {
+            "alignment": "justify",  # 两端对齐
+            "first_line_indent": 0.63  # 首行缩进 0.63 cm
+        }
+    },
+    "figure_caption": {
+        "font": {
+            "font_name": "Times New Roman",
+            "font_size": 12,
+            "bold": False
+        },
+        "paragraph": {
+            "alignment": "left",  # 左对齐
+            "space_after": True  # 段后空一行
+        }
+    },
+    "table_caption": {
+        "font": {
+            "font_name": "Times New Roman",
+            "font_size": 12,
+            "bold": False
+        },
+        "paragraph": {
+            "alignment": "left",  # 左对齐
+            "space_after": True  # 段后空一行
+        }
+    }
+}
 
 
 """ 检查或修改文本内容 """
@@ -37,7 +107,7 @@ class Helper:
         self.text2 = text2
 
     # 检查文本内容的词数 / 字数
-    def count_words(self, show_print: bool = True):
+    def count_words(self, show_print: bool = True) -> Tuple[int, int]:
         """
         用于检查文本内容的词数 / 字数，中文则是为字数，英文则为词数
         The number of words/words used to check the content of the text is the number of words in Chinese
@@ -85,7 +155,7 @@ class Helper:
         return num_english_words, num_chinese_characters
 
     # 比较文本内容
-    def compare_text(self, show_print: bool = True):
+    def compare_text(self, show_print: bool = True) -> str:
         """
         比较两个文本内容，输出差异并高亮显示，并返回所有打印的内容。
         Compare the two text contents, print the difference and highlight it, and return all the printed content.
@@ -158,7 +228,7 @@ class Helper:
         return output_text
 
     # 修正文本中空格的数量
-    def normalize_spaces(self, show_print: bool = True):
+    def normalize_spaces(self, show_print: bool = True) -> str:
         """
         根据中英文的要求来修正文本中空格的数量
         Normalize the number of Spaces in the text according to the requirements of Chinese and English.
@@ -222,3 +292,188 @@ class Helper:
             print(text_without_spaces)
 
         return text_without_spaces
+
+
+""" 对 word 文档进行修改 """
+class Word:
+    """
+    用于对 word 文档的操作，查找，修改等
+
+    """
+
+    Style = Style
+
+    def __init__(self, read_path: Optional[str] = None, save_path: Optional[str] = None):
+        """
+        接受参数
+
+        :param read_path: (str) word 文档的读取路径
+        :param save_path:  (str) word 文档的保存路径
+        """
+
+        self.read_path = read_path
+        self.save_path = save_path
+
+    # 对文本格式的修改
+    def format_word_document(self, inspection_mode: bool = False) -> None:
+        """
+        修改 Word 文档中的内容格式，使用预定义的 self.Font_Style 字典
+        Modify the format of content in a Word document, using the predefined self.Font_Style dictionary
+
+        文章需要以下格式才能正常被识别：
+            1. 开头第一段直接为文章的标题内容
+            2. 图名必需以 'Fig.' 开头
+            3. 表标题必需第一行以 'Table' 开头，且第二行为其名
+            4. 正文在首个二级标题到参考文献之间
+
+        The article must follow the format below to be properly recognized:
+            1.	The first paragraph at the beginning should directly contain the title of the article.
+            2.	Figure captions must start with “Fig.”
+            3.	Table captions must begin with “Table” on the first line, followed by the name on the second line.
+            4.	The main text should be located between the first second-level heading and the references section.
+
+        :param inspection_mode: (bool) 是否打开检查模式，默认为 False
+
+        :return: None
+        """
+
+        # 文件路径
+        read_path = self.read_path
+        save_path = self.save_path
+
+        # 检查文件路径有效性
+        if not os.path.isfile(self.read_path):
+            class_name = self.__class__.__name__  # 获取类名
+            method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                             f"The specified read_path does not exist or is not a valid file: {self.read_path}")
+
+        # 打开 Word 文档
+        doc = Document(read_path)
+
+        # 标志变量
+        found_main_title = False
+        in_body_text = False
+        table_next_paragraph = False
+
+        # 正则表达式模式
+        second_level_heading_pattern = r"^\s*\d+\.\s*[^0-9]+$"
+        third_level_heading_pattern = r"^\s*\d+\.\d+\.\s*[^0-9]+$"
+        fig_title_pattern = r"^Fig\.\s*\d+\.\s*.*$"
+        table_title_pattern = r"^Table\s*\d+\s*.*$"
+        references_pattern = r"^References$"
+
+        # 遍历文档中的每个段落
+        for idx, para in enumerate(doc.paragraphs):
+            text = para.text.strip()  # 获取段落文本并去掉首尾空格
+            if not text:  # 如果段落为空，则跳过
+                continue
+
+            # 打印原文段落
+            if inspection_mode:
+                print(f'{text}')
+
+            # 如果还未找到主标题，则将当前段落处理为主标题
+            if not found_main_title:
+                run = para.runs[0] if para.runs else para.add_run()
+                run.font.name = self.Style["main_title"]["font"]["font_name"]
+                run.font.size = Pt(self.Style["main_title"]["font"]["font_size"])
+                run.bold = self.Style["main_title"]["font"]["bold"]
+                para.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER  # 使用正确的对齐方式
+                if "first_line_indent" in self.Style["main_title"]["font"]:
+                    para.paragraph_format.first_line_indent = Cm(self.Style["main_title"]["font"]["first_line_indent"])
+                if ("space_after" in self.Style["main_title"]["font"]
+                        and self.Style["main_title"]["font"]["space_after"]):
+                    para.paragraph_format.space_after = Pt(12)
+                found_main_title = True  # 标记已找到主标题
+                print(f'\033[1m\033[3m{text}\033[0m')  # 打印主标题
+                continue
+
+            # 如果匹配到二级标题格式
+            if re.match(second_level_heading_pattern, text):
+                run = para.runs[0] if para.runs else para.add_run()
+                run.font.name = self.Style["secondary_title"]["font"]["font_name"]
+                run.font.size = Pt(self.Style["secondary_title"]["font"]["font_size"])
+                run.bold = self.Style["secondary_title"]["font"]["bold"]
+                para.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT  # 使用正确的对齐方式
+                in_body_text = True  # 标记进入正文部分
+                print(f'\033[91m{text}\033[0m')  # 打印二级标题
+                continue
+
+            # 如果匹配到三级标题格式
+            if re.match(third_level_heading_pattern, text):
+                run = para.runs[0] if para.runs else para.add_run()
+                run.font.name = self.Style["tertiary_title"]["font"]["font_name"]
+                run.font.size = Pt(self.Style["tertiary_title"]["font"]["font_size"])
+                run.bold = self.Style["tertiary_title"]["font"]["bold"]
+                para.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT  # 使用正确的对齐方式
+                if inspection_mode:
+                    print(f'\033[95m{text}\033[0m')  # 打印三级标题
+                else:
+                    print('', end='  ')
+                    print(f'\033[95m{text}\033[0m')  # 打印三级标题
+                continue
+
+            # 如果匹配到图标题格式
+            if re.match(fig_title_pattern, text):
+                run = para.runs[0] if para.runs else para.add_run()
+                run.font.name = self.Style["figure_caption"]["font"]["font_name"]
+                run.font.size = Pt(self.Style["figure_caption"]["font"]["font_size"])
+                run.bold = self.Style["figure_caption"]["font"]["bold"]
+                para.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT  # 使用正确的对齐方式
+                if inspection_mode:
+                    print(f'\033[34;2m{text}\033[0m')  # 打印图标题
+                continue
+
+            # 如果匹配到表格标题格式
+            if re.match(table_title_pattern, text):
+                run = para.runs[0] if para.runs else para.add_run()
+                run.font.name = self.Style["table_caption"]["font"]["font_name"]
+                run.font.size = Pt(self.Style["table_caption"]["font"]["font_size"])
+                run.bold = self.Style["table_caption"]["font"]["bold"]
+                para.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT  # 使用正确的对齐方式
+                table_next_paragraph = "(continued)" not in para.text  # 标记下一段也是表格标题
+                if inspection_mode:
+                    print(f'\033[32;2m{text}\033[0m')  # 打印表格标题
+                continue
+
+            # 如果上一段标记为表格标题的后续段落
+            if table_next_paragraph:
+                run = para.runs[0] if para.runs else para.add_run()
+                run.font.name = self.Style["table_caption"]["font"]["font_name"]
+                run.font.size = Pt(self.Style["table_caption"]["font"]["font_size"])
+                run.bold = self.Style["table_caption"]["font"]["bold"]
+                para.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT  # 使用正确的对齐方式
+                table_next_paragraph = False  # 重置标记
+                if inspection_mode:
+                    print(f'\033[32;2m{text}\033[0m')  # 打印表格标题续
+                continue
+
+            # 如果匹配到参考文献部分
+            if re.match(references_pattern, text):
+                run = para.runs[0] if para.runs else para.add_run()
+                run.font.name = self.Style["body_text"]["font"]["font_name"]
+                run.font.size = Pt(self.Style["body_text"]["font"]["font_size"])
+                run.bold = self.Style["body_text"]["font"]["bold"]
+                para.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT  # 使用正确的对齐方式
+                in_body_text = False  # 标记退出正文部分
+                if inspection_mode:
+                    print(f'\033[37;2m{text}\033[0m')  # 打印参考文献
+                continue
+
+            # 处理正文段落
+            if (found_main_title and not re.match(second_level_heading_pattern, text) and in_body_text
+                    and not re.match(fig_title_pattern, text) and not re.match(table_title_pattern, text)):
+                run = para.runs[0] if para.runs else para.add_run()
+                run.font.name = self.Style["body_text"]["font"]["font_name"]
+                run.font.size = Pt(self.Style["body_text"]["font"]["font_size"])
+                run.bold = self.Style["body_text"]["font"]["bold"]
+                para.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT  # 使用正确的对齐方式
+                if inspection_mode:
+                    print(f'\033[4m{text}\033[0m')  # 打印正文段落）
+
+        # 保存修改后的文档
+        if save_path is not None:
+            doc.save(save_path)
+
+        return None

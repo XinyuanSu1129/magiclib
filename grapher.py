@@ -24,6 +24,7 @@ import scipy.stats as stats
 from scipy.optimize import curve_fit
 from scipy.stats import gaussian_kde
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from scipy.optimize import OptimizeWarning
 from typing import Union, Optional, List, Dict, Callable, Tuple
 import matplotlib.cm as cm
 from matplotlib.cm import ScalarMappable
@@ -52,6 +53,8 @@ from sklearn.tree import DecisionTreeRegressor
 warnings.filterwarnings(action="ignore", category=UserWarning, message=r"set_ticklabels\(\) should only be used "
                                                                        r"with a fixed number of ticks, i.e. "
                                                                        r"after set_ticks\(\) or using a FixedLocator\.")
+# 忽略 OptimizeWarning
+warnings.filterwarnings(action="ignore", category=OptimizeWarning)
 
 
 """ 统计学分析 """
@@ -3537,6 +3540,442 @@ class Fitter(general.Manager):
         else:
             return None
 
+    # 根据取值进行函数拟合 (可接受长度大于 1 的 dict 进行拟合，可添加背景色)
+    def fitting_multiple_functional_after_fetching(self, data_dic: Optional[dict] = None,
+                                                   function_model: Optional[Callable] = None,
+                                                   fetching_method: str = 'mean',
+                                                   box_pattern: Optional[str] = None,
+                                                   lower: Optional[list] = None, upper: Optional[list] = None,
+                                                   p0: Optional[list] = None, evaluation: Optional[int] = 1000,
+                                                   save_path: Union[bool, str] = True, dpi: int = 600,
+                                                   x_label: Optional[str] = None, y_label: Optional[str] = None,
+                                                   show_legend: bool = True, show_grid: bool = False,
+                                                   show_parameter: bool = True, colors: all = None, **kwargs) -> None:
+        """
+        对数据以要求的方式进行处理，然后进行曲线拟合，并可以在拟合后绘制统计学图片
+        Process the data as required, then perform curve fitting, and be able to draw statistical graphs after fitting.
+
+        注意：
+        1. 输入的 DataFrame 应当为多列，按每列的数据进行要求取值
+        2. 输入的 function_model 必需有且只有一个变量参数，且只能在第一个位置
+        Attention:
+        1. The input DataFrame should consist of multiple columns,
+            with values fetched according to requirements for each column.;
+        2. The input function_model must have only one variable parameter, and it can only be in the first position.
+
+        :param data_dic: (dict) 包含一个键值对，键为 title，值为包含多个指标及类别序号的 DataFrame
+        :param function_model: (Callable) 进行拟合的函数，默认不拟合
+        :param fetching_method: (str) 在数据表格中取值的方法，此值用于拟合曲线，有 mean 和 median，默认为均值
+        :param box_pattern: (str) 绘制箱类图，默认为不绘制箱类图
+        :param lower: (list) 对应参数拟合的最小值，如为负无穷大则输入 None，默认均为负无穷大
+        :param upper: (list) 对应参数拟合的最大值，如为正无穷大则输入 None，默认均为正无穷大
+        :param p0: (list) 对应参数开始拟合的点
+        :param evaluation: (int) 进行拟合的次数，数值越大则进行拟合次数越多，时间也越长，默认为 1000 次
+        :param save_path: (str) 图片的保存路径
+        :param dpi: (int) 保存图片的精度，默认为 600
+        :param x_label: (str) X 轴的标题
+        :param y_label: (str) Y 轴的标题
+        :param show_legend: (bool) 是否绘制图例，默认为 True
+        :param show_grid: (bool) 是否绘制网格，默认为 False
+        :param show_parameter: (bool) 是否打印拟合的参数，默认为 True
+        :param colors: (list) 绘制的颜色，需要输入所有线条的颜色，每次循环时不刷新，为了突出差别
+        :param kwargs: curve_fit 方法中的关键字参数
+
+        :return: None
+
+        --- **kwargs ---
+
+        - title: (str) 图片的标题，为 str 类型时为其值，默认为无标题
+        - width_height: (tuple) 图片的宽度和高度，默认为 (6, 4.5)
+
+        - x_min: (float) 横坐标的最小值
+        - x_max: (float) 横坐标的最大值
+        - y_min: (float) 纵坐标的最小值
+        - y_max: (float) 纵坐标的最大值
+
+        - custom_xticks: (list) 横坐标的标点，如想不显示，可以 custom_xticks = []
+        - custom_yticks: (list) 纵坐标的标点，如想不显示，可以 custom_yticks = []
+        - x_rotation: (float) X 轴刻度的旋转角度
+        - y_rotation: (float) Y 轴刻度的旋转角度
+
+        - background_color: (str) 背景色，默认无背景
+        - background_transparency: (float) 背景色的透明度，只有存在背景色时才有意义，默认为 0.15
+
+        - ftol: (float) 是相对误差容忍度，用于确定函数值（即拟合的目标函数）的变化量
+                如果连续迭代中目标函数的变化量小于 ftol 设定的阈值，算法会认为已经达到了足够的精度，从而停止迭代
+        - xtol: (float) 是相对于自变量的容忍度。它决定了算法在自变量（即拟合参数）的变化上的敏感度
+                如果连续迭代中参数的变化小于 xtol 指定的阈值，那么算法会认为参数已经足够接近最优解，进而停止迭代
+        """
+
+        # 检查赋值 (5)
+        if True:
+
+            # 将需要处理的数据赋给 data_dic
+            if data_dic is not None:
+                data_dic = copy.deepcopy(data_dic)
+            else:
+                data_dic = copy.deepcopy(self.data_dic)
+
+            # 当 save_path == True 时，沿用 self.save_path 的设置，此项为默认项
+            if save_path is True:
+                save_path = self.save_path
+            # 若 save_path 为 False 时，本图形不保存
+            elif save_path is False:
+                save_path = None
+            # 当有指定的 save_path 时，save_path 将会被其赋值，若 save_path == '' 则保存在运行的 py 文件的目录下
+            else:
+                save_path = save_path
+
+            if x_label is not None:
+                x_label = x_label
+            elif self.x_label is not None:
+                x_label = self.x_label
+            else:
+                x_label = 'X'
+
+            if y_label is not None:
+                y_label = y_label
+            elif self.y_label is not None:
+                y_label = self.y_label
+            else:
+                y_label = 'Y'
+
+            # 查看是否给出绘图颜色
+            if colors is not None:
+                color_palette = iter(colors)
+            else:
+                color_palette = iter(self.color_palette)
+
+            # 关键字参数初始化
+            image_title = kwargs.pop('title', None)
+            width_height = kwargs.pop('width_height', (6, 4.5))
+
+            x_min = kwargs.pop('x_min', None)
+            x_max = kwargs.pop('x_max', None)
+            y_min = kwargs.pop('y_min', None)
+            y_max = kwargs.pop('y_max', None)
+
+            custom_xticks = kwargs.pop('custom_xticks', None)
+            custom_yticks = kwargs.pop('custom_yticks', None)
+            x_rotation = kwargs.pop('x_rotation', None)
+            y_rotation = kwargs.pop('y_rotation', None)
+
+            background_color = kwargs.pop('background_color', None)
+            background_transparency = kwargs.pop('background_transparency', 0.15)
+
+        # 解包并检查数据，然后进行拟合
+        if True:
+
+            # 创建画布
+            plt.figure(figsize=width_height, dpi=200)
+
+            # 找到每组数据的最大和最小值
+            x_min_global = None
+            x_max_global = None
+            y_min_global = None
+            y_max_global = None
+
+            for title, data_df in data_dic.items():
+
+                if function_model is not None and not callable(function_model):
+                    class_name = self.__class__.__name__  # 获取类名
+                    method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+                    raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                                     f"The 'function_model' argument must be a callable (function).")
+
+                # 检查取值方式
+                if fetching_method == 'mean':  # 计算每列的均值
+                    data_df_values = data_df.mean()
+
+                elif fetching_method == 'median':  # 计算每列的中值
+                    data_df_values = data_df.median()
+
+                else:
+                    class_name = self.__class__.__name__  # 获取类名
+                    method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+                    raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                                     f"Please enter a correct fetching method: mean, median")
+
+                # 创建一个包含均值的新 DataFrame，并将第一列设置为原数据的列名
+                data_optimized_df = pd.DataFrame(data_df_values).reset_index()
+                data_optimized_df.columns = ['Column', 'Mean']
+
+                # 从 DataFrame 提取数据
+                x_values = data_optimized_df.iloc[:, 0].values
+                y_values = data_optimized_df.iloc[:, 1].values
+
+                # 检查并更新全局最大最小值
+                if x_min_global is None or min(list(x_values)) < x_min_global:
+                    x_min_global = min(list(x_values))
+                if x_max_global is None or max(list(x_values)) > x_max_global:
+                    x_max_global = max(list(x_values))
+                if y_min_global is None or data_df.min().min() < y_min_global:
+                    y_min_global = data_df.min().min()
+                if y_max_global is None or data_df.max().max() > y_max_global:
+                    y_max_global = data_df.max().max()
+
+                if function_model is not None:
+
+                    # 获取函数的签名
+                    signature = inspect.signature(function_model)
+                    # 计算参数数量 (减去第一个自变量参数)
+                    num_parameters = len(signature.parameters) - 1
+
+                    # 创建边界
+                    if lower is None:
+                        lower_bound = [-np.inf] * num_parameters
+                    else:
+                        lower_bound = [-np.inf if x is None else x for x in lower]  # 将列表中的 None 替换为 np.inf
+
+                    if upper is None:
+                        upper_bound = [np.inf] * num_parameters
+                    else:
+                        upper_bound = [np.inf if x is None else x for x in upper]  # 将列表中的 None 替换为 np.inf
+
+                    # 使用 curve_fit 进行模型拟合
+                    fit_results = curve_fit(f=function_model,
+                                            xdata=x_values,
+                                            ydata=y_values,
+                                            p0=p0,
+                                            bounds=(lower_bound, upper_bound),
+                                            maxfev=evaluation,
+                                            **kwargs
+                                            )
+
+                    popt = fit_results[0]  # 进行拟合的关键参数
+                    # pcov = fit_results[1]  # 进行评估的关键参数
+
+                    # 拟合曲线数据
+                    x_smooth = np.linspace(x_values.min(), x_values.max(), 1000)
+                    y_fit = function_model(x_smooth, *popt)
+
+                else:
+                    x_smooth = None
+                    y_fit = None
+                    popt = None
+                    # pcov = None
+
+                # 将 DataFrame 转换为长格式，适用于 seaborn 绘图函数
+                df_long = data_df.melt(var_name=x_label, value_name=y_label)
+                # 绘制散点图，使用列名作为横坐标，对应值作为纵坐标
+                current_color = next(color_palette)
+                sns.scatterplot(data=df_long,
+                                x=x_label, y=y_label,
+                                color=current_color,
+                                s=50,
+                                edgecolor='black',
+                                label='Original Data')
+
+                # 交换 DataFrame 的第一列和第二列，并赋值给一个新的 DataFrame
+                df_swapped = df_long.copy()  # 绘制箱体部分
+                df_swapped[df_swapped.columns[1]], df_swapped[df_swapped.columns[0]] = \
+                    df_long[df_long.columns[0]], df_long[df_long.columns[1]]
+                df_swapped = df_swapped.astype(float)  # 转换为浮点型
+
+                # 绘制箱类图
+                if box_pattern is None:
+                    pass
+
+                elif box_pattern == 'boxplot':  # 绘制制箱形图，显示分布的中位数、四分位数和异常值
+                    current_color = next(color_palette)
+                    sns.boxplot(data=df_swapped, x=x_label, y=y_label, color=current_color)
+
+                elif box_pattern == 'violinplot':  # 绘制小提琴图，结合了箱形图的特点和核密度估计
+                    current_color = next(color_palette)
+                    sns.violinplot(data=df_swapped, x=x_label, y=y_label, color=current_color)
+
+                elif box_pattern == 'stripplot':  # 绘制散点图，显示所有单个数据点
+                    current_color = next(color_palette)
+                    sns.stripplot(data=df_swapped, x=x_label, y=y_label, color=current_color)
+
+                elif box_pattern == 'swarmplot':  # 绘制不重叠的散点图，显示所有单个数据点
+                    current_color = next(color_palette)
+                    sns.swarmplot(data=df_swapped, x=x_label, y=y_label, color=current_color)
+
+                elif box_pattern == 'barplot':  # 绘制条形图，显示数值变量的中心趋势估计
+                    current_color = next(color_palette)
+                    sns.barplot(data=df_swapped, x=x_label, y=y_label, color=current_color)
+
+                elif box_pattern == 'countplot':  # 绘制条形图，显示类别变量中每个类别的观测数量
+                    current_color = next(color_palette)
+                    sns.countplot(data=df_swapped, x=x_label, y=y_label, color=current_color)
+
+                elif box_pattern == 'pointplot':  # 绘制点图，显示点估计和置信区间
+                    current_color = next(color_palette)
+                    sns.pointplot(data=df_swapped, x=x_label, y=y_label, color=current_color)
+
+                elif box_pattern == 'lineplot':  # 绘制线形图，适合显示数据随时间变化的趋势
+                    current_color = next(color_palette)
+                    sns.lineplot(data=df_swapped, x=x_label, y=y_label, color=current_color)
+
+                elif box_pattern == 'regplot':  # 绘制回归模型的拟合线和散点图
+                    current_color = next(color_palette)
+                    sns.regplot(data=df_swapped, x=x_label, y=y_label, color=current_color)
+
+                elif box_pattern == 'scatterplot':  # 绘制散点图，适合查看两个数值变量之间的关系
+                    current_color = next(color_palette)
+                    sns.scatterplot(data=df_swapped, x=x_label, y=y_label, color=current_color)
+
+                elif box_pattern == 'histplot':  # 绘制直方图，显示数值变量的分布
+                    current_color = next(color_palette)
+                    sns.histplot(data=df_swapped, x=x_label, y=y_label, color=current_color)
+
+                elif box_pattern == 'kdeplot':  # 绘制核密度估计图，显示数值变量的分布趋势
+                    current_color = next(color_palette)
+                    sns.kdeplot(data=df_swapped, x=x_label, y=y_label, color=current_color)
+
+                elif box_pattern == 'ecdfplot':  # 绘制经验累积分布函数图
+                    current_color = next(color_palette)
+                    sns.ecdfplot(data=df_swapped, x=x_label, y=y_label, color=current_color)
+
+                elif box_pattern == 'boxenplot':  # 绘制增强箱形图，适合大型数据集
+                    current_color = next(color_palette)
+                    sns.boxenplot(data=df_swapped, x=x_label, y=y_label, color=current_color)
+
+                else:
+                    box_patterns = [
+                        'boxplot',
+                        'violinplot',
+                        'stripplot',
+                        'swarmplot',
+                        'barplot',
+                        'countplot',
+                        'pointplot',
+                        'lineplot',
+                        'regplot',
+                        'scatterplot',
+                        'histplot',
+                        'kdeplot',
+                        'ecdfplot',
+                        'boxenplot'
+                    ]
+                    class_name = self.__class__.__name__  # 获取类名
+                    method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+                    raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                                     f"Please enter the correct box_pattern. "
+                                     f"Allowed keyword arguments are: {', '.join(box_patterns)}")
+
+                # 绘制取值后的数据
+                current_color = next(color_palette)
+                plt.scatter(x_values, y_values,
+                            label=fetching_method.capitalize() + ' Data',
+                            color=current_color,
+                            s=100,
+                            edgecolor='black')
+
+                # 绘制拟合后的数据
+                if function_model is not None:
+                    current_color = next(color_palette)
+                    plt.plot(x_smooth, y_fit, label='Fitted Curve', color=current_color)
+
+                # 打印优化的参数值
+                if function_model is not None:
+                    param_values = ", ".join(  # 警告为 IDE 误解
+                        [f"\033[34m{name}\033[0m=\033[32m{value:.6f}\033[0m" for name, value in
+                         zip(function_model.__code__.co_varnames[1:], popt)])
+
+                    # 使用拟合参数生成预测值
+                    y_pred = function_model(x_values, *popt)
+
+                    # 计算 R² 值
+                    rss = np.sum((y_values - y_pred) ** 2)
+                    tss = np.sum((y_values - np.mean(y_values)) ** 2)
+                    r_squared = 1 - (rss / tss)
+
+                    # 打印参数
+                    if show_parameter:
+                        print(f"For \033[33mFitting\033[0m", end=': ')
+                        print(f"\033[34m{title}\033[0m: \033[32m{fetching_method}\033[0m", end=', ')
+                        print(f"{param_values}", end=', ')
+                        print(f"\033[31mR²\033[0m=\033[31m{r_squared:.6f}\033[0m")
+
+        # 图片格式调整
+        if True:
+
+            # 将最大最小值调整为原来的 1.15 倍
+            x_range = x_max_global - x_min_global
+            x_min_global -= 0.15 * x_range
+            x_max_global += 0.15 * x_range
+
+            y_range = y_max_global - y_min_global
+            y_min_global -= 0.15 * y_range
+            y_max_global += 0.15 * y_range
+
+            # 使用条件表达式来设置边界
+            x_lower_limit = x_min if (x_min is not None) else x_min_global
+            x_upper_limit = x_max if (x_max is not None) else x_max_global
+            y_lower_limit = y_min if (y_min is not None) else y_min_global
+            y_upper_limit = y_max if (y_max is not None) else y_max_global
+
+            # 背景
+            if background_color is not None:
+                # 调用函数加背景，防止刻度被锁住
+                self.change_imshow(background_color=background_color,
+                                   background_transparency=background_transparency, show_in_one=True,
+                                   x_min=np.float64(x_lower_limit), x_max=np.float64(x_upper_limit),
+                                   y_min=np.float64(y_lower_limit), y_max=np.float64(y_upper_limit))
+
+            plt.xlim((x_min, x_max))
+            plt.ylim((y_min, y_max))
+
+            if custom_xticks is not None:
+                plt.xticks(custom_xticks)
+            if custom_yticks is not None:
+                plt.yticks(custom_yticks)
+
+            # 只有当 show_legend 为 True 时才会有图例
+            if show_legend:
+                plt.legend(prop=self.font_legend)
+            else:
+                plt.legend().remove()
+
+            plt.grid(show_grid)  # 绘制网格
+
+            # 设置标题
+            if isinstance(image_title, str):
+                plt.title(image_title, fontdict=self.font_title)
+
+            # 坐标轴标题字体
+            plt.xlabel(x_label, fontdict=self.font_title)
+            plt.ylabel(y_label, fontdict=self.font_title)
+
+            # 刻度轴字体
+            plt.xticks(fontsize=self.font_ticket['size'],
+                       fontweight=self.font_ticket['weight'],
+                       fontfamily=self.font_ticket['family'],
+                       rotation=x_rotation)
+            plt.yticks(fontsize=self.font_ticket['size'],
+                       fontweight=self.font_ticket['weight'],
+                       fontfamily=self.font_ticket['family'],
+                       rotation=y_rotation)
+
+            plt.tight_layout()
+
+        # 保存图片
+        if True:
+
+            # 如果提供了保存路径，则保存图像到指定路径
+            if save_path is not None:  # 如果 save_path 的值不为 None，则保存
+                file_name = "Fitting.png"  # 初始文件名为 "Fitting.png"
+                full_file_path = os.path.join(save_path, file_name)  # 创建完整的文件路径
+
+                if os.path.exists(full_file_path):  # 查看该文件名是否存在
+                    count = 1
+                    file_name = "Fitting.png" + f"_{count}.png"  # 若该文件名存在则在后面加 '_1'
+                    full_file_path = os.path.join(save_path, file_name)  # 更新完整的文件路径
+
+                    while os.path.exists(full_file_path):  # 找是否存在，并不断 +1，直到不重复
+                        count += 1
+                        file_name = "Fitting.png" + f"_{count}.png"
+                        full_file_path = os.path.join(save_path, file_name)  # 更新完整的文件路径
+
+                plt.savefig(fname=full_file_path, dpi=dpi)  # 使用完整路径将散点图保存到指定的路径
+
+            plt.show()  # 显示图像
+            time.sleep(self.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
+
+        return None
+
     # 多自变量单因变量拟合 (仅接受长度为 1 的 dict 进行拟合)
     def multivariable_fitting(self):
         pass
@@ -3727,7 +4166,7 @@ class Fitter(general.Manager):
 
                     if content_list is not None:
                         # 将数据 DataFrame 存入 dict
-                        key_dict[content_list[idx]] = data_df
+                        key_dict[content_list[int(idx)]] = data_df
 
                 # 将当前标题的数据 dict 存入最终结果 dict
                 result_dict[key] = key_dict

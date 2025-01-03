@@ -1411,6 +1411,8 @@ class TEA(Keyword):
 
         --- **kwargs ---
 
+        - x_min: (float) X 轴的最小值，默认为 None
+        - x_max: (float) X 轴的最大值，默认为 None
         - left_min: (float) 左轴的最小值，默认为 None
         - left_max: (float) 左轴的最大值，默认为 None
         - right_min: (float) 右轴的最小值，默认为 None
@@ -1433,6 +1435,8 @@ class TEA(Keyword):
                 save_path = save_path
 
             # 关键字参数初始化
+            x_min = kwargs.pop('x_min', None)
+            x_max = kwargs.pop('x_max', None)
             left_min = kwargs.pop('left_min', None)
             left_max = kwargs.pop('left_max', None)
             right_min = kwargs.pop('right_min', None)
@@ -1486,6 +1490,9 @@ class TEA(Keyword):
             plt.yticks(fontsize=self.data.font_ticket['size'],
                        fontweight=self.data.font_ticket['weight'],
                        fontfamily=self.data.font_ticket['family'])
+
+            # 设置 X 轴
+            plt.xlim((x_min, x_max))
 
             # 设置左轴的最小值和最大值
             ax1.set_ylim(bottom=left_min, top=left_max)

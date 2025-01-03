@@ -171,6 +171,44 @@ class Constructor(general.Magic):
 
         self.plot_line(show_in_one=True, background_transparency=0.3)
 
+    # 调整 DIL 数值，并绘制一阶导数图 250103
+    def adjust_and_plot_DIL(self, read_path, save_path=None, max_value=None, color_pattern=None, **kwargs):
+
+        if color_pattern == 'red':
+            background_color = sns.light_palette(color='#800000', reverse=True, as_cmap=True)
+            background_transparency = 0.3
+        elif color_pattern == 'gray':
+            background_color = sns.dark_palette(color='#808080', reverse=True, as_cmap=True)
+            background_transparency = 0.2
+
+        m1 = projector.TEA(read_path=read_path, save_path=save_path)
+        m1.read()
+
+        m2 = general.Magic(data_dic=m1.data.data_dic)
+        m2.smooth_curve()
+        print(1)
+        m2.locate_point()
+        print(2)
+        m2.improve_precision()
+        print(3)
+        m2.reduce_precision()
+        print(4)
+        m2.normalize_data(y_max_limit=max_value)
+        print(5)
+        m2.adjust_data()
+        print(6)
+        m2.assign_weight()
+        print(7)
+        m2.fit_curve()
+        print(8)
+        m2.restore_precision()
+        print(9)
+        # m2.realize_data()
+        print(10)
+
+        m1.data.data_dic = m2.fitting_dic
+        m1.plot_derivative(background_color=background_color, background_transparency=background_transparency, **kwargs)
+
 
 """ 文章图像 """
 class Article:

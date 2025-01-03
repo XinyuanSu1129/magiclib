@@ -6759,7 +6759,7 @@ class Magic(Manager, Module):
         return spline_smoothing_dic
 
     # 2 定位
-    def locate_point(self, spline_dic=None, precision_dxdy: float = 0.001, locate_extremum: bool = True,
+    def locate_point(self, spline_dic=None, precision_dxdy: float = 0.01, locate_extremum: bool = True,
                      locate_inflection: bool = True, locate_max: bool = True, locate_min: bool = True) \
             -> dict[str, Dict[str, Optional[DataFrame]]]:
         """
@@ -6767,11 +6767,11 @@ class Magic(Manager, Module):
         Find extrema, inflection points, maximum points, and minimum points in the input DataFrame.
 
         STEP TWO： (Recommended parameter Settings for this method:)
-                 precision_dxdy = 0.001, locate_inflection = True, locate_extremum = True,
+                 precision_dxdy = 0.01, locate_inflection = True, locate_extremum = True,
                  locate_max = True, locate_min = True
 
         :param spline_dic: (scipy) 若被赋值，则将会对该 dict 进行操作，其中 key 为数据的 title，value 为数据的 scipy 曲线
-        :param precision_dxdy: (float) 导函数的精度，默认为0.001
+        :param precision_dxdy: (float) 导函数的精度，默认为0.01
         :param locate_extremum: (bool) 是否寻找极值点，默认为 True，为 False 时输出该项为 None
         :param locate_inflection: (bool) 是否寻找拐点，默认为 True，为 False 时输出该项为 None
         :param locate_max: (bool) 是否寻找最大值，默认为 True，为 False 时输出该项为 None
@@ -6912,16 +6912,16 @@ class Magic(Manager, Module):
         return key_point_dic
 
     # 3 高精度
-    def improve_precision(self, spline_dic=None, precision_smoothing: float = 0.001) -> Dict[str, DataFrame]:
+    def improve_precision(self, spline_dic=None, precision_smoothing: float = 0.1) -> Dict[str, DataFrame]:
         """
         将曲线实例化高精度的 DataFrame 数据
         Instantiate the curve as a high-precision DataFrame data.
 
         STEP THREE： (Recommended parameter Settings for this method:)
-                  precision_smoothing = 0.001
+                  precision_smoothing = 0.1
 
         :param spline_dic: (scipy) 若被赋值，则将会对该 dict 进行操作，其中 key 为数据的 title，value 为数据的 scipy 曲线
-        :param precision_smoothing: (float) 高精度曲线的精度
+        :param precision_smoothing: (float) 高精度曲线的精度，默认精度为 0.1
 
         :return smoothing_dic：(dict) 包含高精度曲线表格的 dict，key 为特殊点的类型，value 为对应的高精度 DataFrame
         例如：smoothing_dic = {'title1': DataFrame1, 'title2': DataFrame2}
@@ -6959,17 +6959,17 @@ class Magic(Manager, Module):
 
     # 4 低精度
     def reduce_precision(self, data_dic: Optional[Dict[str, DataFrame]] = None,
-                         interval_disperse: Optional[float] = 0.05) -> Dict[str, DataFrame]:
+                         interval_disperse: Optional[float] = 0.5) -> Dict[str, DataFrame]:
         """
         将原始数据进行处理，删除部分数据使得横坐标间隔大于等于指定的间隔
         Process the raw data by removing some data points to ensure that the
         horizontal coordinate interval is greater than or equal to the specified interval.
 
         STEP FORE： (Recommended parameter Settings for this method:)
-                  interval_disperse = 0.05
+                  interval_disperse = 0.5
 
         :param data_dic: (dict) 若被赋值，则将会对该 dict 进行操作，其中 key 为数据的 title，value 为数据的 DataFrame 表格
-        :param interval_disperse: (float) 横坐标的间隔，删除数据使得横坐标间隔大于等于该值，为 None 时不删除，默认为 0.05
+        :param interval_disperse: (float) 横坐标的间隔，删除数据使得横坐标间隔大于等于该值，为 None 时不删除，默认为 0.5
 
         :return dispersed_dic: (dict) 曲线的 dict，其中 key 为数据的 title，value 为对应的低精度 DataFrame
         例如：dispersed_dic = {'title1': DataFrame1, 'title2': DataFrame2}
@@ -7636,7 +7636,7 @@ class Magic(Manager, Module):
                                  f"x_section contains duplicate values: {duplicates}")
 
             # 添加检查权重列表的长度是否与数据量一致
-            if weight_list is not None and len(weight) != len(x_section):
+            if weight_list is not None and len(weight_list) != len(x_section):
                 class_name = self.__class__.__name__  # 获取类名
                 method_name = inspect.currentframe().f_code.co_name  # 获取方法名
                 raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "

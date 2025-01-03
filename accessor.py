@@ -172,7 +172,7 @@ class Constructor(general.Magic):
         self.plot_line(show_in_one=True, background_transparency=0.3)
 
     # 调整 DIL 数值，并绘制一阶导数图 250103
-    def adjust_and_plot_DIL(self, read_path, save_path=None, max_value=None, color_pattern=None, **kwargs):
+    def adjust_and_plot_DIL(self, read_path, save_path=None, point_target=None, color_pattern=None, **kwargs):
 
         if color_pattern == 'red':
             background_color = sns.light_palette(color='#800000', reverse=True, as_cmap=True)
@@ -193,9 +193,9 @@ class Constructor(general.Magic):
         print(3)
         m2.reduce_precision()
         print(4)
-        m2.normalize_data(y_max_limit=max_value)
+        m2.normalize_data()
         print(5)
-        m2.adjust_data()
+        m2.adjust_data(point_target=point_target)
         print(6)
         m2.assign_weight()
         print(7)

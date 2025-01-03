@@ -251,6 +251,7 @@ MAGIC
                 Fixed a bug in method fitting_multiple_functional().
                 Added a new class Word in the module Author and added the method format_word_document () to it.
 --> 6.1.6       25-01-03 Some values are adjusted in general and projector.
+                New methods have been added to accessor.
                
                     
  ------ Needing ------

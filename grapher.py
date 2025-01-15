@@ -142,15 +142,18 @@ class Statistics(general.Manager):
 
         # pca_analysis()
         self.pca_dic = None
+        # pca_loadings()
+        self.pca_loadings_dic = None
 
     # 主成分分析绘图
     def pca_analysis(self, data_dic: Optional[dict] = None, save_path: Union[bool, str] = True,
                      draw_ellipse: bool = True, std: float = 2,  margin_ratio: float = 0.1, dpi: int = 600,
                      width_height: tuple = (6, 4.5), category: Optional[str] = None, colors: Optional[list] = None,
-                     show_result: bool = True, show_legend: bool = True, **kwargs) -> Dict[str, DataFrame]:
+                     show_result: bool = True, show_legend: bool = True, loadings_analysis: bool = False,
+                     **kwargs) -> Dict[str, DataFrame]:
         """
-        此方法用于绘制 PCA 结果图
-        This method is used to plot the PCA result.
+        此方法用于绘制 PCA 结果图，输入的 data_dic 的长度需为 1
+        This method is used to plot the PCA result, and the length of the input data_dic must be 1.
 
         :param data_dic: (dict) 包含一个键值对，键为 title，值为包含多个指标及类别序号的 DataFrame
         :param save_path: (str) 图片的保存路径
@@ -163,6 +166,7 @@ class Statistics(general.Manager):
         :param colors: (str / list) 置信椭圆的填充颜色
         :param show_result: (bool) 是否打印结果，默认为 True
         :param show_legend: (bool) 是否显示图例，默认为 True
+        :param loadings_analysis: (bool) 是否一同绘制载荷图，使用的参数为默认值，默认为 False
         :param kwargs: Ellipse 方法中的关键字参数
 
         :return pca_dic: (dict) PCA 分析后的数据 dict ，键为 title，值为 DataFrame 形式的 PCA 结果
@@ -340,17 +344,17 @@ class Statistics(general.Manager):
 
         # 如果提供了保存路径，则保存图像到指定路径
         if save_path is not None:  # 如果 save_path 的值不为 None，则保存
-            file_name = title + ".png"  # 初始文件名为 "title.png"
+            file_name = title + "_PCA.png"  # 初始文件名为 "title_PCA.png"
             full_file_path = os.path.join(save_path, file_name)  # 创建完整的文件路径
 
             if os.path.exists(full_file_path):  # 查看该文件名是否存在
                 count = 1
-                file_name = title + f"_{count}.png"  # 若该文件名存在则在后面加 '_1'
+                file_name = title + "_PCA" + f"_{count}.png"  # 若该文件名存在则在后面加 '_1'
                 full_file_path = os.path.join(save_path, file_name)  # 更新完整的文件路径
 
                 while os.path.exists(full_file_path):  # 找是否存在，并不断 +1，直到不重复
                     count += 1
-                    file_name = title + f"_{count}.png"
+                    file_name = title + "_PCA" + f"_{count}.png"
                     full_file_path = os.path.join(save_path, file_name)  # 更新完整的文件路径
 
             plt.savefig(fname=full_file_path, dpi=dpi)  # 使用完整路径将散点图保存到指定的路径
@@ -365,7 +369,186 @@ class Statistics(general.Manager):
         pca_dic = {title: pca_df}
         self.pca_dic = pca_dic
 
+        # 分析载荷图的情况
+        if loadings_analysis:
+            self.pca_loadings(save_path=save_path)
+
         return pca_dic
+
+    # PCA 载荷图
+    def pca_loadings(self, data_dic: Optional[dict] = None, save_path: Union[bool, str] = True,
+                     margin_ratio: float = 0.1, dpi: int = 600, width_height: tuple = (6, 4.5),
+                     category: Optional[str] = None, colors: Optional[list] = None, show_result: bool = True,
+                     show_legend: bool = True, **kwargs) -> Dict[str, DataFrame]:
+        """
+        此方法用于绘制 PCA 结果图中的载荷图，输入 data_dic 的长度需为 1
+        This method is used to plot the load plot in the PCA result plot,
+        and the length of the input data_dic must be 1.
+
+        :param data_dic: (dict) 包含一个键值对，键为 title，值为包含多个指标及类别序号的 DataFrame
+        :param save_path: (str) 图片的保存路径
+        :param margin_ratio: (float) 数据距边界的比例，该值需要介于 0 至 1 之间，默认为 0.1
+        :param dpi: (int) 图像保存和展示的精度
+        :param width_height: (tuple) 图片的宽度和高度，默认为(6, 4.5)
+        :param category: (str) 用于分类的列，默认为 Statistics.Category_Index
+        :param colors: (str / list) 第一个颜色为箭头颜色，第二个颜色为文本颜色，默认为红与黑
+        :param show_result: (bool) 是否打印结果，默认为 True
+        :param show_legend: (bool) 是否显示图例，默认为 True
+        :param kwargs: Ellipse 方法中的关键字参数
+
+        :return pca_dic: (dict) PCA 分析后的数据 dict ，键为 title，值为 DataFrame 形式的 PCA 结果
+
+        --- **kwargs ---
+
+        - x_min: (float) X 轴最小值
+        - x_max: (float) X 轴最大值
+        - y_min: (float) Y 轴最小值
+        - y_max: (float) Y 轴最大值
+        """
+
+        # 将需要处理的数据赋给 data_dic
+        if data_dic is not None:
+            data_dic = copy.deepcopy(data_dic)
+        else:
+            data_dic = copy.deepcopy(self.data_dic)
+
+        # 当 save_path == True 时，沿用 self.save_path 的设置，此项为默认项
+        if save_path is True:
+            save_path = self.save_path
+        # 若 save_path 为 False 时，本图形不保存
+        elif save_path is False:
+            save_path = None
+        # 当有指定的 save_path 时，save_path 将会被其赋值，若 save_path == '' 则保存在运行的 py 文件的目录下
+        else:
+            save_path = save_path
+
+        # 用于分类的列
+        if category is not None:
+            category = category
+        else:
+            category = Statistics.Category_Index
+
+        # 查看是否给出绘图颜色
+        if colors is not None:
+            color_palette = colors
+        else:
+            color_palette = ['red', 'black']
+
+        # 关键字参数初始化
+        x_min = kwargs.pop('x_min', None)
+        x_max = kwargs.pop('x_max', None)
+        y_min = kwargs.pop('y_min', None)
+        y_max = kwargs.pop('y_max', None)
+
+        title, data_df = list(data_dic.items())[0]  # 从 data_dic 中获取标题和数据
+
+        # 提取数据部分和类别标签部分
+        category_index = data_df[category]  # 提取名为 Category_Index 的列作为类别标签
+        before_pca_df = data_df.drop(columns=[category])  # 剩下的列作为数据部分
+
+        # 获取数据中的唯一类别值
+        unique_category = np.unique(category_index)
+
+        # 如果未提供颜色列表，则默认选择 color_palette 中与类别数量匹配的前几个颜色
+        if colors is None:
+            if len(unique_category) > len(color_palette):
+                class_name = self.__class__.__name__  # 获取类名
+                method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+                raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                                 f"There are {len(unique_category)} categories "
+                                 f"but only {len(color_palette)} colors in the default color palette.")
+            colors = color_palette[:len(unique_category)]
+
+        # 验证提供的颜色数量是否与类别数量匹配
+        elif len(colors) != len(unique_category):
+            class_name = self.__class__.__name__  # 获取类名
+            method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                             f"There are {len(unique_category)} categories but you provided {len(colors)} colors.")
+
+        # 用 0 替换所有缺失值
+        before_pca_df = before_pca_df.fillna(0)
+
+        # 标准化处理数据
+        x_scaled = StandardScaler().fit_transform(before_pca_df)
+
+        # 使用 PCA 将数据降至 2D
+        pca = PCA(n_components=2)
+        pca.fit(x_scaled)  # 执行 PCA
+
+        # 获取变量载荷
+        pca_loadings = pca.components_.T
+
+        pc1_loadings = pca_loadings[:, 0]  # 主成分 1 的载荷
+        pc2_loadings = pca_loadings[:, 1]  # 主成分 2 的载荷
+
+        # 绘制变量载荷图
+        fig, ax = plt.subplots(figsize=width_height, dpi=200, facecolor="w")
+
+        for i, variable in enumerate(before_pca_df.columns):
+            plt.arrow(0, 0, pc1_loadings[i], pc2_loadings[i],
+                      head_width=0.05, head_length=0.05, color=colors[0], alpha=0.8)
+            if show_legend:
+                plt.text(pc1_loadings[i] * 1.2, pc2_loadings[i] * 1.2, variable,
+                         color=colors[1],
+                         ha='center',
+                         va='center',
+                         fontfamily=self.font_ticket['family'],
+                         fontweight=self.font_ticket['weight'],
+                         fontsize=self.font_ticket['size'])
+
+        # 设置刻度限制
+        if x_min is not None or x_max is not None:
+            plt.xlim((x_min, x_max))
+        if y_min is not None or y_max is not None:
+            plt.ylim((y_min, y_max))
+
+        # 设置坐标轴字体
+        plt.xlabel(xlabel='PC1', fontdict=self.font_title)
+        plt.ylabel(ylabel='PC2', fontdict=self.font_title)
+
+        # 设置刻度标签的字体
+        plt.xticks(fontfamily=self.font_ticket['family'],
+                   fontweight=self.font_ticket['weight'],
+                   fontsize=self.font_ticket['size'])
+        plt.yticks(fontfamily=self.font_ticket['family'],
+                   fontweight=self.font_ticket['weight'],
+                   fontsize=self.font_ticket['size'])
+        ax.tick_params(axis='both', which='major', direction='in')
+
+        # 在你设置轴范围之前，设置边距
+        ax.margins(margin_ratio)
+
+        plt.tight_layout()
+
+        # 如果提供了保存路径，则保存图像到指定路径
+        if save_path is not None:  # 如果 save_path 的值不为 None，则保存
+            file_name = title + "_PCA_loadings.png"  # 初始文件名为 "title_loadings.png"
+            full_file_path = os.path.join(save_path, file_name)  # 创建完整的文件路径
+
+            if os.path.exists(full_file_path):  # 查看该文件名是否存在
+                count = 1
+                file_name = title + "_PCA_loadings" + f"_{count}.png"  # 若该文件名存在则在后面加 '_1'
+                full_file_path = os.path.join(save_path, file_name)  # 更新完整的文件路径
+
+                while os.path.exists(full_file_path):  # 找是否存在，并不断 +1，直到不重复
+                    count += 1
+                    file_name = title + "_PCA_loadings" + f"_{count}.png"
+                    full_file_path = os.path.join(save_path, file_name)  # 更新完整的文件路径
+
+            plt.savefig(fname=full_file_path, dpi=dpi)  # 使用完整路径将散点图保存到指定的路径
+
+        # 显示图像
+        plt.show()
+
+        if show_result:
+            print(pca_loadings)
+
+        # 创建 pca_dic 用于返回 PCA 分析后的数据
+        pca_loadings_dic = {title: pca_loadings}
+        self.pca_loadings_dic = pca_loadings_dic
+
+        return pca_loadings_dic
 
 
 """ 绘图 """

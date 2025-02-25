@@ -2775,6 +2775,117 @@ class Plotter(general.Manager):
 
         return None
 
+    # 饼图
+    def plot_pie(self, data_dic: Optional[dict] = None, save_path: Union[bool, str] = True, dpi: int = 600,
+                 labels: Optional[list] = None, colors: [list] = None, explode: [list] = None,
+                 autopct: Optional[str] = None, startangle: Optional[int] = None, **kwargs) -> None:
+        """
+        此方法用于绘制热图图像
+        This method is used to draw a heatmap.
+
+        :param data_dic: (dict) 包含一个键值对，键为 title，值为包含多个指标及类别序号的 DataFrame
+        :param save_path: 保存路径，若无赋值则用初始化中的 self.save_path
+        :param dpi: (int) 保存图片的精度，默认为 600
+        :param labels: (list) 饼图外围的标签，长度需要写数值个数一致
+        :param colors: (list) 颜色色系的名称，有默认色板
+        :param explode: (list) 第几部分突出，突出多少，如 (0.2, 0, 0, 0) 表示第一部分突出 0.2，长度需要写数值个数一致
+        :param autopct: (str) 是否显示数值，默认为显示两位小数 '%1.2f%%'
+        :param startangle: (int) 是否有初始旋转角度，默认为 140
+        :param kwargs: 绘制热图时的关键字参数
+
+        :return: None
+
+        --- **kwargs ---
+
+        - title: (str) 图片的标题，为 True 时为 title，为 str 类型时为其值，默认为无标题
+        - width_height: (tuple) 图片的宽度和高度，默认为 (6, 4.5)
+        """
+
+        # 检查赋值 (5)
+        if True:
+
+            # 将需要处理的数据赋给 data_dic
+            if data_dic is not None:
+                data_dic = copy.deepcopy(data_dic)
+            else:
+                data_dic = copy.deepcopy(self.data_dic)
+
+            # 当 save_path == True 时，沿用 self.save_path 的设置，此项为默认项
+            if save_path is True:
+                save_path = self.save_path
+            # 若 save_path 为 False 时，本图形不保存
+            elif save_path is False:
+                save_path = None
+            # 当有指定的 save_path 时，save_path 将会被其赋值，若 save_path == '' 则保存在运行的 py 文件的目录下
+            else:
+                save_path = save_path
+
+            # 颜色
+            if colors is None:
+                colors = colors = ['#FF6F61', '#6B8E23', '#FFD700', '#4B8B3B', '#D2691E',
+                                   '#1E90FF', '#9932CC', '#FF8C00', '#00CED1', '#8A2BE2']
+
+            # 显示数值
+            if explode is None:
+                explode = '%1.2f%%'
+
+            # 初始旋转角度
+            if startangle is None:
+                startangle = 140
+
+            # 关键字参数初始化
+            image_title = kwargs.pop('title', None)
+            width_height = kwargs.pop('width_height', (6, 4.5))
+
+        for title, data_df in data_dic.items():
+
+            # 检查并删除 Category_Index 列
+            if Plotter.Category_Index in data_df.columns:
+                data_df = data_df.drop(columns=Plotter.Category_Index)
+
+            if len(data_df) != 1:
+                class_name = self.__class__.__name__  # 获取类名
+                method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+                raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                                 f"data_df must have exactly one row, but it has {len(data_df)} rows.")
+
+            # data_df 是长度为 1 的 DataFrame
+            data_list = data_df.iloc[0].tolist()
+            # 使用 list comprehension 将每个元素转换为 float
+            data_list = [float(i) for i in data_list]
+
+            # 绘制饼图
+            plt.figure(figsize=width_height, dpi=200)
+            plt.pie(data_list,
+                    labels=labels,
+                    colors=colors,
+                    # explode='%1.2f%%',
+                    autopct=autopct,
+                    startangle=startangle,
+                    **kwargs)
+
+            # 如果提供了保存路径，则保存图像到指定路径
+            if save_path is not None:  # 如果 save_path 的值不为 None，则保存
+                file_name = title + ".png"  # 初始文件名为 "title.png"
+                full_file_path = os.path.join(save_path, file_name)  # 创建完整的文件路径
+
+                if os.path.exists(full_file_path):  # 查看该文件名是否存在
+                    count = 1
+                    file_name = title + f"_{count}.png"  # 若该文件名存在则在后面加 '_1'
+                    full_file_path = os.path.join(save_path, file_name)  # 更新完整的文件路径
+
+                    while os.path.exists(full_file_path):  # 找是否存在，并不断 +1，直到不重复
+                        count += 1
+                        file_name = title + f"_{count}.png"
+                        full_file_path = os.path.join(save_path, file_name)  # 更新完整的文件路径
+
+                plt.savefig(fname=full_file_path, dpi=dpi)  # 使用完整路径将散点图保存到指定的路径
+
+            plt.show()  # 显示图形
+            time.sleep(self.interval_time)  # 让程序休息一段时间，防止绘图过快导致程序崩溃
+
+        return None
+
 
 """ 拟合 """
 class Fitter(general.Manager):

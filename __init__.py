@@ -254,6 +254,7 @@ MAGIC
                 New methods have been added to accessor.
 --> 6.1.8       25-01-15 17:14 Add a new method pca_loadings() to class Statistics.
                 Optimize the class Statistics.
+--> 6.1.9       25-02-24 15:31 Add a new method plot_pie() to class Plotter.
                
                     
  ------ Needing ------
@@ -407,6 +408,7 @@ plot_distribution()
 plot_jointdistribution()
 peak_deconvolution()
 plot_function()
+plot_pie()
 
 ------ Fitter ------
 polynomial_fitting()

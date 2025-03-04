@@ -2778,7 +2778,7 @@ class Plotter(general.Manager):
     # 饼图
     def plot_pie(self, data_dic: Optional[dict] = None, save_path: Union[bool, str] = True, dpi: int = 600,
                  labels: Optional[list] = None, colors: [list] = None, explode: [list] = None,
-                 autopct: Optional[str] = None, startangle: Optional[int] = None, **kwargs) -> None:
+                 show_number: Union[str, bool, None] = True, startangle: Optional[int] = None, **kwargs) -> None:
         """
         此方法用于绘制热图图像
         This method is used to draw a heatmap.
@@ -2789,7 +2789,7 @@ class Plotter(general.Manager):
         :param labels: (list) 饼图外围的标签，长度需要写数值个数一致
         :param colors: (list) 颜色色系的名称，有默认色板
         :param explode: (list) 第几部分突出，突出多少，如 (0.2, 0, 0, 0) 表示第一部分突出 0.2，长度需要写数值个数一致
-        :param autopct: (str) 是否显示数值，默认为显示两位小数 '%1.2f%%'
+        :param show_number: (str) 是否显示数值，默认为显示两位小数 '%1.2f%%'
         :param startangle: (int) 是否有初始旋转角度，默认为 140
         :param kwargs: 绘制热图时的关键字参数
 
@@ -2799,6 +2799,10 @@ class Plotter(general.Manager):
 
         - title: (str) 图片的标题，为 True 时为 title，为 str 类型时为其值，默认为无标题
         - width_height: (tuple) 图片的宽度和高度，默认为 (6, 4.5)
+
+        - pctdistance: (float) 调整数值（autopct）的位置，默认 0.7 表示更靠近饼图中心
+        - labeldistance: (float) 调整标签（labels）位置，默认 1.1
+
         """
 
         # 检查赋值 (5)
@@ -2822,12 +2826,16 @@ class Plotter(general.Manager):
 
             # 颜色
             if colors is None:
-                colors = colors = ['#FF6F61', '#6B8E23', '#FFD700', '#4B8B3B', '#D2691E',
-                                   '#1E90FF', '#9932CC', '#FF8C00', '#00CED1', '#8A2BE2']
+                colors = ['#FF6F61', '#6B8E23', '#FFD700', '#4B8B3B', '#D2691E',
+                          '#1E90FF', '#9932CC', '#FF8C00', '#00CED1', '#8A2BE2']
 
             # 显示数值
-            if explode is None:
-                explode = '%1.2f%%'
+            if isinstance(show_number, str):
+                show_number = show_number  # 保持原样
+            elif show_number is True:
+                show_number = '%1.2f%%'  # 为 True 时，设为默认格式
+            else:  # 为 False 或 None 时
+                show_number = None
 
             # 初始旋转角度
             if startangle is None:
@@ -2837,12 +2845,16 @@ class Plotter(general.Manager):
             image_title = kwargs.pop('title', None)
             width_height = kwargs.pop('width_height', (6, 4.5))
 
+            pctdistance = kwargs.pop('pctdistance', 0.7)
+            labeldistance = kwargs.pop('labeldistance', 1.1)
+
         for title, data_df in data_dic.items():
 
             # 检查并删除 Category_Index 列
             if Plotter.Category_Index in data_df.columns:
                 data_df = data_df.drop(columns=Plotter.Category_Index)
 
+            # 数据的长度需要为 1
             if len(data_df) != 1:
                 class_name = self.__class__.__name__  # 获取类名
                 method_name = inspect.currentframe().f_code.co_name  # 获取方法名
@@ -2854,15 +2866,32 @@ class Plotter(general.Manager):
             # 使用 list comprehension 将每个元素转换为 float
             data_list = [float(i) for i in data_list]
 
+            # 检查 explode 的长度是否和 data_list 匹配
+            if explode is not None and len(explode) != len(data_list):
+                class_name = self.__class__.__name__  # 获取类名
+                method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+                raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                                 f"'explode' length ({len(explode)}) must be equal to "
+                                 f"'data_list' length ({len(data_list)})")
+
             # 绘制饼图
             plt.figure(figsize=width_height, dpi=200)
             plt.pie(data_list,
                     labels=labels,
                     colors=colors,
-                    # explode='%1.2f%%',
-                    autopct=autopct,
+                    explode=explode,
+                    autopct=show_number,
                     startangle=startangle,
+                    textprops=self.font_legend,  # 这里设置 label 和数值字体
+                    pctdistance=pctdistance,  # 调整数值（autopct）的位置，0.7 表示更靠近饼图中心
+                    labeldistance=labeldistance,  # 调整标签（labels）位置，默认 1.1
                     **kwargs)
+
+            # 设置标题
+            if isinstance(image_title, str):
+                plt.title(label=image_title, fontdict=self.font_title)
+            elif image_title is True:
+                plt.title(label=title, fontdict=self.font_title)
 
             # 如果提供了保存路径，则保存图像到指定路径
             if save_path is not None:  # 如果 save_path 的值不为 None，则保存

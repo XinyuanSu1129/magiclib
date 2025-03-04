@@ -255,6 +255,7 @@ MAGIC
 --> 6.1.8       25-01-15 17:14 Add a new method pca_loadings() to class Statistics.
                 Optimize the class Statistics.
 --> 6.1.9       25-02-24 15:31 Add a new method plot_pie() to class Plotter.
+--> 6.1.10      25-03-04 11:51 Optimize the method plot_pie() of class Plotter.
                
                     
  ------ Needing ------

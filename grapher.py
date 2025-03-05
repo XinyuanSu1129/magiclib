@@ -443,28 +443,14 @@ class Statistics(general.Manager):
         title, data_df = list(data_dic.items())[0]  # 从 data_dic 中获取标题和数据
 
         # 提取数据部分和类别标签部分
-        category_index = data_df[category]  # 提取名为 Category_Index 的列作为类别标签
+        # category_index = data_df[category]  # 提取名为 Category_Index 的列作为类别标签
         before_pca_df = data_df.drop(columns=[category])  # 剩下的列作为数据部分
 
-        # 获取数据中的唯一类别值
-        unique_category = np.unique(category_index)
-
-        # 如果未提供颜色列表，则默认选择 color_palette 中与类别数量匹配的前几个颜色
-        if colors is None:
-            if len(unique_category) > len(color_palette):
-                class_name = self.__class__.__name__  # 获取类名
-                method_name = inspect.currentframe().f_code.co_name  # 获取方法名
-                raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
-                                 f"There are {len(unique_category)} categories "
-                                 f"but only {len(color_palette)} colors in the default color palette.")
-            colors = color_palette[:len(unique_category)]
-
-        # 验证提供的颜色数量是否与类别数量匹配
-        elif len(colors) != len(unique_category):
+        if len(color_palette) < 2:
             class_name = self.__class__.__name__  # 获取类名
             method_name = inspect.currentframe().f_code.co_name  # 获取方法名
             raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
-                             f"There are {len(unique_category)} categories but you provided {len(colors)} colors.")
+                             f"The number of elements in 'colors' must be at least 2.")
 
         # 用 0 替换所有缺失值
         before_pca_df = before_pca_df.fillna(0)
@@ -487,10 +473,10 @@ class Statistics(general.Manager):
 
         for i, variable in enumerate(before_pca_df.columns):
             plt.arrow(0, 0, pc1_loadings[i], pc2_loadings[i],
-                      head_width=0.05, head_length=0.05, color=colors[0], alpha=0.8)
+                      head_width=0.05, head_length=0.05, color=color_palette[0], alpha=0.8)
             if show_legend:
                 plt.text(pc1_loadings[i] * 1.2, pc2_loadings[i] * 1.2, variable,
-                         color=colors[1],
+                         color=color_palette[1],
                          ha='center',
                          va='center',
                          fontfamily=self.font_ticket['family'],

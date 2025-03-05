@@ -1,5 +1,5 @@
 
-__version__ = '6.1.8'
+__version__ = '6.1.11'
 
 __all__ = ['general', 'grapher', 'projector', 'performer', 'inspector', 'accessor', 'author', 'potter']
 
@@ -256,6 +256,10 @@ MAGIC
                 Optimize the class Statistics.
 --> 6.1.9       25-02-24 15:31 Add a new method plot_pie() to class Plotter.
 --> 6.1.10      25-03-04 11:51 Optimize the method plot_pie() of class Plotter.
+--> 6.1.11      25-03-05 12:47 Add two new method remove_category() and add_category() to class Optimizer.
+                Made improvements to the to_reality() method in the Manager class, adding retrieval for the category 
+                self.Category_Index and adapting it to the data_init() initialization method in the Function class.
+                Optimized some of the comments.
                
                     
  ------ Needing ------
@@ -338,6 +342,8 @@ convert_one_length_dict()
 insert_data_to_df()
 sort_df()
 calculate_statistics()
+remove_category()
+add_category()
 
 ------ Manager ------
 Magic_Database

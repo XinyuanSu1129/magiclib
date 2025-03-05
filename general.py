@@ -93,6 +93,7 @@ class Function:
             self.data_init()
 
         # 以下数据为添加填，在该类初始化中可自动生成，其它子类中无需再添加
+        self.category_dic = None  # (dict) value 为包含 self.Category_Index 值的 list，不含标题
         self.precision_data_dic = None  # (dict) 原数据的精度
         self.point_scale_dic = None  # (dict) value 是标准化前数据在横纵坐标上的最大和最小的值
 
@@ -173,7 +174,7 @@ class Function:
                     else:
                         data_df[col] = data_df[col].astype(str)
 
-        # 将 dict 数据转换为 x_list & y_list 和 x_label & y_label
+        # 将 DataFrame 数据转换为 x_list & y_list 和 x_label & y_label
         if self.data_df is not None and len(self.data_df.columns) == 2:
             column_names = self.data_df.columns.tolist()  # 将列名转换为列表
             # 将列名赋值给相应的变量
@@ -182,6 +183,16 @@ class Function:
 
             self.x_list = self.data_df[column_names[0]].tolist()  # 提取第一列数据，并转换为列表
             self.y_list = self.data_df[column_names[1]].tolist()  # 提取第二列数据，并转换为列表
+
+        #  遍历 data_dic，提取名为 self.Category_Index 的列为列表，存入 self.category_dic
+        if self.data_dic is not None:
+            category_dic = {}
+            for title, data_df in self.data_dic.items():
+                if self.Category_Index in self.data_df.columns:
+                    category_dic[title] = data_df[self.Category_Index].tolist()
+                else:
+                    category_dic[title] = None
+            self.category_dic = category_dic
 
         # 只有是 Magic 及其子类时才会为 True
         if isinstance(self, Magic):
@@ -805,7 +816,7 @@ class Optimizer(Function):
 
         self.current_dic = 'data_dic'
 
-        # 变量初始化
+        # 变量初始化，所有变量均为 dict
         self.extended_dic = None  # generate_rows_to_df()
         self.noised_dic = None  # add_noise_to_dataframe()
         self.randomized_dic = None  # change_to_random()
@@ -820,6 +831,8 @@ class Optimizer(Function):
         self.inserted_dic = None  # insert_data_to_df()
         self.sorted_dic = None  # sort_df()
         self.calculated_dic = None  # calculate_statistics()
+        self.without_category_dic = None  # remove_category()
+        self.add_category_dic = None  # add_category()
 
         # 数据初始化分配 和 数据类型导入
         if type(self) == Optimizer:  # 当 self 为 Optimizer 的直接实例时为真
@@ -843,7 +856,7 @@ class Optimizer(Function):
         :param show: (bool) 显示进度消息，默认为 True
         :param overwrite: (bool) 是否覆盖原 data_dic 数据，默认为 True
 
-        :return extended_dic: (dict) 扩展后的表格
+        :return extended_dic: (dict) 扩展后的 dict
         """
 
         # 将需要处理的数据赋给 data_dic
@@ -1959,6 +1972,229 @@ class Optimizer(Function):
         self.current_dic = 'calculated_dic'
 
         return calculated_dic
+
+    # 删除 Category_Index 列
+    def remove_category(self, data_dic: Optional[Dict[str, DataFrame]] = None,
+                        category_index: Union[str, int, None] = None, sort_axis: str = 'column', show: bool = True,
+                        overwrite: bool = True) -> Dict[str, DataFrame]:
+        """
+        在目标 dict 中删除名为 category_index 这一行 / 列，通常用作删除 Category_Index 列
+        Remove the column/row named category_index in the target dictionary,
+        usually used to delete the Category_Index column.
+
+        :param data_dic: (dict) 文件的 dict，key 为文件名，value 为 DataFrame 数据
+        :param category_index: (str / int) 为 str 时，为需要删除行 / 列的名称，默认为 self.Category_Index
+                                           为 int 时，为需要删除行 / 列的行索引名称
+        :param sort_axis: (str) 以行 / 列进行检索，默认为 'column'
+        :param show: (bool) 是否显示进度消息，默认为 True
+        :param overwrite: (bool) 是否覆盖原 data_dic 数据，默认为 True
+
+        :return without_category_dic: (dict) 删除后的 dict
+        """
+
+        # 将需要处理的数据赋给 data_dic
+        if data_dic is not None:
+            data_dic = copy.deepcopy(data_dic)
+        else:
+            data_dic = copy.deepcopy(self.data_dic)
+
+        # 检查 category_index 的赋值
+        if category_index is not None:
+            category_index = category_index
+        else:
+            category_index = self.Category_Index
+
+        # 确保 sort_axis 有效
+        if sort_axis not in ['column', 'row']:
+            class_name = self.__class__.__name__  # 获取类名
+            method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                             f"sort_axis must be 'row' or 'column'.")
+
+        # 遍历 dict
+        for title, data_df in data_dic.items():
+            if sort_axis == 'column':
+                if category_index in data_df.columns:
+                    data_dic[title] = data_df.drop(columns=[category_index])  # 删除列
+                    if show:
+                        print(f"In \033[92m{title}\033[0m, the column \033[31m{category_index}\033[0m "
+                              f"has been removed.")
+                else:
+                    if show:
+                        print(f"Column \033[31m{category_index}\033[0m not found in \033[92m{title}\033[0m, skipping.")
+
+            elif sort_axis == 'row':
+                if category_index in data_df.index:
+                    data_dic[title] = data_df.drop(index=[category_index])  # 删除行
+                    if show:
+                        print(f"In \033[92m{title}\033[0m, the row \033[31m{category_index}\033[0m has been removed.")
+                else:
+                    if show:
+                        print(f"Row \033[31m{category_index}\033[0m not found in \033[92m{title}\033[0m, skipping.")
+
+        without_category_dic = data_dic
+
+        # 覆盖原数据
+        if overwrite:
+            self.data_dic = without_category_dic
+
+        self.without_category_dic = without_category_dic
+        self.current_dic = 'without_category_dic'
+
+        return without_category_dic
+
+    # 在最后一行按照要求添加 Category_Index 列
+    def add_category(self, data_dic: Optional[Dict[str, DataFrame]] = None,
+                     category_index: Union[str, None] = None, category_name: Optional[list] = None,
+                     category_number: Optional[list] = None, sort_axis='column', show: bool = True,
+                     overwrite: bool = True) -> Dict[str, DataFrame]:
+        """
+        在最后一行 / 列添加新的行 / 列，但添加的内容只能为 str，
+        如果 category_name 与 category_number 均未被赋值，则用 self.category_dic，但长度不一致时仍会报错
+        Add a new row/column at the end, but the added content must be of type str.
+        If category_name and category_number are both unassigned, use self.category_dic.
+        However, an error will still be raised if the lengths do not match.
+
+        :param data_dic: (dict) 文件的 dict，key 为文件名，value 为 DataFrame 数据
+        :param category_index: (str) 添加新行 / 列的标题，默认为 self.Category_Index
+        :param category_name: (list) 添加新行 / 列的内容，均为字符串
+        :param category_number: (list) 添加新行 / 列的数量，均为整形，
+                                category_number 的长度需要与 category_name 一致，同时相加的值需要与 DataFrame 行 / 列相等
+        :param sort_axis: (str) 以行 / 列进行检索，默认为 'column'
+        :param show: (bool) 是否显示进度消息，默认为 True
+        :param overwrite: (bool) 是否覆盖原 data_dic 数据，默认为 True
+
+        :return add_category_dic: (dict) 添加新 category 后的 dict
+        """
+
+        # 将需要处理的数据赋给 data_dic
+        if data_dic is not None:
+            data_dic = copy.deepcopy(data_dic)
+        else:
+            data_dic = copy.deepcopy(self.data_dic)
+
+        # 检查 category_index 的赋值
+        if category_index is not None:
+            category_index = category_index
+        else:
+            category_index = self.Category_Index
+
+        # 确保 sort_axis 有效
+        if sort_axis not in ['column', 'row']:
+            class_name = self.__class__.__name__  # 获取类名
+            method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                             f"sort_axis must be 'row' or 'column'.")
+
+        # 检查 category_name 和 category_number 是否符合要求
+        total_count = None
+        if category_name is not None or category_number is not None:
+            if not (isinstance(category_name, list) and isinstance(category_number, list)):
+                class_name = self.__class__.__name__  # 获取类名
+                method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+                raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                                 f"both category_name and category_number must be lists.")
+            if len(category_name) != len(category_number):
+                class_name = self.__class__.__name__  # 获取类名
+                method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+                raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                                 f"category_name and category_number must have the same length.")
+            if not all(isinstance(name, str) for name in category_name):
+                class_name = self.__class__.__name__  # 获取类名
+                method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+                raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                                 f"all elements in category_name must be strings.")
+            if not all(isinstance(num, int) and num > 0 for num in category_number):
+                class_name = self.__class__.__name__  # 获取类名
+                method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+                raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                                 f"all elements in category_number must be positive integers.")
+
+            # 计算总数量
+            total_count = sum(category_number)
+
+        # 遍历字典以按照要求删除行 / 列
+        for title, data_df in data_dic.items():
+            if sort_axis == 'column':  # 添加列
+                if category_name is None and category_number is None:
+                    if title not in self.category_dic:
+                        class_name = self.__class__.__name__  # 获取类名
+                        method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+                        raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                                         f"\033[95merror:\033[0m '{title}' not found in self.category_dic.")
+                    if len(self.category_dic[title]) != len(data_df):
+                        class_name = self.__class__.__name__  # 获取类名
+                        method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+                        raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                                         f"({len(self.category_dic[title])}) does not match the number of rows "
+                                         f"({len(data_df)}) in '{title}'.")
+                    category_values = self.category_dic[title]
+                else:
+                    if len(data_df) != total_count:
+                        class_name = self.__class__.__name__  # 获取类名
+                        method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+                        raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                                         f"total category count ({total_count}) does not match the number of rows "
+                                         f"({len(data_df)}) in '{title}'.")
+
+                    # 创建分类列
+                    category_values = []
+                    for name, num in zip(category_name, category_number):
+                        category_values.extend([name] * num)
+
+                # 添加新列
+                data_dic[title][category_index] = category_values
+
+                # 如果 show == True，则打印信息
+                if show:
+                    print(f"In \033[92m{title}\033[0m, the column \033[31m{category_index}\033[0m has been added.")
+
+            elif sort_axis == 'row':  # 添加行
+                if category_name is None and category_number is None:
+                    if title not in self.category_dic:
+                        class_name = self.__class__.__name__  # 获取类名
+                        method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+                        raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                                         f"\033[95merror:\033[0m '{title}' not found in self.category_dic.")
+                    if len(self.category_dic[title]) != len(data_df.columns):
+                        class_name = self.__class__.__name__  # 获取类名
+                        method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+                        raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                                         f"\033[95merror:\033[0m Length mismatch: self.category_dic['{title}'] "
+                                         f"({len(self.category_dic[title])}) does not match the number of columns "
+                                         f"({len(data_df.columns)}) in '{title}'.")
+                    category_values = self.category_dic[title]
+                else:
+                    if len(data_df.columns) != total_count:
+                        class_name = self.__class__.__name__  # 获取类名
+                        method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+                        raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                                         f"Total category count ({total_count}) does not match the number of columns "
+                                         f"({len(data_df.columns)}) in '{title}'.")
+
+                    # 创建分类行
+                    category_values = []
+                    for name, num in zip(category_name, category_number):
+                        category_values.extend([name] * num)
+
+                # 转换为 DataFrame 并添加到原 DataFrame 末尾
+                category_df = pd.DataFrame(data=[category_values], columns=data_df.columns, index=[category_index])
+                data_dic[title] = pd.concat([data_df, category_df])
+
+                # 如果 show == True，则打印信息
+                if show:
+                    print(f"In \033[92m{title}\033[0m, the row \033[31m{category_index}\033[0m has been added.")
+
+        add_category_dic = data_dic
+
+        # 覆盖原数据
+        if overwrite:
+            self.data_dic = add_category_dic
+
+        self.add_category_dic = add_category_dic
+        self.current_dic = 'add_category_dic'
+
+        return add_category_dic
 
 
 """ 管理系统 """
@@ -3913,6 +4149,7 @@ class Manager(Optimizer):
 
         :param variable: (str, bool) 需要打印名称及内容的变量，默认为 self.data_dic，只有当 search != 'current' 时才有效，
                          当 variable == True，且 search 为 'class', 'local' 或 'global' 时，为查找当前环境下的变量
+                         在填写参数时，只需要填写变量名即可，无需带上 'self'，如 'data_dic' 或 'data_df'
         :param search: (str) 检索范围，有 'current', 'class', 'local' 和 'global'，分别表示类内部，局部和全局，默认为 'current'
         :param color: (str) 字体的颜色，默认为亮洋红色
         :param total_width: (int) 标题总宽度
@@ -4021,6 +4258,8 @@ class Manager(Optimizer):
                     # 如果值是可以被直接打印的，就打印出来
                     if isinstance(value, dict):
                         print_value = value  # 如果已经是字典，直接使用
+                    elif isinstance(value, pd.DataFrame):  # 如果是 DataFrame 类型，直接使用
+                        print_value = value
                     elif hasattr(value, 'to_dict'):  # 对于支持 to_dict 的对象，例如 Pandas DataFrame
                         print_value = value.to_dict()
                     else:
@@ -4040,6 +4279,8 @@ class Manager(Optimizer):
                     # 如果值是可以被直接打印的，就打印出来
                     if isinstance(value, dict):
                         print_value = value  # 如果已经是字典，直接使用
+                    elif isinstance(value, pd.DataFrame):  # 如果是 DataFrame 类型，直接使用
+                        print_value = value
                     elif hasattr(value, 'to_dict'):  # 对于支持 to_dict 的对象，例如 Pandas DataFrame
                         print_value = value.to_dict()
                     else:
@@ -4059,6 +4300,8 @@ class Manager(Optimizer):
                     # 如果值是可以被直接打印的，就打印出来
                     if isinstance(value, dict):
                         print_value = value  # 如果已经是字典，直接使用
+                    elif isinstance(value, pd.DataFrame):  # 如果是 DataFrame 类型，直接使用
+                        print_value = value
                     elif hasattr(value, 'to_dict'):  # 对于支持 to_dict 的对象，例如 Pandas DataFrame
                         print_value = value.to_dict()
                     else:

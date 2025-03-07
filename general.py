@@ -879,7 +879,7 @@ class Optimizer(Function):
 
             # 尝试将 DataFrame 中所有内容转换为数值，如果失败就报错，ValueError
             try:
-                data_df.applymap(lambda x: pd.to_numeric(x, errors='raise'))
+                data_df = data_df.map(lambda x: pd.to_numeric(x, errors='raise'))
             except ValueError as e:
                 class_name = self.__class__.__name__  # 获取类名
                 method_name = inspect.currentframe().f_code.co_name  # 获取方法名

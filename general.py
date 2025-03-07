@@ -100,8 +100,8 @@ class Function:
     # 数据初始化分配模组
     def data_init(self) -> None:
         """
-        数据的初始化分配
-        The initialization allocation of data.
+        数据的初始化分配：小组大，大分小
+        The initialization allocation of data. Put the whole together from the pieces, then break the whole into pieces.
 
         思路：从零散组成数据，再从整体分配到零散
         x_list & y_list 优先度最高，data_df 其次，data_dic 最低
@@ -2411,10 +2411,10 @@ class Manager(Optimizer):
 
     # 1 TXT 文件的读取
     def read_txt(self, txt_path: Optional[str] = None, file_pattern: Optional[str] = None,
-                 increasing_order: Optional[int] = None, delete_nan: Optional[bool] = None,
-                 swap_column: Optional[bool] = None, x_label: str = None, y_label: str = None,
-                 delimiter: Optional[str] = None,  columns_txt: Union[list, None] = None)\
-            -> Dict[str, DataFrame]:
+                 x_label: str = None, y_label: str = None, increasing_order: Optional[int] = None,
+                 delete_nan: Optional[bool] = None, swap_column: Optional[bool] = None,
+                 delimiter: Optional[str] = None, columns_txt: Union[list, None] = None,
+                 update_to: Optional[bool] = None) -> Dict[str, DataFrame]:
         """
         获取 TXT 文件的方法，返回的数据为一个 dict
         Method to retrieve a TXT file, returning data as a dictionary.
@@ -2434,6 +2434,10 @@ class Manager(Optimizer):
         :param delimiter: (str) TXT 文件中的分割符，用以分列
         :param columns_txt: (list) TXT 文件所用的列，以 0 开头
 
+        # 临时变量 (1)
+        :param update_to: (bool) 是否更新至原来的 data_dic，如果 key 有重名则覆盖
+
+        # 返回值 (1)
         :return data_dic: (dict) 返回该 TXT 文件的 dict，key 为文件名的测TXT的名称，value 为 DataFrame (该文件的有效数据)
                  如果初始化时为 TXT 文件路径，则返回的dict中仅有该文件一个数据的 key & value
                  如果初始化时为 TXT 文件的目录路径，则返回的dict中含有该目录下所有 TXT 文件数据的 key & value
@@ -2462,6 +2466,20 @@ class Manager(Optimizer):
             else:
                 file_pattern = r'.*'
 
+            if x_label is not None:
+                x_label = x_label
+            elif self.x_label is not None:
+                x_label = self.x_label
+            else:
+                x_label = None
+
+            if y_label is not None:
+                y_label = y_label
+            elif self.y_label is not None:
+                y_label = self.y_label
+            else:
+                y_label = None
+
             if increasing_order is not None:
                 increasing_order = increasing_order
             elif self.increasing_order is not None:
@@ -2483,20 +2501,6 @@ class Manager(Optimizer):
             else:
                 swap_column = False
 
-            if x_label is not None:
-                x_label = x_label
-            elif self.x_label is not None:
-                x_label = self.x_label
-            else:
-                x_label = None
-
-            if y_label is not None:
-                y_label = y_label
-            elif self.y_label is not None:
-                y_label = self.y_label
-            else:
-                y_label = None
-
             if delimiter is not None:
                 delimiter = delimiter
             elif self.delimiter is not None:
@@ -2510,6 +2514,11 @@ class Manager(Optimizer):
                 columns_txt = self.columns_txt
             else:
                 columns_txt = [0, 1]
+
+            if update_to is not None:
+                update_to = update_to
+            else:
+                update_to = False
 
         # 检查路径是否是绝对路径
         if not os.path.isabs(txt_path):
@@ -2590,10 +2599,11 @@ class Manager(Optimizer):
             # 返回该 TXT 文件的 dict，key 为文件名，value 为 DataFrame (该文件的有效数据)
             data_dic = {re.match(pattern=r'(\.?\/.*\/)(?P<name>[^\/]+)\..*$', string=txt_path).group('name'): data_df}
 
-            self.data_dic = data_dic  # 将得到的数据的 dict 传给 self.data_dic
-
-            # 数据的初始化分配
-            self.data_init()
+            # 是否更新
+            if not update_to:
+                self.data_dic = data_dic  # 将得到的数据的 dict 传给 self.data_dic
+            else:
+                self.data_dic.update(data_dic)  # 将得到的数据的 dict 更新至 self.data_dic
 
             return data_dic
 
@@ -2677,10 +2687,11 @@ class Manager(Optimizer):
                     data_dic[re.match(pattern=r'(\.?\/.*\/)(?P<name>[^\/]+)\..*$',
                                       string=file_path).group('name')] = data_df
 
+            # 是否更新
+            if not update_to:
                 self.data_dic = data_dic  # 将得到的数据的 dict 传给 self.data_dic
-
-            # 数据的初始化分配
-            self.data_init()
+            else:
+                self.data_dic.update(data_dic)  # 将得到的数据的 dict 更新至 self.data_dic
 
             return data_dic
 
@@ -2694,11 +2705,11 @@ class Manager(Optimizer):
 
     # 2 Excel 文件的读取
     def read_excel(self, excel_path: Optional[str] = None, file_pattern: Optional[str] = None,
-                   increasing_order: Optional[int] = None, delete_nan: Optional[bool] = None,
-                   swap_column: Optional[bool] = None, x_label: str = None, y_label: str = None,
+                   x_label: str = None, y_label: str = None, increasing_order: Optional[int] = None,
+                   delete_nan: Optional[bool] = None, swap_column: Optional[bool] = None,
                    sheet: Union[int, str, None] = 0, header: Optional[int] = None, index: Optional[int] = None,
-                   columns_excel: Union[int, list, None] = None, rows_excel: Optional[int] = None)\
-            -> Dict[str, DataFrame]:
+                   columns_excel: Union[int, list, None] = None, rows_excel: Optional[int] = None,
+                   update_to: Optional[bool] = None) -> Dict[str, DataFrame]:
         """
         获取 Excel 表格的方法，返回的数据为一个 dict
         Method to retrieve an Excel file, returning data as a dictionary.
@@ -2722,7 +2733,10 @@ class Manager(Optimizer):
         :param columns_excel: (int / list) 使用第哪些列的数据，默认为 None，表示所有列
         :param rows_excel: (int) 使用几行数据，默认为 None，表示表头以下所有行
 
+        # 临时变量 (1)
+        :param update_to: (bool) 是否更新至原来的 data_dic，如果 key 有重名则覆盖
 
+        # 返回值 (1)
         :return data_dic: (dict) 返回该 Excel 文件的 dict，key 为文件名的测 Excel 的名称，value 为 DataFrame (该文件的有效数据)
                  如果初始化时为 Excel 文件路径，则返回的dict中仅有该文件一个数据的 key & value
                  如果初始化时为 Excel 文件的目录路径，则返回的dict中含有该目录下所有 Excel 文件数据的 key & value
@@ -2751,6 +2765,20 @@ class Manager(Optimizer):
             else:
                 file_pattern = r'.*'
 
+            if x_label is not None:
+                x_label = x_label
+            elif self.x_label is not None:
+                x_label = self.x_label
+            else:
+                x_label = None
+
+            if y_label is not None:
+                y_label = y_label
+            elif self.y_label is not None:
+                y_label = self.y_label
+            else:
+                y_label = None
+
             if increasing_order is not None:
                 increasing_order = increasing_order
             elif self.increasing_order is not None:
@@ -2771,20 +2799,6 @@ class Manager(Optimizer):
                 swap_column = self.swap_column
             else:
                 swap_column = None
-
-            if x_label is not None:
-                x_label = x_label
-            elif self.x_label is not None:
-                x_label = self.x_label
-            else:
-                x_label = None
-
-            if y_label is not None:
-                y_label = y_label
-            elif self.y_label is not None:
-                y_label = self.y_label
-            else:
-                y_label = None
 
             if sheet is not None:
                 sheet = sheet
@@ -2820,6 +2834,11 @@ class Manager(Optimizer):
                 rows_excel = self.rows_excel
             else:
                 rows_excel = None
+
+            if update_to is not None:
+                update_to = update_to
+            else:
+                update_to = False
 
         # 检查路径是否是绝对路径
         if not os.path.isabs(excel_path):
@@ -2884,10 +2903,11 @@ class Manager(Optimizer):
             # 返回该 Excel 文件的 dict，key 为文件名，value 为 DataFrame (该文件的有效数据)
             data_dic[re.match(pattern=r'(\.?\/.*\/)(?P<name>[^\/]+)\..*$', string=excel_path).group('name')] = data_df
 
-            self.data_dic = data_dic  # 将得到的数据的 dict 传给 self.data_dic
-
-            # 数据的初始化分配
-            self.data_init()
+            # 是否更新
+            if not update_to:
+                self.data_dic = data_dic  # 将得到的数据的 dict 传给 self.data_dic
+            else:
+                self.data_dic.update(data_dic)  # 将得到的数据的 dict 更新至 self.data_dic
 
             return data_dic
 
@@ -2956,10 +2976,11 @@ class Manager(Optimizer):
                     data_dic[re.match(pattern=r'(\.?\/.*\/)(?P<name>[^\/]+)\..*$',
                                       string=file_path).group('name')] = data_df
 
+            # 是否更新
+            if not update_to:
                 self.data_dic = data_dic  # 将得到的数据的 dict 传给 self.data_dic
-
-            # 数据的初始化分配
-            self.data_init()
+            else:
+                self.data_dic.update(data_dic)  # 将得到的数据的 dict 更新至 self.data_dic
 
             return data_dic
 
@@ -2972,7 +2993,7 @@ class Manager(Optimizer):
 
     # 3 读取 JSON 文件的读取
     def read_json(self, keyword: Optional[str] = None, json_path: Optional[str] = None,
-                  magic_database: Optional[str] = None) \
+                  magic_database: Optional[str] = None, update_to: Optional[bool] = None)\
             -> Tuple[Dict[str, DataFrame], Dict[str, any], Dict[str, any]]:
         """
         获取 JSON 表格的方法，返回的数据为一个 dict
@@ -2981,18 +3002,25 @@ class Manager(Optimizer):
         注意：keyword 与 json_path 只能有一个被赋值
         Attention: Only one of keyword and json_path can be assigned a value.
 
+        # 关键参数 (3)
         :param keyword: (str) 关键字，根据关键字来寻找数据库中的数据
         :param json_path: (str) JSON 文件的路径或目录路径
         :param magic_database: (str) 数据库的位置，若未赋值则延用类属性中数据库的位置
 
-        :return data_dic: (dict) 返回该 JSON 文件的 dict，key 为文件名的测TXT的名称，value 为 DataFrame (该文件的有效数据)
-                 如果初始化时为 TXT 文件路径，则返回的dict中仅有该文件一个数据的 key & value
-                 如果初始化时为 TXT 文件的目录路径，则返回的dict中含有该目录下所有 TXT 文件数据的 key & value
+        # 临时变量 (1)
+        :param update_to: (bool) 是否更新至原来的 data_dic，如果 key 有重名则覆盖
+
+        # 返回值 (3)
+        :return data_dic: (dict) 返回该 JSON 文件的 dict，key 为文件名的测 TXT 的名称，value 为 DataFrame (该文件的有效数据)
+        :return key_point_dic: (dict) 返回该 JSON 文件的 dict，key 为文件名的测 TXT 的名称，value 为 DataFrame (该文件的关键点)
+        :return sampled_dic: (dict) 返回该 JSON 文件的 dict，key 为文件名的测 TXT 的名称，value 为 DataFrame (有效数据 + 关键点)
+                            如果初始化时为 TXT 文件路径，则返回的 dict 中仅有该文件一个数据的 key & value
+                            如果初始化时为 TXT 文件的目录路径，则返回的dict中含有该目录下所有 TXT 文件数据的 key & value
+
         DataFrame: column1:       float64
                    column2:       float64
                    dtype:         object
 
-        :return sampled_dic: (dict) 读取 JSON 文件的数据
         an example of sampled_dic is
                 {
                 file_name1: { 'title': title1 (str), 'data_df': data_df (DataFrame), 'key_dic': key_dic1
@@ -3036,6 +3064,11 @@ class Manager(Optimizer):
                 magic_database = magic_database
             else:
                 magic_database = self.magic_database
+
+            if update_to is not None:
+                update_to = update_to
+            else:
+                update_to = False
 
         data_dic = {}
         key_point_dic = {}
@@ -3123,9 +3156,9 @@ class Manager(Optimizer):
                         # 获取 key 对应的 value 的 python 格式，而不是 JSON 格式
                         title = sample.get('title')
                         data_df_json = sample.get('data_df')
-                        data_df = pd.read_json(data_df_json)
+                        data_df = pd.read_json(StringIO(data_df_json))
                         key_dic_json = sample.get('key_dic')
-                        key_dic = {k: pd.read_json(v) for k, v in key_dic_json.items()}
+                        key_dic = {k: pd.read_json(StringIO(v)) for k, v in key_dic_json.items()}
                         rule_dic_json = sample.get('rule_dic')
                         rule_dic = {k: float(v) for k, v in rule_dic_json.items()}
                         interval_json = sample.get('interval')
@@ -3198,12 +3231,15 @@ class Manager(Optimizer):
                 raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
                                  f"json_path is not a path to a JSON file or folder.")
 
-        self.data_dic = data_dic
-        self.key_point_dic = key_point_dic
-        self.sampled_dic = sampled_dic
-
-        # 数据的初始化分配
-        self.data_init()
+        # 是否更新
+        if not update_to:
+            self.data_dic = data_dic  # 将得到的数据的 dict 传给 self.data_dic，下同
+            self.key_point_dic = key_point_dic
+            self.sampled_dic = sampled_dic
+        else:
+            self.data_dic.update(data_dic)  # 将得到的数据的 dict 更新至 self.data_dic，下同
+            self.key_point_dic.update(key_point_dic)
+            self.sampled_dic.update(sampled_dic)
 
         return data_dic, key_point_dic, sampled_dic
 
@@ -4253,7 +4289,7 @@ class Manager(Optimizer):
 
             # 如果值是可以被直接打印的，就打印出来
             if isinstance(selected_data_dic, dict):
-                print_value = selected_data_dic  # 如果已经是字典，直接使用
+                print_value = dict(selected_data_dic)  # 如果已经是字典，直接使用
             else:
                 print_value = selected_data_dic  # 对于其他类型，直接打印
 
@@ -4270,7 +4306,7 @@ class Manager(Optimizer):
 
                     # 如果值是可以被直接打印的，就打印出来
                     if isinstance(value, dict):
-                        print_value = value  # 如果已经是字典，直接使用
+                        print_value = dict(value)  # 如果已经是字典，直接使用
                     elif isinstance(value, pd.DataFrame):  # 如果是 DataFrame 类型，直接使用
                         print_value = value
                     elif hasattr(value, 'to_dict'):  # 对于支持 to_dict 的对象，例如 Pandas DataFrame
@@ -4291,7 +4327,7 @@ class Manager(Optimizer):
 
                     # 如果值是可以被直接打印的，就打印出来
                     if isinstance(value, dict):
-                        print_value = value  # 如果已经是字典，直接使用
+                        print_value = dict(value)  # 如果已经是字典，直接使用
                     elif isinstance(value, pd.DataFrame):  # 如果是 DataFrame 类型，直接使用
                         print_value = value
                     elif hasattr(value, 'to_dict'):  # 对于支持 to_dict 的对象，例如 Pandas DataFrame
@@ -4312,7 +4348,7 @@ class Manager(Optimizer):
 
                     # 如果值是可以被直接打印的，就打印出来
                     if isinstance(value, dict):
-                        print_value = value  # 如果已经是字典，直接使用
+                        print_value = dict(value)  # 如果已经是字典，直接使用
                     elif isinstance(value, pd.DataFrame):  # 如果是 DataFrame 类型，直接使用
                         print_value = value
                     elif hasattr(value, 'to_dict'):  # 对于支持 to_dict 的对象，例如 Pandas DataFrame

@@ -1,5 +1,5 @@
 
-__version__ = '6.1.11'
+__version__ = '6.2.0'
 
 __all__ = ['general', 'grapher', 'projector', 'performer', 'inspector', 'accessor', 'author', 'potter']
 
@@ -260,6 +260,9 @@ MAGIC
                 Made improvements to the to_reality() method in the Manager class, adding retrieval for the category 
                 self.Category_Index and adapting it to the data_init() initialization method in the Function class.
                 Optimized some of the comments.
+--> 6.2.0       25-03-07 13:17 Data can be directly updated when calling read_txt(), read_excel(), and read_json().
+                Updated to_reality().
+                Optimized the description and data update logic of data_init().
                
                     
  ------ Needing ------

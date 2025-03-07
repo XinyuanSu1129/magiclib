@@ -874,8 +874,18 @@ class Optimizer(Function):
         # 初始化输出 dict
         extended_dic = {}
 
-        # 遍历每一个DataFrame
+        # 遍历每一个 DataFrame
         for key, data_df in data_dic.items():
+
+            # 尝试将 DataFrame 中所有内容转换为数值，如果失败就报错，ValueError
+            try:
+                data_df.applymap(lambda x: pd.to_numeric(x, errors='raise'))
+            except ValueError as e:
+                class_name = self.__class__.__name__  # 获取类名
+                method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+                raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                                 f"DataFrame contains non-numeric values.") from e
+
             # 验证 tolerance值
             if tolerance < 0:
                 class_name = self.__class__.__name__  # 获取类名
@@ -4241,8 +4251,10 @@ class Manager(Optimizer):
             selected_data_dic = copy.deepcopy(getattr(self, self.current_dic))
             print_name = self.current_dic
 
-            # 字典
-            print_value = dict(selected_data_dic)
+            if hasattr(selected_data_dic, 'to_dict'):  # 对于支持 to_dict 的对象，例如 Pandas DataFrame
+                print_value = dict(selected_data_dic)
+            else:
+                print_value = None
 
         # 在类中寻找变量时
         elif search == 'class':

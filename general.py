@@ -4251,10 +4251,11 @@ class Manager(Optimizer):
             selected_data_dic = copy.deepcopy(getattr(self, self.current_dic))
             print_name = self.current_dic
 
-            if hasattr(selected_data_dic, 'to_dict'):  # 对于支持 to_dict 的对象，例如 Pandas DataFrame
-                print_value = dict(selected_data_dic)
+            # 如果值是可以被直接打印的，就打印出来
+            if isinstance(selected_data_dic, dict):
+                print_value = selected_data_dic  # 如果已经是字典，直接使用
             else:
-                print_value = None
+                print_value = selected_data_dic  # 对于其他类型，直接打印
 
         # 在类中寻找变量时
         elif search == 'class':

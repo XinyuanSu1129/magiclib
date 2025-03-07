@@ -833,6 +833,8 @@ class Optimizer(Function):
         self.calculated_dic = None  # calculate_statistics()
         self.without_category_dic = None  # remove_category()
         self.add_category_dic = None  # add_category()
+        self.split_by_category_dic = None  # split_df_by_category()
+        self.merge_by_category_dic = None  # merge_df_by_category()
 
         # 数据初始化分配 和 数据类型导入
         if type(self) == Optimizer:  # 当 self 为 Optimizer 的直接实例时为真
@@ -2055,7 +2057,7 @@ class Optimizer(Function):
 
     # 在最后一行按照要求添加 Category_Index 列
     def add_category(self, data_dic: Optional[Dict[str, DataFrame]] = None,
-                     category_index: Union[str, None] = None, category_name: Optional[list] = None,
+                     category_index: Optional[str] = None, category_name: Optional[list] = None,
                      category_number: Optional[list] = None, sort_axis='column', show: bool = True,
                      overwrite: bool = True) -> Dict[str, DataFrame]:
         """
@@ -2205,6 +2207,175 @@ class Optimizer(Function):
         self.current_dic = 'add_category_dic'
 
         return add_category_dic
+
+    # 根据 category_index 来拆分一个 "ALL" DataFrame 成多个 DataFrame
+    def split_df_by_category(self, data_dic: Optional[Dict[str, DataFrame]] = None,
+                             category_index: Optional[str] = None, show: bool = True, overwrite: bool = True)\
+            -> Dict[str, DataFrame]:
+        """
+        根据 category_index 来拆分一个 DataFrame 成多个 DataFrame，拆分后每个原本的 category_index 成为了其 key
+        Split a DataFrame into multiple DataFrames based on category_index, where each unique value of
+        category_index becomes a key.
+
+        :param data_dic: (dict) 文件的 dict，key 为文件名，value 为 DataFrame 数据
+        :param category_index: (str) 添加新行 / 列的标题，默认为 self.Category_Index
+        :param show: (bool) 是否显示进度消息，默认为 True
+        :param overwrite: (bool) 是否覆盖原 data_dic 数据，默认为 True
+
+        :return split_by_category_dic: (dict) 拆分后的 dict，其包含多个 key-value，且 key 为原 category_index 值
+        """
+
+        # 将需要处理的数据赋给 data_dic
+        if data_dic is not None:
+            data_dic = copy.deepcopy(data_dic)
+        else:
+            data_dic = copy.deepcopy(self.data_dic)
+
+        # 检查 category_index 的赋值
+        if category_index is not None:
+            category_index = category_index
+        else:
+            category_index = self.Category_Index
+
+        # 1. 检查 data_dic 是否为空
+        if not data_dic or not isinstance(data_dic, dict):
+            class_name = self.__class__.__name__  # 获取类名
+            method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                             f"data_dic cannot be empty and must be a dictionary.")
+
+        # 2. 如果 data_dic 的长度大于 1，则直接打印并返回
+        if len(data_dic) > 1:
+            split_by_category_dic = data_dic
+            print(f"The dictionary already contains multiple key-value pairs: \033[31m{list(data_dic.keys())}\033[0m.")
+
+            # 覆盖原数据
+            if overwrite:
+                self.data_dic = split_by_category_dic
+
+            self.split_by_category_dic = split_by_category_dic
+            self.current_dic = 'split_by_category_dic'
+
+            return split_by_category_dic
+
+        # 3. 获取唯一的 DataFrame
+        title, data_df = next(iter(data_dic.items()))
+
+        # 4. 检查 category_index 是否存在
+        if category_index not in data_df.columns:
+            class_name = self.__class__.__name__  # 获取类名
+            method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                             f"Column '{category_index}' not found in DataFrame.")
+
+        # 5. 按 category_index 拆分 DataFrame
+        split_by_category_dic = {cat: data_df[data_df[category_index] == cat].copy()
+                                 for cat in data_df[category_index].unique()}
+
+        # 6. 打印拆分后的结果
+        if show:
+            print(f"The DataFrame has been split by \033[32m{category_index}\033[0m into "
+                  f"\033[34m{len(split_by_category_dic)}\033[0m groups: "
+                  f"Category: \033[31m{list(split_by_category_dic.keys())}\033[0m.")
+
+        # 覆盖原数据
+        if overwrite:
+            self.data_dic = split_by_category_dic
+
+        self.split_by_category_dic = split_by_category_dic
+        self.current_dic = 'split_by_category_dic'
+
+        return split_by_category_dic
+
+    # 根据 category_index 来整合多个 DataFrame 成一个 "ALL" DataFrame
+    def merge_df_by_category(self, data_dic: Optional[Dict[str, DataFrame]] = None,
+                             category_index: Optional[str] = None, title: Optional[str] = None,
+                             keep_common_only: bool = False, show: bool = True, overwrite: bool = True)\
+            -> Dict[str, DataFrame]:
+        """
+        根据 category_index 来将多个 DataFrame 整合成一个 DataFrame，此时 category_index 加在最后一列 (相对第一个 DataFrame 的)，
+        且其值为原本的 key
+        Multiple dataframes are combined into a single DataFrame using category_index. In this case,
+        category_index is added to the last column (Relative to the first DataFrame) with the original key value.
+
+        :param data_dic: (dict) 文件的 dict，key 为文件名，value 为 DataFrame 数据
+        :param category_index: (str) 添加新行 / 列的标题，默认为 self.Category_Index
+        :param title: (str) 整合成一个 DataFrame 时，对应 key 的 title，默认为 'ALL'
+        :param keep_common_only: (bool) 是否仅保留共有列，默认为 False
+        :param show: (bool) 是否显示进度消息，默认为 True
+        :param overwrite: (bool) 是否覆盖原 data_dic 数据，默认为 True
+
+        :return merge_by_category_dic: (dict) 整合后带有 category_index 的 dict
+        """
+
+        # 将需要处理的数据赋给 data_dic
+        if data_dic is not None:
+            data_dic = copy.deepcopy(data_dic)
+        else:
+            data_dic = copy.deepcopy(self.data_dic)
+
+        # 检查 category_index 的赋值
+        if category_index is not None:
+            category_index = category_index
+        else:
+            category_index = self.Category_Index
+
+        # 检查 title 的赋值
+        if title is not None:
+            title = title
+        else:
+            title = 'ALL'
+
+        # 检查 data_dic 中的 value 是否均为 DataFrame 格式
+        if not isinstance(data_dic, dict) or not all(isinstance(v, pd.DataFrame) for v in data_dic.values()):
+            class_name = self.__class__.__name__  # 获取类名
+            method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                             f"data_dic must be a dictionary that contains a DataFrame as a value.")
+
+        # 如果 data_dic 只有一个键值对，则直接返回原字典
+        if len(data_dic) == 1:
+
+            merge_by_category_dic = data_dic
+            if show:
+                print(f"The \033[31m{list(data_dic.keys())[0]}\033[0m contains only a single key-value pair.")
+
+            # 覆盖原数据
+            if overwrite:
+                self.data_dic = merge_by_category_dic
+
+            self.merge_by_category_dic = merge_by_category_dic
+            self.current_dic = 'merge_by_category_dic'
+
+            return merge_by_category_dic
+
+        # 处理多个 DataFrame
+        merge_by_category_dic = {}
+        merged_list = []
+        common_columns = set.intersection(*(set(df.columns) for df in data_dic.values())) if keep_common_only else None
+
+        for df_title, data_df in data_dic.items():
+            temp_df = data_df.copy()
+            if keep_common_only:
+                temp_df = temp_df[list(common_columns)]  # 仅保留共有列
+            temp_df[category_index] = df_title  # 添加类别索引列
+            merged_list.append(temp_df)
+
+        merged_df = pd.concat(merged_list, ignore_index=True)
+        # 在原字典中新增合并后的 DataFrame
+        merge_by_category_dic[title] = merged_df
+
+        if show:
+            print(f"The dictionary has been merged, and its title is \033[31m{title}\033[0m.")
+
+        # 覆盖原数据
+        if overwrite:
+            self.data_dic = merge_by_category_dic
+
+        self.merge_by_category_dic = merge_by_category_dic
+        self.current_dic = 'merge_by_category_dic'
+
+        return merge_by_category_dic
 
 
 """ 管理系统 """

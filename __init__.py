@@ -263,6 +263,7 @@ MAGIC
 --> 6.2.0       25-03-07 13:17 Data can be directly updated when calling read_txt(), read_excel(), and read_json().
                 Updated to_reality().
                 Optimized the description and data update logic of data_init().
+                Add two methods split_df_by_category() and merge_df_by_category() to class Function.
                
                     
  ------ Needing ------
@@ -347,6 +348,8 @@ sort_df()
 calculate_statistics()
 remove_category()
 add_category()
+split_df_by_category()
+merge_df_by_category()
 
 ------ Manager ------
 Magic_Database

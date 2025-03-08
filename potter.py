@@ -935,6 +935,68 @@ class PotteryBase(general.Manager):
         # 返回包含所有生成的 TXT 文件路径的字典
         return txt_dic
 
+    # 以 EXCEL 的形式保存数据至数据库
+    def save_data_to_excel(self, site: Optional[str] = None, method: Optional[str] = None,
+                           database: Optional[str] = None, data_dic: Optional[Dict[str, DataFrame]] = None) -> None:
+        """
+        处理目标 site 的 method 中的 Excel 文件，如果不存在则生成一个，如果存在多个则报错
+        Process the Excel file in the method of the target site, generate one file if none exists,
+        and report an error if multiple files exist.
+
+        :param site: (str) 存储的实验数据的站点，默认为 self.site 中的站点
+        :param method: (str) 存储的实验数据的分类方法
+        :param data_dic: (dict)  key 为 title， value 数据的 DataFrame，默认为 smoothing_dic 数据优先
+        :param database: (str) 数据库的位置，若未赋值则延用类属性中数据库的位置
+
+        :return: None
+        """
+
+        # 检查所选地区与测试数据是否存在
+        self.whether_data_exists(site=site, method=method, database=database)
+
+        # 检查 database 是否被赋值
+        if database is None:
+            database = self.database
+
+        # 到这里表示 site 和 method 都存在，准备保存数据
+        target_site_dir = os.path.join(database, site)
+        target_method_dir = os.path.join(target_site_dir, method)
+
+        # 将需要处理的数据赋给 data_dic
+        if data_dic is None:
+            data_dic = copy.deepcopy(self.data_dic)
+
+        # 找到与 method 同名的 Excel 文件路径
+        excel_file_path = os.path.join(target_method_dir, f'{method}.xlsx')
+
+        # 构建新的 DataFrame 的表头 (假设 data_dic 中每个 value 是 DataFrame 类型)
+        new_data = pd.concat(data_dic.values(), axis=1)  # 组合所有 DataFrame 列
+
+        if not os.path.exists(excel_file_path):
+            # 如果没有 Excel 文件，创建一个新的
+            new_data.to_excel(excel_file_path, index=False)
+            print(
+                f"New data has been saved to \033[36m{method}.xlsx\033[0m "
+                f"in site \033[31m{site}\033[0m and method \033[34m{method}\033[0m.")
+        else:
+            # 如果 Excel 文件已存在，加载并更新数据
+            existing_data = pd.read_excel(excel_file_path)
+
+            # 检查并添加缺失的列
+            for column in new_data.columns:
+                if column not in existing_data.columns:
+                    existing_data[column] = None  # 添加新列，初始值为 None
+
+            # 将新数据添加到旧表格
+            updated_data = pd.concat([existing_data, new_data], ignore_index=True)
+
+            # 保存更新后的数据
+            updated_data.to_excel(excel_file_path, index=False)
+            print(f"New data has been saved to \033[32m{method}.xlsx\033[0m "
+                  f"in site \033[31m{site}\033[0m and method \033[34m{method}\033[0m.")
+
+        return None
+
     # 以 JSON 的形式保存数据至数据库
     def save_data_to_json(self, site: Optional[str] = None, method: Optional[str] = None,
                           data_dic: Optional[Dict[str, DataFrame]] = None, database: Optional[str] = None,
@@ -1035,68 +1097,6 @@ class PotteryBase(general.Manager):
                 f"saved JSON file: \033[36m{file_name}\033[0m.")
 
         return json_dic
-
-    # 以 EXCEL 的形式保存数据至数据库
-    def save_data_to_excel(self, site: Optional[str] = None, method: Optional[str] = None,
-                           database: Optional[str] = None, data_dic: Optional[Dict[str, DataFrame]] = None) -> None:
-        """
-        处理目标 site 的 method 中的 Excel 文件，如果不存在则生成一个，如果存在多个则报错
-        Process the Excel file in the method of the target site, generate one file if none exists,
-        and report an error if multiple files exist.
-
-        :param site: (str) 存储的实验数据的站点，默认为 self.site 中的站点
-        :param method: (str) 存储的实验数据的分类方法
-        :param data_dic: (dict)  key 为 title， value 数据的 DataFrame，默认为 smoothing_dic 数据优先
-        :param database: (str) 数据库的位置，若未赋值则延用类属性中数据库的位置
-
-        :return: None
-        """
-
-        # 检查所选地区与测试数据是否存在
-        self.whether_data_exists(site=site, method=method, database=database)
-
-        # 检查 database 是否被赋值
-        if database is None:
-            database = self.database
-
-        # 到这里表示 site 和 method 都存在，准备保存数据
-        target_site_dir = os.path.join(database, site)
-        target_method_dir = os.path.join(target_site_dir, method)
-
-        # 将需要处理的数据赋给 data_dic
-        if data_dic is None:
-            data_dic = copy.deepcopy(self.data_dic)
-
-        # 找到与 method 同名的 Excel 文件路径
-        excel_file_path = os.path.join(target_method_dir, f'{method}.xlsx')
-
-        # 构建新的 DataFrame 的表头 (假设 data_dic 中每个 value 是 DataFrame 类型)
-        new_data = pd.concat(data_dic.values(), axis=1)  # 组合所有 DataFrame 列
-
-        if not os.path.exists(excel_file_path):
-            # 如果没有 Excel 文件，创建一个新的
-            new_data.to_excel(excel_file_path, index=False)
-            print(
-                f"New data has been saved to \033[36m{method}.xlsx\033[0m "
-                f"in site \033[31m{site}\033[0m and method \033[34m{method}\033[0m.")
-        else:
-            # 如果 Excel 文件已存在，加载并更新数据
-            existing_data = pd.read_excel(excel_file_path)
-
-            # 检查并添加缺失的列
-            for column in new_data.columns:
-                if column not in existing_data.columns:
-                    existing_data[column] = None  # 添加新列，初始值为 None
-
-            # 将新数据添加到旧表格
-            updated_data = pd.concat([existing_data, new_data], ignore_index=True)
-
-            # 保存更新后的数据
-            updated_data.to_excel(excel_file_path, index=False)
-            print(f"New data has been saved to \033[32m{method}.xlsx\033[0m "
-                  f"in site \033[31m{site}\033[0m and method \033[34m{method}\033[0m.")
-
-        return None
 
     # 读取库中 TXT 文件数据，并打印
     def read_data(self, site: Optional[str] = None, method: Optional[str] = None, file: Optional[str] = None,
@@ -2189,10 +2189,10 @@ class PotteryBase(general.Manager):
 
             return pca_dic
 
-    # 查看图片
-    def open_figure(self, site: Optional[str] = None, method: Optional[str] = None, database: Optional[str] = None):
-
-        return None
+    # # 查看图片
+    # def open_figure(self, site: Optional[str] = None, method: Optional[str] = None, database: Optional[str] = None):
+    #
+    #     return None
 
 
 """ 运行陶器基因库 """
@@ -2614,6 +2614,32 @@ class Pottery(PotteryBase):
         self.layer = 2
 
         return None
+
+    # 根据 Excel 绘制图像
+    def __plot_figure_from_excel(self):
+        """
+        绘制 PCA 分析后的图像，利用 Excel 表格数据
+        The PCA images were ploted using Excel spreadsheet data.
+        """
+
+        # 检查文件是否是 xlsx 或 xls 格式
+        if self.selected_data.endswith('.xlsx') or self.selected_data.endswith('.xls'):
+
+            # 清楚当前已储存的数据，以免造成数据覆盖
+            self.clear_data()
+
+            # 尝试打开文件
+            self.plot_pca(
+                site=self.site,
+                method=self.method
+            )
+
+        else:
+            print('Figure plotting is only applicable to \033[36m.xlsx files\033[0m.\n')
+
+        self.layer = 2
+
+        return None
     
     # 根据 json 绘制图像
     def __plot_figure_from_json(self):
@@ -2644,33 +2670,7 @@ class Pottery(PotteryBase):
         self.layer = 2
 
         return None
-    
-    # 根据 Excel 绘制图像
-    def __plot_figure_from_excel(self):
-        """
-        绘制 PCA 分析后的图像，利用 Excel 表格数据
-        The PCA images were ploted using Excel spreadsheet data.
-        """
 
-        # 检查文件是否是 xlsx 或 xls 格式
-        if self.selected_data.endswith('.xlsx') or self.selected_data.endswith('.xls'):
-
-            # 清楚当前已储存的数据，以免造成数据覆盖
-            self.clear_data()
-
-            # 尝试打开文件
-            self.plot_pca(
-                site=self.site,
-                method=self.method
-            )
-
-        else:
-            print('Figure plotting is only applicable to \033[36m.xlsx files\033[0m.\n')
-
-        self.layer = 2
-
-        return None
-    
     # 打开图像
     def __open_figure(self):
 
@@ -2813,7 +2813,8 @@ class Pottery(PotteryBase):
         return None
 
     # 空白消息组
-    def __wait_input(self):
+    @staticmethod
+    def __wait_input():
         """
         等待下一步指令
         Wait for next instruction

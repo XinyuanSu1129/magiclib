@@ -40,14 +40,13 @@ from typing import Union, Tuple, Optional, List, Dict
 """ 关键常量 """
 current_dir = os.path.dirname(__file__)  # 获取当前文件所在目录的路径
 database_path = os.path.join(current_dir, '../Database')  # 相对于库根目录 ('magiclib') 获取 'Magic_Database' 路径
-database_path = os.path.abspath(database_path)  # 去除两个点，使路径更加简洁
+database_path = os.path.abspath(database_path)  # 确保路径为绝对路径
 
 Magic_Database = os.path.join(database_path, 'Magic_Database')  # 魔法库路径
 Standard_Database = os.path.join(database_path, 'Standard_Database')  # 标准库路径
 Pottery_Database = os.path.join(database_path, 'Pottery_Database')  # 陶器基因库路径
 
 Category_Index = 'category'  # 分类索引
-
 interval_time = 0.5  # 程序休息时间
 
 
@@ -4174,7 +4173,7 @@ class Manager(Optimizer):
                           'This attribute is recommended for reading data, but not advised for plotting.'},
 
             # 热膨胀 曲线
-            'TEA': {
+            'DIL': {
                 'file_type': 'txt',  # file 类型
                 'plot_type': 'line',  # show 类型
 
@@ -4259,6 +4258,47 @@ class Manager(Optimizer):
                           'the second column represents the data coordinates, and the third column is '
                           'for blank coordinates. The horizontal axis values are in descending order.'
                           'This attribute is recommended for reading data, but not advised for plotting.'},
+
+            # SEM-EDS Mapping
+            'Mapping': {
+                'file_type': 'txt',  # file 类型
+                'plot_type': 'line',  # show 类型
+
+                'txt': {
+                    # file 共有参数 (5)
+                    'x_label': 'keV',
+                    'y_label': 'cps / eV',
+                    'increasing_order': None,
+                    'delete_nan': False,
+                    'swap_column': False,
+
+                    # read_txt() 相关参数 (2)
+                    'delimiter': r'\s*,\s*',
+                    'columns_txt': [0, 1]
+                },
+
+                'line': {
+                    # plot 共有参数 (11)
+                    'show_in_one': False,
+                    'width_height': (8, 4.5),
+                    'show_grid': True,
+                    'alpha': 1,
+                    'show_label': False,
+                    'x_min': 0,
+                    'x_max': None,
+                    'y_min': 0,
+                    'y_max': None,
+                    'background_color': sns.light_palette(color='#ef5350', as_cmap=True),
+                    'background_transparency': 0.1,
+
+                    # plot_line() 相关参数 (3)
+                    'line_color': ['purple'],
+                    'line_style': '-',
+                    'line_width': 1.5
+                },
+
+                'remark': 'The energy spectrum of the txt file in the scanned image of SEM-EDS Mapping is drawn. '
+                          'Please change the parameters and separators as required.'},
         }
 
         # 当 keyword 与 to_magic_dic 中的 key 均不相同时报错
@@ -4627,7 +4667,7 @@ class Manager(Optimizer):
         :param show_in_one: (bool) 是否将所有数据展示在一张图片里，默认为 False
         :param width_height: (tuple) 图片的宽度和高度，默认为 (6, 4.5)
         :param show_grid: (bool) 是否显示网格，默认不显示
-        :param alpha: (float) 线条的透明度
+        :param alpha: (float) 线条的透明度，默认为 1，表示不透明
         :param show_label: (bool) 是否展示线条注解，默认为否
         :param x_label: (str) X 轴的标题，默认为原列中的标题，若有则为该标题
         :param y_label: (str) Y 轴的标题，默认为原列中的标题，若有则为该标题
@@ -5306,7 +5346,7 @@ class Manager(Optimizer):
         :param show_in_one: (bool) 是否将所有数据展示在一张图片里，默认为 False
         :param width_height: (tuple) 图片的宽度和高度，默认为 (6, 4.5)
         :param show_grid: (bool) 是否显示网格，默认不显示
-        :param alpha: (float) 线条的透明度
+        :param alpha: (float) 线条的透明度，默认为 1，表示不透明
         :param show_label: (bool) 是否展示线条注解，默认为否
         :param x_label: (str) X 轴的标题，默认为原列中的标题，若有则为该标题
         :param y_label: (str) Y 轴的标题，默认为原列中的标题，若有则为该标题

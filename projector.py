@@ -1294,8 +1294,8 @@ class Raman(Keyword):
         return smoothing_dic, key_point_dic
 
 
-""" TEA """
-class TEA(Keyword):
+""" DIL """
+class DIL(Keyword):
 
     # 初始化
     def __init__(self, read_path: str, save_path: Optional[str] = None):
@@ -1313,7 +1313,7 @@ class TEA(Keyword):
         self.save_path = save_path
 
         # 实例化类 general.Manager 来进行数据的读取和图形的绘制  /* 该属性为实例化类，调用类属性时需要区分 */
-        self.data = general.Manager(keyword='TEA', save_path=save_path)
+        self.data = general.Manager(keyword='DIL', save_path=save_path)
 
     # 读取原生文件
     def read(self) -> Dict[str, DataFrame]:
@@ -1630,7 +1630,8 @@ class XPS(Keyword):
     def plot(self, save_path: Union[bool, str] = True, fitting: bool = False, noise_level: float = 0,
              degree: int = 3, smoothing: float = 200, deconvolution: Union[tuple, list, None] = None,
              area: Union[tuple, list, None] = None, high: Union[tuple, list, None] = None, precision: float = 0.2,
-             show_perfect: bool = False, show_legend: bool = False, show_information: bool = True, **kwargs) -> None:
+             show_perfect: bool = False, show_legend: bool = False, show_information: bool = True, dpi: int = 600,
+             **kwargs) -> None:
         """
         绘制 XPS 的图像
         Plot the XPS image.
@@ -1647,6 +1648,7 @@ class XPS(Keyword):
         :param show_perfect: (bool) 让散点贴近拟合出的曲线，此项可以加噪声，默认为 False
         :param show_legend: (bool) 显示散点 / 曲线信息，默认为 False
         :param show_information: (bool) 打印峰值信息，默认为 True
+        :param dpi: (int) 图片保存的精度，只有在需要保存时才有意义，默认为 dpi=600
         :param kwargs: 添加峰的曲线关键字参数
 
         :return: None
@@ -1959,7 +1961,6 @@ class XPS(Keyword):
         return smoothing_dic, smoothing_original_precision_dic, realized_dic, realized_original_precision_dic
 
     # 加噪
-    # noinspection PyProtectedMember
     def __add_noise(self, noise_level: float = 0) -> Dict[str, DataFrame]:
         """
         给数据添加噪声，使得数据更加真实
@@ -2011,7 +2012,7 @@ class Mapping(Keyword):
         self.element_dic = None
 
         # 实例化类 general.Manager 来进行数据的读取和图形的绘制  /* 该属性为实例化类，调用类属性时需要区分 */
-        self.data = general.Manager(save_path=save_path)
+        self.data = general.Manager(keyword='Mapping', save_path=save_path)
 
     # 读取原生文件
     def read(self, delimiter: Optional[str] = None) -> Dict[str, DataFrame]:
@@ -2019,9 +2020,9 @@ class Mapping(Keyword):
         读取能谱的源生 TXT 文件
         Read the raw TXT file of the energy spectrum.
 
-        针对仪器： SEM-EDS 配合冷场发射扫描电镜使用，SDD 电制冷探测器，80mm2 活区；分析元素范围：Be4-U92
+        针对仪器： SEM-EDS 乌灯丝扫描电子显微镜 SU3500，放大倍数：5~30000；样品台尺寸：装载直径 ≥ 200mm; 有 S E以及 BSE 成像
 
-        :param delimiter: (str) TXT 文件中的分割符，用以分列，默认为 '\s+'
+        :param delimiter: (str) TXT 文件中的分割符，用以分列，默认为 keyword = 'Mapping' 中的 self.delimiter 参数，即 ','
 
         :return data_dic: (dict) 数据的 dict 格式 {'title': DataFrame}
         DataFrame: column1:       float64
@@ -2030,10 +2031,10 @@ class Mapping(Keyword):
                    dtype:         object
         """
 
-        if delimiter is None:
-            delimiter = r'\s+'
+        if delimiter is not None:
+            self.data.delimiter = delimiter
 
-        self.data.read_txt(txt_path=self.read_path, delimiter=delimiter)  # 读取 TXT 文件数据
+        self.data.read_txt(txt_path=self.read_path)  # 读取 TXT 文件数据
 
         data_dic = copy.deepcopy(self.data.data_dic)
 
@@ -2055,34 +2056,20 @@ class Mapping(Keyword):
         :return: None
         """
 
-        if line_color is None:
-            line_color = 'purple'
+        if line_color is not None:
+            self.data.line_color = 'purple'
 
-        if fill_color is None:
+        if fill_color is not None:
+            fill_color = fill_color
+        else:
             fill_color = 'skyblue'
 
-        if background_color is None:
-            background_color = '#ef5350'
+        if background_color is not None:
+            background_color = background_color
+        else:
+            background_color = self.data.background_color
 
         self.data.plot_line(
-            save_path=save_path,
-
-            # 关键参数
-            width_height=(8, 4.5),
-            line_color=[line_color],
-            line_style='-',
-            line_width=1.5,
-
-            # 坐标轴标题
-            x_label='keV',
-            y_label='cps/eV',
-
-            # 加风格
-            show_grid=True,
-
-            # 刻度设置
-            x_min=0,
-            y_min=0,
 
             # 填充折线图下方的区域
             fill_area=True,
@@ -2090,8 +2077,7 @@ class Mapping(Keyword):
             fill_alpha=0.5,
 
             # 背景设置
-            background_color=sns.light_palette(background_color, as_cmap=True),
-            background_transparency=0.1,
+            background_color=background_color,
 
             **kwargs,
         )  # 进行图形的绘制
@@ -2109,7 +2095,7 @@ class Mapping(Keyword):
 
     # 分析 Mapping 的报告 word，并整合图片
     def analyze_Mapping(self, read_path: Optional[str] = None, save_path: Union[bool, str] = True,
-                        composite_image: bool = True, print_detail: bool = True) -> Dict[str, list]:
+                        composite_image: bool = True, print_detail: bool = True, dpi: int = 600) -> Dict[str, list]:
         """
         分析 SEM-EDS Mapping 得到的 Word 文档，进行合成图像，和提取并打印元素含量的功能
         Word documents obtained by SEM-EDS Mapping can be analyzed to synthesize images,
@@ -2119,6 +2105,7 @@ class Mapping(Keyword):
         :param save_path: (str) 图像的保存路径
         :param composite_image: (bool) 是否合成图像，默认为 True
         :param print_detail: (bool) 是否打印元素含量的详细信息，默认为 True
+        :param dpi: (int) 图片保存的精度，只有在需要保存时才有意义，默认为 dpi=600
 
         :return image_dic: (dict) 包含图像的 dict，一个键对应三个图像，第一个为 SEM 图像，第二个为元素分布图像，第三个为元素含量图像
         """
@@ -2207,7 +2194,7 @@ class Mapping(Keyword):
 
         # 合成图像
         if composite_image:
-            self.__composite_image(save_path)
+            self.__composite_image(save_path=save_path, dpi=dpi)
 
         # 打印元素含量详细信息
         if print_detail:
@@ -2216,13 +2203,14 @@ class Mapping(Keyword):
         return image_dic
 
     # 合成图像
-    def __composite_image(self, save_path: Union[bool, str] = True) -> dict:
+    def __composite_image(self, save_path: Union[bool, str] = True, dpi: int = 600) -> dict:
         """
         将两个图像合成一张。将第二张图像的黑色换成透明色，并将其中的彩色加深，使其更加鲜艳，然后放入第一张图片上
         Combine two images into one. Replace the black of the second image with a transparent color,
         and deepen the color in it to make it more vivid, and then put it on the first image
 
         :param save_path: (str) 图像的保存路径
+        :param dpi: (int) 图片保存的精度，只有在需要保存时才有意义，默认为 dpi=600
 
         :return result_image_dic: (dict) 包含合成图像的 dict，键为 title，值为合成后的图像
         """

@@ -278,7 +278,7 @@ class Helper:
         # 处理所有英文标点，确保后面有一个空格
         english_punctuation = ".!?,;:"
         for punct in english_punctuation:
-            text = re.sub(pattern=r'\{}[\t ]*'.format(punct),repl= punct + ' ', string=text)
+            text = re.sub(pattern=r'\{}[\t ]*'.format(punct), repl=punct + ' ', string=text)
 
         # 删除文本末尾不必要的空格及标点后的多余空格
         text = re.sub(pattern=r'\s+$', repl='', string=text)

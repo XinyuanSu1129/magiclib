@@ -1,7 +1,7 @@
 
 __version__ = '6.2.0'
 
-__all__ = ['general', 'grapher', 'projector', 'performer', 'inspector', 'accessor', 'author', 'potter']
+__all__ = ['general', 'grapher', 'projector', 'performer', 'potter', 'author', 'inspector']
 
 
 # Import warning
@@ -43,7 +43,7 @@ MAGIC
  -Torsion-       扭转曲线类 (Keyword)： 绘制扭转曲线 (应力-应变)
  -XRD-           XRD 类 (Keyword)： 绘制 XRD 曲线
  -Raman-         Raman 类 (Keyword)： 绘制 Raman 曲线
- -TEA-           热膨胀类 (Keyword)： 绘制热膨胀曲线
+ -DIL-           热膨胀类 (Keyword)： 绘制热膨胀曲线
  -XPS-           XPS 类 (Keyword)： 绘制 XPS 曲线
  
  --------------------------------------------------- performer ---------------------------------------------------------
@@ -53,27 +53,21 @@ MAGIC
  -Raman_Window-  Raman 窗口 (QMainWindow)： 进行 Raman 计算的小窗口
  -XRF_Window-    XRF 窗口 (QMainWindow)： 进行 XRF 计算的小窗口
  -SubWindow-     附加小窗口 (QMainWindow)： 附加的小窗口，可进行其它功能设置
+ 
+  ----------------------------------------------------- potter ----------------------------------------------------------
+ 
+ -PotteryBase-   基因库操作区：用于写入、读取和比较陶器数据
+ -Pottery-       基因库读取区：用于简单，明快地查找和读取数据和浏览图片
+ 
+  ----------------------------------------------------- author ----------------------------------------------------------
+ 
+ -Helper-        文本编辑区：用于检查、修改和比较文本内容
 
 ---------------------------------------------------- inspector ---------------------------------------------------------
 
  -Tool-          工具类： 用于直接调用的属性和方法
  -Observer-      观察类： 用于观测可用数据
  -Monitor-       检查类： 用于检查代码
-
- ---------------------------------------------------- accessor ---------------------------------------------------------
-
- -Constructor-   函数构造区： 用于构造函数来完成用户的请求
- -Article-       文章图像： 用于保留绘制文章中函数的图像
- -History-       属性存储： 用于存储用到过以后可能还会用的属性
- 
- ----------------------------------------------------- author ----------------------------------------------------------
- 
- -Helper-        文本编辑区：用于检查、修改和比较文本内容
-
- ----------------------------------------------------- potter ----------------------------------------------------------
- 
- -PotteryBase-   基因库操作区：用于写入、读取和比较陶器数据
- -Pottery-       基因库读取区：用于简单，明快地查找和读取数据和浏览图片
 
 ========================================================================================================================
 
@@ -99,7 +93,7 @@ MAGIC
  -Torsion-       Torsion Curve Class (Keyword): Draws torsion curves (stress-strain)
  -XRD-           XRD Class (Keyword): Draws XRD curves
  -Raman-         Raman Class (Keyword): Draws Raman curves
- -TEA-           Thermal Expansion Class (Keyword): Draws thermal expansion curves
+ -DIL-           Thermal Expansion Class (Keyword): Draws thermal expansion curves
  -XPS-           XPS Class (Keyword): Draws XPS curves
 
  --------------------------------------------------- performer ---------------------------------------------------------
@@ -109,27 +103,21 @@ MAGIC
  -Raman_Window-  Raman Window (QMainWindow): A small window for performing Raman calculations
  -XRF_Window-    XRF Window (QMainWindow): A small window for performing XRF calculations
  -SubWindow-     Additional Small Window (QMainWindow): An additional small window for setting other functions
+ 
+  ----------------------------------------------------- potter ----------------------------------------------------------
+
+ -PotteryBase-   Gene Bank operation area: used to write, read and compare pottery data
+ -Pottery-       Gene Library Reading area: for easy, crisp finding and reading data and viewing images
+ 
+ ----------------------------------------------------- author ----------------------------------------------------------
+
+ -Helper-        Text Editing: Used to examine, modify, and compare text content
 
 ---------------------------------------------------- inspector ---------------------------------------------------------
 
  -Tool-          Utility Class: Attributes and methods used for direct calls
  -Observer-      Observation Class: For observing available data
  -Monitor-       Inspection Class: For checking code
-
----------------------------------------------------- accessor ---------------------------------------------------------
-
- -Constructor-   Function Construction Area: Used for constructing functions to fulfill user requests
- -Article-       Article Image: Used to store images drawn in the article
- -History-       Attribute Storage: Used for storing attributes that have been used and might be needed again later
-
------------------------------------------------------ author ----------------------------------------------------------
-
- -Helper-        Text Editing: Used to examine, modify, and compare text content
- 
- ----------------------------------------------------- potter ----------------------------------------------------------
-
- -PotteryBase-   Gene Bank operation area: used to write, read and compare pottery data
- -Pottery-       Gene Library Reading area: for easy, crisp finding and reading data and viewing images
 
 ========================================================================================================================
 """
@@ -266,6 +254,11 @@ MAGIC
                 Added # Notice in the __init__.py file, which prohibits the use of the ptitprince library due 
                 to library conflicts.
                 Replace the raincloud diagram with the violin diagram.
+                Some of the content in class author and class potter has been modified, 
+                but the functionality has not been modified.
+                Move the accessor class out of the library and replace it in the Database.
+                The order and layout of the code are optimized.
+                Optimize the XPS, Mapping and other classes in the class projector.
                
                     
  ------ Needing ------
@@ -273,6 +266,8 @@ MAGIC
 --> method format_word_document() cannot format the text correctlyin class Author.
 --> Supplement the author content of the module.
 --> Supplement the pottery content of the module.
+--> Supplement the performer content of the module.
+--> Supplement the inspector content of the module.
 
 ========================================================================================================================
                                      The  Best  Way  Out  Is  Always  Through .
@@ -313,6 +308,7 @@ MAGIC
 # Content
 """
 ======================================================== Content =======================================================
+
 
 -----   *  *  *  *  *  Magic  Library  *  *  *  *  *   -----
 
@@ -367,10 +363,10 @@ merge_df_by_category()
 ------ Manager ------
 Magic_Database
 Category_Index
-Font_title
-Font_ticket
-Font_legend
-Font_mark
+font_title
+font_ticket
+font_legend
+font_mark
 interval_time
 
 read_txt()
@@ -423,6 +419,8 @@ pca_analysis()
 pca_loadings()
 
 ------ Plotter ------
+Category_Index
+
 plot_box()
 plot_violin()
 plot_heatmap()
@@ -499,11 +497,12 @@ magic_plot()
 save_json()
 __curve_fitting()
 
------- TEA ------
+------ DIL ------
 read()
 plot()
 magic_plot()
 save_json()
+plot_derivative()
 
 ------ XPS ------
 read()
@@ -511,6 +510,7 @@ plot()
 magic_plot()
 save_json()
 __curve_fitting()
+__add_noise()
 
 ------ Mapping ------
 read()
@@ -535,8 +535,7 @@ __extract_data()
 
 run_app()
 
------- Tool ------
-Main_Window()
+------ Main_Window ------
 initUI()
 open_XRD_Window()
 open_Raman_Window()
@@ -555,46 +554,45 @@ XRF_run()
 ------ SubWindow ------
 
 
-/ / / / / * inspector * / / / / /
+/ / / / / * potter * / / / / /
 
------- Tool ------
-blue_colors
-green_colors
-neutral_colors
-warm_colors
-rainbow_colors
-gradient_colors
-contrast_colors
-color_schemes
+------ PotteryBase ------
+Pottery_Database
+Standard_Template
+Category_Index
 
-light_palette()
-dark_palette()
+apply_standard_template()
+whether_data_exists()
+add_site()
+add_method()
+update_info_of_site()
+update_info_of_method()
+save_data_to_txt()
+save_data_to_excel()
+save_data_to_json()
+read_data()
+read_data_from_json()
+read_information()
+add_temporary_data()
+read_all_from_excel()
+plot_figure()
+plot_figure_from_json()
+plot_pca()
+# open_figure()
 
------- Observer ------
-print_background_color()
-print_width_height()
-print_markers()
-print_encoding()
-print_custom_color_palette()
-
------- Monitor ------
-
-
-/ / / / / * accessor * / / / / /
-
------- Constructor ------
-magic_access()
-to_improve_precision()
-examine_library()
-generation_access()
-for_report_tensile()
-
------- Article ------
-Banpo_XRD()
-Jiangzhai_XRD()
-
------- History ------
-(The class properties of History are not shown here)
+------ Pottery ------
+__display_main_folders()
+__display_secondary_folders()
+__display_thirdly_folders()
+__decide_figure()
+__plot_fingure_from_txt()
+__plot_figure_from_excel()
+__plot_figure_from_json()
+__open_figure()
+__user_input()
+__read_information()
+__wait_input()
+run()
 
 
 / / / / / * author * / / / / /
@@ -612,45 +610,30 @@ Style
 format_word_document()
 
 
-/ / / / / * potter * / / / / /
+/ / / / / * inspector * / / / / /
 
------- PotteryBase ------
-Pottery_Database
-Standard_Template
-Category_Index
+------ Tool ------
+blue_colors
+green_colors
+neutral_colors
+warm_colors
+rainbow_colors
+gradient_colors
+contrast_colors
+color_schemes
 
-apply_standard_template()
-whether_data_exists()
-add_site()
-add_method()
-update_info_of_site()
-update_info_of_method()
-save_data_to_txt()
-save_data_to_json()
-save_data_to_excel()
-read_data()
-read_data_from_json()
-read_information()
-add_temporary_data()
-read_all_from_excel()
-plot_figure()
-plot_figure_from_json()
-plot_pca()
-open_figure()
+light_palette()
+dark_palette()
 
------- Pottery ------
-__display_main_folders()
-__display_secondary_folders()
-__display_thirdly_folders()
-__decide_figure()
-__plot_fingure_from_txt()
-__plot_figure_from_json()
-__plot_figure_from_excel()
-__open_figure()
-__user_input()
-__read_information()
-__wait_input()
-run()
+------ Observer ------
+print_width_height()
+print_markers()
+print_encoding()
+print_color_palette()
+print_custom_color_palette()
+print_parameter_about_math()
+
+------ Monitor ------
 
 
 ========================================================================================================================

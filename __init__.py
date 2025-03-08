@@ -132,12 +132,11 @@ MAGIC
  -Pottery-       Gene Library Reading area: for easy, crisp finding and reading data and viewing images
 
 ========================================================================================================================
-
 """
 
-# Version
+# Log
 """
- ------ Version ------
+======================================================= Version ========================================================
 
 --> 0.0.0 Alpha 23-09-22 21:15 Manager upgrade.
 --> 0.0.0 Beta  23-09-25 11:29 XPS upgrade.
@@ -264,11 +263,13 @@ MAGIC
                 Updated to_reality().
                 Optimized the description and data update logic of data_init().
                 Add two methods split_df_by_category() and merge_df_by_category() to class Function.
+                Added # Notice in the __init__.py file, which prohibits the use of the ptitprince library due 
+                to library conflicts.
+                Replace the raincloud diagram with the violin diagram.
                
                     
  ------ Needing ------
-
---> Figure do not appear properly in the grid when drawing heat maps.
+ 
 --> method format_word_document() cannot format the text correctlyin class Author.
 --> Supplement the author content of the module.
 --> Supplement the pottery content of the module.
@@ -299,8 +300,20 @@ MAGIC
 
 """
 
+# Notice
+"""
+======================================================== Mptice ========================================================
+
+ --1--  seaborn conflicts with ptitprince in version 0.13.2 or later, and seaborn has heatmap required methods, 
+        so importing ptitprince is prohibited.
+
+========================================================================================================================
+"""
+
 # Content
 """
+======================================================== Content =======================================================
+
 -----   *  *  *  *  *  Magic  Library  *  *  *  *  *   -----
 
 
@@ -411,7 +424,7 @@ pca_loadings()
 
 ------ Plotter ------
 plot_box()
-plot_raincloud()
+plot_violin()
 plot_heatmap()
 plot_bars()
 plot_2d_histogram()
@@ -641,5 +654,4 @@ run()
 
 
 ========================================================================================================================
-
 """

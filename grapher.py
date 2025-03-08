@@ -18,7 +18,6 @@ import warnings
 import numpy as np
 import pandas as pd
 import seaborn as sns
-import ptitprince as pt
 from pandas import DataFrame
 import scipy.stats as stats
 from scipy.optimize import curve_fit
@@ -766,13 +765,13 @@ class Plotter(general.Manager):
 
         return None
 
-    # 组合图
-    def plot_raincloud(self, data_dic: Optional[dict] = None, save_path: Union[bool, str] = True, dpi: int = 600,
-                       x_label: Optional[str] = None, y_label: Optional[str] = None, show_grid: bool = True,
-                       colors: Optional[list] = None, show_line: bool = False, width: float = 0.6, **kwargs) -> None:
+    # 小提琴图
+    def plot_violin(self, data_dic: Optional[dict] = None, save_path: Union[bool, str] = True, dpi: int = 600,
+                    x_label: Optional[str] = None, y_label: Optional[str] = None, show_grid: bool = True,
+                    colors: Optional[list] = None, show_line: bool = False, width: float = 0.6, **kwargs) -> None:
         """
-        此方法用于绘制一个组合型箱线图
-        This method is used to plot a raincloud plot.
+        此方法用于绘制一个组小提琴图
+        This method is used to plot a vollin plot.
 
         :param data_dic: (dict) 包含一个键值对，键为 title，值为包含多个指标及类别序号的 DataFrame
         :param save_path: (str) 图片的保存路径
@@ -782,8 +781,8 @@ class Plotter(general.Manager):
         :param show_grid: 是否绘制网格，默认为 True
         :param colors: 绘制的颜色
         :param show_line: (bool) 显示连接线
-        :param width: (float) 小提琴部分的宽度
-        :param kwargs: RainCloud 方法中的关键字参数
+        :param width: (float) 小提琴部分的宽度，默认为 0.6
+        :param kwargs: 小提琴方法中的关键字参数
 
         :return: None
 
@@ -850,11 +849,29 @@ class Plotter(general.Manager):
 
             melted_data = pd.melt(data_df)
 
+            # 创建画布
             fig, ax = plt.subplots(figsize=width_height, dpi=200, facecolor="w")
-            ax = pt.RainCloud(x="variable", y="value", data=melted_data,
-                              palette=color_palette,
-                              width_viol=width, width_box=0.2, move=0, saturation=1, linewidth=0.5,
-                              box_showfliers=False, box_linewidth=1, point_size=4, pointplot=show_line, ax=ax, **kwargs)
+
+            # 小提琴图 (显示分布)
+            sns.violinplot(x="variable", y="value", data=melted_data,
+                           hue="variable", palette=color_palette, width=width,
+                           linewidth=0.5, saturation=1, legend=False, ax=ax, **kwargs)
+
+            # 透明箱线图 (仅显示框线，隐藏箱体)
+            sns.boxplot(x="variable", y="value", data=melted_data,
+                        width=0.2, showcaps=False, boxprops={"facecolor": "none"},
+                        whiskerprops={'linewidth': 0}, medianprops={'color': 'black'},
+                        ax=ax)
+
+            # 散点图 (显示数据点)
+            sns.stripplot(x="variable", y="value", data=melted_data,
+                          size=4, color="black", alpha=0.6, ax=ax)
+
+            # 折线图 (替代 pointplot=show_line)
+            if show_line:  # 只有 show_line=True 时才绘制折线
+                sns.pointplot(x="variable", y="value", data=melted_data,
+                              color="black", linestyles="-", markers="o",
+                              markersize=5, linewidth=1, ax=ax)
 
             plt.grid(show_grid)  # 绘制网格
 

@@ -676,6 +676,7 @@ class Statistics(general.Manager):
             ax.spines['bottom'].set_visible(False)
         if hide_left:
             ax.spines['left'].set_visible(False)
+            ax.set_yticks([])  # 隐藏 Y 轴刻度
         if hide_right:
             ax.spines['right'].set_visible(False)
 

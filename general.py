@@ -2511,26 +2511,25 @@ class Manager(Optimizer):
 
         # 二十种常用的配色方案
         self.color_palette = [
-            '#FF0000',  # 红色 | Red
-            '#008000',  # 绿色 | Green
-            '#0000FF',  # 蓝色 | Blue
-            '#800080',  # 紫色 | Purple
-            '#000000',  # 黑色 | Black
-            '#1f77b4',  # Tableau 蓝色 | Tableau Blue
-            '#ff7f0e',  # Tableau 橙色 | Tableau Orange
-            '#2ca02c',  # Tableau 绿色 | Tableau Green
-            '#d62728',  # Tableau 红色 | Tableau Red
-            '#9467bd',  # Tableau 紫色 | Tableau Purple
-            '#8c564b',  # Tableau 棕色 | Tableau Brown
-            '#e377c2',  # Tableau 粉色 | Tableau Pink
-            '#7f7f7f',  # Tableau 灰色 | Tableau Gray
-            '#bcbd22',  # Tableau 橄榄色 | Tableau Olive
-            '#17becf',  # Tableau 青色 | Tableau Cyan
-            '#001F3F',  # 海军蓝 | Navy
-            '#00FFFF',  # 浅蓝色 | Aqua
-            '#01FF70',  # 酸橙色 | Lime
-            '#F012BE',  # 紫红色 | Fuchsia
-            '#FFFFFF'  # 白色 | White
+            '#1f77b4',  # 蓝色 | Blue (Tableau Blue)
+            '#ff7f0e',  # 橙色 | Orange (Tableau Orange)
+            '#2ca02c',  # 绿色 | Green (Tableau Green)
+            '#d62728',  # 红色 | Red (Tableau Red)
+            '#9467bd',  # 紫色 | Purple (Tableau Purple)
+            '#8c564b',  # 棕色 | Brown (Tableau Brown)
+            '#e377c2',  # 粉色 | Pink (Tableau Pink)
+            '#7f7f7f',  # 灰色 | Gray (Tableau Gray)
+            '#bcbd22',  # 橄榄绿 | Olive (Tableau Olive)
+            '#17becf',  # 青色 | Cyan (Tableau Cyan)
+            '#005AB5',  # 深蓝色 | Deep Blue (Color Universal Design)
+            '#DC3220',  # 深红色 | Deep Red (Color Universal Design)
+            '#A6611A',  # 赭石色 | Ochre
+            '#E7298A',  # 品红色 | Magenta
+            '#6A3D9A',  # 深紫色 | Dark Purple
+            '#FF8C00',  # 深橙色 | Dark Orange
+            '#66C2A5',  # 浅绿色 | Light Green
+            '#FC8D62',  # 珊瑚色 | Coral
+            '#8DA0CB',  # 暗蓝色 | Muted Blue
         ]
 
         # 数据初始化分配 和 数据类型导入

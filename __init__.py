@@ -1,5 +1,5 @@
 
-__version__ = '6.2.0'
+__version__ = '6.2.1'
 
 __all__ = ['general', 'grapher', 'projector', 'performer', 'potter', 'author', 'inspector']
 
@@ -259,6 +259,10 @@ MAGIC
                 Move the accessor class out of the library and replace it in the Database.
                 The order and layout of the code are optimized.
                 Optimize the XPS, Mapping and other classes in the class projector.
+-> 6.2.1        25-03-20 11:55 Adjusted the order of some of the code in the pca_analysis() method in class Statistics.
+                Add a new method dendrogram_clustering() to class Statistics.
+                Add a new method agglomerative_clustering() to class Statistics.
+                Changed the self.color_palette 20 color scheme in class Manager to remove white.
                
                     
  ------ Needing ------
@@ -417,6 +421,8 @@ Category_Index
 
 pca_analysis()
 pca_loadings()
+dendrogram_clustering()
+agglomerative_clustering()
 
 ------ Plotter ------
 Category_Index

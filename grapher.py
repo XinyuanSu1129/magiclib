@@ -18,14 +18,15 @@ import warnings
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from pandas import DataFrame
+import matplotlib.cm as cm
 import scipy.stats as stats
+from pandas import DataFrame
 from scipy.optimize import curve_fit
 from scipy.stats import gaussian_kde
+import scipy.cluster.hierarchy as sch
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.optimize import OptimizeWarning
 from typing import Union, Optional, List, Dict, Callable, Tuple
-import matplotlib.cm as cm
 from matplotlib.cm import ScalarMappable
 from matplotlib import pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
@@ -37,6 +38,7 @@ from matplotlib.colors import ListedColormap, Normalize
 from matplotlib.colors import LinearSegmentedColormap
 from sklearn.svm import SVR
 from sklearn.decomposition import PCA
+from sklearn.cluster import AgglomerativeClustering
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import PolynomialFeatures
@@ -143,28 +145,34 @@ class Statistics(general.Manager):
         self.pca_dic = None
         # pca_loadings()
         self.pca_loadings_dic = None
+        # dendrogram_clustering()
+        self.tree_dic = None
+        # agglomerative_clustering()
+        self.agglomerative_dic = None
 
     # 主成分分析绘图
     def pca_analysis(self, data_dic: Optional[dict] = None, save_path: Union[bool, str] = True,
                      draw_ellipse: bool = True, std: float = 2,  margin_ratio: float = 0.1, dpi: int = 600,
                      width_height: tuple = (6, 4.5), category: Optional[str] = None, colors: Optional[list] = None,
-                     show_result: bool = True, show_legend: bool = True, loadings_analysis: bool = False,
-                     **kwargs) -> Dict[str, DataFrame]:
+                     show_result: bool = True, show_legend: bool = True, show_figure: bool = True,
+                     loadings_analysis: bool = False, **kwargs) -> Dict[str, DataFrame]:
         """
-        此方法用于绘制 PCA 结果图，输入的 data_dic 的长度需为 1
-        This method is used to plot the PCA result, and the length of the input data_dic must be 1.
+        此方法用于绘制 PCA 结果图，输入的 data_dic 的长度需为 1，需要有 category 列
+        This method is used to plot PCA results. The length of the input data_dic should be 1 and there should
+        be a category column.
 
         :param data_dic: (dict) 包含一个键值对，键为 title，值为包含多个指标及类别序号的 DataFrame
         :param save_path: (str) 图片的保存路径
         :param draw_ellipse: (bool) 是否绘制置信椭圆
         :param std: (float) 置信椭圆的标准差范围，默认为 2，此时置信区间为 90%
         :param margin_ratio: (float) 数据距边界的比例，该值需要介于 0 至 1 之间，默认为 0.1
-        :param dpi: (int) 图像保存和展示的精度
+        :param dpi: (int) 图像保存的精度
         :param width_height: (tuple) 图片的宽度和高度，默认为(6, 4.5)
         :param category: (str) 用于分类的列，默认为 Statistics.Category_Index
         :param colors: (str / list) 置信椭圆的填充颜色
         :param show_result: (bool) 是否打印结果，默认为 True
         :param show_legend: (bool) 是否显示图例，默认为 True
+        :param show_figure: (bool) 是否显示图片，默认为 True，此项是确保被内部方法调用时不会绘制图像
         :param loadings_analysis: (bool) 是否一同绘制载荷图，使用的参数为默认值，默认为 False
         :param kwargs: Ellipse 方法中的关键字参数
 
@@ -255,25 +263,6 @@ class Statistics(general.Manager):
         # 创建绘图对象
         fig, ax = plt.subplots(figsize=width_height, dpi=200, facecolor="w")
 
-        # 设置刻度限制
-        if x_min is not None or x_max is not None:
-            plt.xlim((x_min, x_max))
-        if y_min is not None or y_max is not None:
-            plt.ylim((y_min, y_max))
-
-        # 设置坐标轴字体
-        plt.xlabel(xlabel='PC1', fontdict=self.font_title)
-        plt.ylabel(ylabel='PC2', fontdict=self.font_title)
-
-        # 设置刻度标签的字体
-        plt.xticks(fontfamily=self.font_ticket['family'],
-                   fontweight=self.font_ticket['weight'],
-                   fontsize=self.font_ticket['size'])
-        plt.yticks(fontfamily=self.font_ticket['family'],
-                   fontweight=self.font_ticket['weight'],
-                   fontsize=self.font_ticket['size'])
-        ax.tick_params(axis='both', which='major', direction='in')
-
         # 验证提供的颜色数量是否与类别数量匹配
         if len(colors) != len(unique_category):
             class_name = self.__class__.__name__  # 获取类名
@@ -294,6 +283,25 @@ class Statistics(general.Manager):
                         s=40,
                         edgecolor='k',
                         ax=ax)
+
+        # 设置刻度限制
+        if x_min is not None or x_max is not None:
+            plt.xlim((x_min, x_max))
+        if y_min is not None or y_max is not None:
+            plt.ylim((y_min, y_max))
+
+        # 设置坐标轴字体
+        plt.xlabel(xlabel='PC1', fontdict=self.font_title)
+        plt.ylabel(ylabel='PC2', fontdict=self.font_title)
+
+        # 设置刻度标签的字体
+        plt.xticks(fontfamily=self.font_ticket['family'],
+                   fontweight=self.font_ticket['weight'],
+                   fontsize=self.font_ticket['size'])
+        plt.yticks(fontfamily=self.font_ticket['family'],
+                   fontweight=self.font_ticket['weight'],
+                   fontsize=self.font_ticket['size'])
+        ax.tick_params(axis='both', which='major', direction='in')
 
         # 只有当 show_legend 为 True 时才会有图例
         if show_legend:
@@ -359,7 +367,10 @@ class Statistics(general.Manager):
             plt.savefig(fname=full_file_path, dpi=dpi)  # 使用完整路径将散点图保存到指定的路径
 
         # 显示图像
-        plt.show()
+        if show_figure:
+            plt.show()
+        else:
+            plt.clf()  # 清空当前的画板
 
         if show_result:
             print(pca_df)
@@ -387,7 +398,7 @@ class Statistics(general.Manager):
         :param data_dic: (dict) 包含一个键值对，键为 title，值为包含多个指标及类别序号的 DataFrame
         :param save_path: (str) 图片的保存路径
         :param margin_ratio: (float) 数据距边界的比例，该值需要介于 0 至 1 之间，默认为 0.1
-        :param dpi: (int) 图像保存和展示的精度
+        :param dpi: (int) 图像保存的精度
         :param width_height: (tuple) 图片的宽度和高度，默认为(6, 4.5)
         :param category: (str) 用于分类的列，默认为 Statistics.Category_Index
         :param colors: (str / list) 第一个颜色为箭头颜色，第二个颜色为文本颜色，默认为红与黑
@@ -534,6 +545,366 @@ class Statistics(general.Manager):
         self.pca_loadings_dic = pca_loadings_dic
 
         return pca_loadings_dic
+
+    # 树状聚类分析
+    def dendrogram_clustering(self, data_dic: Optional[dict] = None, save_path: Union[bool, str] = True,
+                              method: str = 'ward', metric: str = 'euclidean', dpi: int = 600,
+                              width_height: tuple = (6, 4.5), threshold: float = 0.7,
+                              above_color: Union[str, tuple] = "b", p: int = None, hide_x: bool = True,
+                              tree_linewidth: Union[int, float] = 2, axes_linewidth: Union[int, float] = 3,
+                              show_result: bool = True, **kwargs) -> Dict[str, np.ndarray]:
+        """
+        此方法用于绘制树状聚类分析图，输入的 data_dic 的长度需为 1
+        This method is used to draw the tree cluster analysis graph, and the length of the input data_dic should be 1.
+
+        :param data_dic: (dict) 包含一个键值对，键为 title，值为包含多个指标及类别序号的 DataFrame
+        :param save_path: (str) 图片的保存路径
+        :param method: (str)  参数定义了聚类过程中使用的合并方法，默认为 'ward'。常见的几种方法包括：
+                       ['ward', 'single', 'complete', 'average', 'centroid', 'median', 'ward.D', 'ward.D2']
+        :param metric: (str) 参数定义了距离度量方式，即在计算样本之间的相似度时使用的度量标准，默认为 'euclidean'。常见的度量方式包括：
+                       ['euclidean', 'cityblock', 'cosine', 'minkowski', 'chebyshev', 'hamming', 'jaccard']
+        :param dpi: (int) 图像保存的精度
+        :param width_height: (tuple) 图片的宽度和高度，默认为(6, 4.5)
+        :param threshold: (float) 在 0 至 1 之间，表示上层颜色的值，默认为 0.7
+        :param above_color: (str / tuple) 最上方树杈的颜色
+        :param p: (int) 横坐标，即叶子节点的个数，默认为 None，表示不限制
+        :param hide_x: (bool) 是否隐藏 X 轴刻度，表示样品名，转为为 True
+        :param tree_linewidth: (int / float) 树杈的粗线，默认为 2
+        :param axes_linewidth: (int / float) 边框的粗线，默认为 3
+        :param show_result: (bool) 是否打印结果，默认为 True
+
+        :return tree_dic: (dict) 聚类分析后的数据 dict ，键为 title，值为层次聚类的链接矩阵 (linkage matrix)
+
+        --- **kwargs ---
+
+        - x_label: (str) X 轴的标题
+        - y_label: (str) Y 轴的标题
+        - x_min: (float) X 轴最小值
+        - x_max: (float) X 轴最大值
+        - y_min: (float) Y 轴最小值
+        - y_max: (float) Y 轴最大值
+        - hide_top: (bool) 隐藏上框，默认为 True
+        - hide_bottom: (bool) 隐藏下框，默认为 True
+        - hide_left: (bool) 隐藏左框，默认为 False
+        - hide_right: (bool) 隐藏右框，默认为 True
+        """
+
+        # 将需要处理的数据赋给 data_dic
+        if data_dic is not None:
+            data_dic = copy.deepcopy(data_dic)
+        else:
+            data_dic = copy.deepcopy(self.data_dic)
+
+        # 当 save_path == True 时，沿用 self.save_path 的设置，此项为默认项
+        if save_path is True:
+            save_path = self.save_path
+        # 若 save_path 为 False 时，本图形不保存
+        elif save_path is False:
+            save_path = None
+        # 当有指定的 save_path 时，save_path 将会被其赋值，若 save_path == '' 则保存在运行的 py 文件的目录下
+        else:
+            save_path = save_path
+
+        # 关键字参数初始化
+        x_label = kwargs.pop('x_label', '')
+        y_label = kwargs.pop('y_label', '')
+        x_min = kwargs.pop('x_min', None)
+        x_max = kwargs.pop('x_max', None)
+        y_min = kwargs.pop('y_min', None)
+        y_max = kwargs.pop('y_max', None)
+        hide_top = kwargs.pop('hide_top', True)
+        hide_bottom = kwargs.pop('hide_bottom', True)
+        hide_left = kwargs.pop('hide_left', False)
+        hide_right = kwargs.pop('hide_right', True)
+
+        title, data_df = list(data_dic.items())[0]  # 从 data_dic 中获取标题和数据
+
+        # 检查 data_df 中是否存在 self.Category_Index列
+        if self.Category_Index in data_df.columns:
+            # 提取数据部分和类别标签部分
+            # category_index = data_df[self.Category_Index]  # 提取名为 Category_Index 的列作为类别标签
+            data_df = data_df.drop(columns=[self.Category_Index])
+
+        # 用 0 替换所有缺失值
+        data_df = data_df.fillna(0)
+        # 聚类合并
+        z_data = sch.linkage(data_df, method=method, metric=metric)
+
+        # 创建绘图对象
+        fig, ax = plt.subplots(figsize=width_height, dpi=200, facecolor="w")
+
+        # 画树状图，使用条件表达式传递 p
+        if p is not None:
+            sch.dendrogram(z_data,
+                           ax=ax,
+                           p=p,
+                           truncate_mode="lastp",
+                           above_threshold_color=above_color,
+                           color_threshold=threshold * max(z_data[:, 2]),
+                           **kwargs)
+        else:
+            sch.dendrogram(z_data,
+                           ax=ax,
+                           truncate_mode="lastp",
+                           above_threshold_color=above_color,
+                           color_threshold=threshold * max(z_data[:, 2]),
+                           **kwargs)
+
+        # **修改树状图连线的宽度**
+        for line in ax.collections:
+            line.set_linewidth(tree_linewidth)  # 这里设置线条宽度
+
+        # 设置刻度限制
+        if x_min is not None or x_max is not None:
+            plt.xlim((x_min, x_max))
+        if y_min is not None or y_max is not None:
+            plt.ylim((y_min, y_max))
+
+        # **去除横坐标**
+        if hide_x:
+            ax.set_xticks([])  # 隐藏 X 轴刻度
+
+        # 加粗纵坐标
+        ax.spines['top'].set_linewidth(axes_linewidth)  # 加粗上轴
+        ax.spines['bottom'].set_linewidth(axes_linewidth)  # 加粗下轴
+        ax.spines['left'].set_linewidth(axes_linewidth)  # 加粗左轴
+        ax.spines['right'].set_linewidth(axes_linewidth)  # 加粗右轴
+        # 是否隐藏顶部、右侧和底部的边框
+        if hide_top:
+            ax.spines['top'].set_visible(False)
+        if hide_bottom:
+            ax.spines['bottom'].set_visible(False)
+        if hide_left:
+            ax.spines['left'].set_visible(False)
+        if hide_right:
+            ax.spines['right'].set_visible(False)
+
+        # 设置坐标轴字体
+        plt.xlabel(xlabel=x_label, fontdict=self.font_title)
+        plt.ylabel(ylabel=y_label, fontdict=self.font_title)
+
+        # 设置刻度标签的字体
+        plt.xticks(fontfamily=self.font_ticket['family'],
+                   fontweight=self.font_ticket['weight'],
+                   fontsize=self.font_ticket['size'])
+        plt.yticks(fontfamily=self.font_ticket['family'],
+                   fontweight=self.font_ticket['weight'],
+                   fontsize=self.font_ticket['size'])
+        ax.tick_params(axis='both', which='major', direction='in')
+
+        # 在你设置轴范围之前，设置边距
+        ax.margins(0.1)
+
+        plt.tight_layout()
+
+        # 如果提供了保存路径，则保存图像到指定路径
+        if save_path is not None:  # 如果 save_path 的值不为 None，则保存
+            file_name = title + "_tree.png"  # 初始文件名为 "title_tree.png"
+            full_file_path = os.path.join(save_path, file_name)  # 创建完整的文件路径
+
+            if os.path.exists(full_file_path):  # 查看该文件名是否存在
+                count = 1
+                file_name = title + "_tree" + f"_{count}.png"  # 若该文件名存在则在后面加 '_1'
+                full_file_path = os.path.join(save_path, file_name)  # 更新完整的文件路径
+
+                while os.path.exists(full_file_path):  # 找是否存在，并不断 +1，直到不重复
+                    count += 1
+                    file_name = title + "_tree" + f"_{count}.png"
+                    full_file_path = os.path.join(save_path, file_name)  # 更新完整的文件路径
+
+            plt.savefig(fname=full_file_path, dpi=dpi)  # 使用完整路径将散点图保存到指定的路径
+
+        # 显示图像
+        plt.show()
+
+        if show_result:
+            print(z_data)
+
+        # 创建 tree_dic 用于返回聚类分析后的数据
+        tree_dic = {title: z_data}
+        self.tree_dic = tree_dic
+
+        return tree_dic
+
+    # 层次聚类分析
+    def agglomerative_clustering(self, data_dic: Optional[dict] = None, save_path: Union[bool, str] = True,
+                                 method: str = 'ward', metric: str = 'euclidean', dpi: int = 600,
+                                 width_height: tuple = (6, 4.5), n_clusters: int = 2, colors: list = None,
+                                 point_style: str = 'o', point_size: float = 3, show_result: bool = True,
+                                 **kwargs) -> Dict[str, np.ndarray]:
+        """
+        此方法用于二维 (两列数据) 的层次聚类分析图，输入的 data_dic 的长度需为 1
+        This method is used for a two-dimensional (two-column data) hierarchical cluster analysis graph, and
+        the length of the input data_dic should be 1.
+
+        :param data_dic: (dict) 包含一个键值对，键为 title，值为包含多个指标及类别序号的 DataFrame，数据只会用到前两列
+        :param save_path: (str) 图片的保存路径
+        :param method: (str)  参数定义了聚类过程中使用的合并方法，默认为 'ward'。常见的几种方法包括：
+                       ['ward', 'single', 'complete', 'average', 'centroid', 'median', 'ward.D', 'ward.D2']
+        :param metric: (str) 参数定义了距离度量方式，即在计算样本之间的相似度时使用的度量标准，默认为 'euclidean'。常见的度量方式包括：
+                       ['euclidean', 'cityblock', 'cosine', 'minkowski', 'chebyshev', 'hamming', 'jaccard']
+        :param dpi: (int) 图像保存的精度
+        :param width_height: (tuple) 图片的宽度和高度，默认为(6, 4.5)
+        :param n_clusters: (int) 将数据分为几类，默认为自动分类，建议手动赋值
+        :param colors: (list) 散点颜色，有默认颜色
+        :param point_style: (str) 最上方散点的风格，即 scatter 图像散点的风格，默认为点状
+        :param point_size: (float) 散点的大小，默认为 3
+        :param show_result: (bool) 是否打印结果，默认为 True
+
+        :return z_dic: (dict) 聚类分析后的数据 dict ，键为 title，值为层次聚类的链接矩阵 (linkage matrix)
+
+        --- **kwargs ---
+
+        - x_label: (str) X 轴的标题
+        - y_label: (str) Y 轴的标题
+        - x_min: (float) X 轴最小值
+        - x_max: (float) X 轴最大值
+        - y_min: (float) Y 轴最小值
+        - y_max: (float) Y 轴最大值
+        - hide_top: (bool) 隐藏上框，默认为 False
+        - hide_bottom: (bool) 隐藏下框，默认为 False
+        - hide_left: (bool) 隐藏左框，默认为 False
+        - hide_right: (bool) 隐藏右框，默认为 False
+        """
+
+        # 将需要处理的数据赋给 data_dic
+        if data_dic is not None:
+            data_dic = copy.deepcopy(data_dic)
+        else:
+            data_dic = copy.deepcopy(self.data_dic)
+
+        # 当 save_path == True 时，沿用 self.save_path 的设置，此项为默认项
+        if save_path is True:
+            save_path = self.save_path
+        # 若 save_path 为 False 时，本图形不保存
+        elif save_path is False:
+            save_path = None
+        # 当有指定的 save_path 时，save_path 将会被其赋值，若 save_path == '' 则保存在运行的 py 文件的目录下
+        else:
+            save_path = save_path
+
+        # 检查 colors 是否为 None 且长度是否与 n_clusters 一致
+        if colors is not None and len(colors) != n_clusters:
+            class_name = self.__class__.__name__  # 获取类名
+            method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                             f"Length of colors ({len(colors)}) list must match n_clusters ({n_clusters}).")
+
+        # 查看是否给出绘图颜色
+        if colors is not None:
+            color_palette = ListedColormap(colors)
+        else:
+            color_palette = ListedColormap(self.color_palette)
+
+        # 关键字参数初始化
+        x_label = kwargs.pop('x_label', '')
+        y_label = kwargs.pop('y_label', '')
+        x_min = kwargs.pop('x_min', None)
+        x_max = kwargs.pop('x_max', None)
+        y_min = kwargs.pop('y_min', None)
+        y_max = kwargs.pop('y_max', None)
+        hide_top = kwargs.pop('hide_top', False)
+        hide_bottom = kwargs.pop('hide_bottom', False)
+        hide_left = kwargs.pop('hide_left', False)
+        hide_right = kwargs.pop('hide_right', False)
+
+        title, data_df = list(data_dic.items())[0]  # 从 data_dic 中获取标题和数据
+
+        # 检查 data_df 中是否存在 self.Category_Index列
+        if self.Category_Index in data_df.columns:
+            # 提取数据部分和类别标签部分
+            # category_index = data_df[self.Category_Index]  # 提取名为 Category_Index 的列作为类别标签
+            data_df = data_df.drop(columns=[self.Category_Index])
+
+        # 用 0 替换所有缺失值
+        data_df = data_df.fillna(0)
+        # 进行层次聚类
+        hc = AgglomerativeClustering(n_clusters=n_clusters, linkage=method, metric=metric)
+        # 进行层次聚类，并返回每个样本的聚类标签
+        y_hc = hc.fit_predict(data_df)
+
+        # 进行 PCA 绘制时让数据降维 (不会影响聚类结果，只是用于绘图)
+        pca_dic = self.pca_analysis(data_dic=data_dic,
+                                    save_path=False,
+                                    draw_ellipse=False,
+                                    show_result=False,
+                                    show_figure=False)
+        pca_data_df = list(pca_dic.values())[0]  # 从 pca_dic 中获取数据
+
+        # 创建绘图对象
+        fig, ax = plt.subplots(figsize=width_height, dpi=200, facecolor="w")
+
+        # 画出聚类结果
+        plt.scatter(x=pca_data_df.iloc[:, 0],
+                    y=pca_data_df.iloc[:, 1],
+                    c=y_hc,
+                    cmap=color_palette,
+                    marker=point_style,
+                    s=point_size,
+                    **kwargs)
+
+        # 设置刻度限制
+        if x_min is not None or x_max is not None:
+            plt.xlim((x_min, x_max))
+        if y_min is not None or y_max is not None:
+            plt.ylim((y_min, y_max))
+
+        # 是否隐藏顶部、右侧和底部的边框
+        if hide_top:
+            ax.spines['top'].set_visible(False)
+        if hide_bottom:
+            ax.spines['bottom'].set_visible(False)
+        if hide_left:
+            ax.spines['left'].set_visible(False)
+        if hide_right:
+            ax.spines['right'].set_visible(False)
+
+        # 设置坐标轴字体
+        plt.xlabel(xlabel=x_label, fontdict=self.font_title)
+        plt.ylabel(ylabel=y_label, fontdict=self.font_title)
+
+        # 设置刻度标签的字体
+        plt.xticks(fontfamily=self.font_ticket['family'],
+                   fontweight=self.font_ticket['weight'],
+                   fontsize=self.font_ticket['size'])
+        plt.yticks(fontfamily=self.font_ticket['family'],
+                   fontweight=self.font_ticket['weight'],
+                   fontsize=self.font_ticket['size'])
+        ax.tick_params(axis='both', which='major', direction='in')
+
+        # 在你设置轴范围之前，设置边距
+        ax.margins(0.1)
+
+        plt.tight_layout()
+
+        # 如果提供了保存路径，则保存图像到指定路径
+        if save_path is not None:  # 如果 save_path 的值不为 None，则保存
+            file_name = title + "_agglomerative.png"  # 初始文件名为 "title_agglomerative.png"
+            full_file_path = os.path.join(save_path, file_name)  # 创建完整的文件路径
+
+            if os.path.exists(full_file_path):  # 查看该文件名是否存在
+                count = 1
+                file_name = title + "_agglomerative" + f"_{count}.png"  # 若该文件名存在则在后面加 '_1'
+                full_file_path = os.path.join(save_path, file_name)  # 更新完整的文件路径
+
+                while os.path.exists(full_file_path):  # 找是否存在，并不断 +1，直到不重复
+                    count += 1
+                    file_name = title + "_agglomerative" + f"_{count}.png"
+                    full_file_path = os.path.join(save_path, file_name)  # 更新完整的文件路径
+
+            plt.savefig(fname=full_file_path, dpi=dpi)  # 使用完整路径将散点图保存到指定的路径
+
+        # 显示图像
+        plt.show()
+
+        if show_result:
+            print(y_hc)
+
+        # 创建 agglomerative_dic 用于返回聚类分析后的数据
+        agglomerative_dic = {title: y_hc}
+        self.agglomerative_dic = agglomerative_dic
+
+        return agglomerative_dic
 
 
 """ 绘图 """

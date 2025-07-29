@@ -27,6 +27,7 @@ import scipy.stats as stats
 from pandas import DataFrame
 from scipy.stats import norm
 from datetime import datetime
+from natsort import natsorted
 from collections import Counter
 from sympy import sympify, symbols
 from scipy.signal import find_peaks
@@ -293,7 +294,7 @@ class Function:
         :param path: (str) TXT 文件路径或目录路径
         :param show: (bool) 是否打印，默认为 True
 
-        :return: results: (str) 返回文件编码的结果
+        :return results: (str) 返回文件编码的结果
         """
 
         # 初始化空字符串来存储结果
@@ -467,7 +468,7 @@ class Function:
         :param probability: (float) 概率
         :param show: (bool) 是否绘图，默认为否
 
-        :return: std: (float) 标准差
+        :return std: (float) 标准差
         """
 
         # 检查对称区间
@@ -512,7 +513,7 @@ class Function:
         :param std: (float) 标准差
         :param show: (bool) 是否绘图，默认为否
 
-        :return: probability: (float) 概率
+        :return probability: (float) 概率
         """
 
         # 计算区间的上下限对应的 z-scores
@@ -542,14 +543,14 @@ class Function:
 
     # 获取文件夹下所有子文件夹的名称
     @staticmethod
-    def get_subdirectories(folder_path) -> tuple:
+    def get_subdirectories(folder_path: str) -> tuple:
         """
         获取目录文件夹下所有子文件夹的名称
         Retrieve the names of all subfolders within a directory.
 
         :param folder_path: (str) 文件夹的路径
 
-        :return: result: (tuple) 子文件夹的名称
+        :return result: (tuple) 子文件夹的名称
         """
 
         subdirectories = []
@@ -561,6 +562,183 @@ class Function:
         result = tuple(subdirectories)
 
         return result
+
+    # 获取文件夹下所有目标子文件的名称
+    @staticmethod
+    def get_files(folder_path, target_suffix: [None, list, str] = None, seek_directory: bool = True, show: bool = True)\
+            -> List[str]:
+        """
+        获取目录文件夹下所有子文件夹或指定类型文件的名称
+        Retrieve the names of all subfolders and/or files with specific suffixes within a directory.
+
+        :param folder_path: (str) 文件夹的路径
+        :param target_suffix: (str / list / None) 指定扩展名（例如 ".pdf"），也可以是字符串列表，None 表示不过滤
+        :param seek_directory: (bool) 是否查找子目录，True 表示包含目录，False 表示只返回文件
+        :param show: (bool) 是否在控制台打印结果，True 表示打印，False 表示静默返回
+
+        :return files_list: (list) 子文件夹和 / 或目录名称
+        """
+
+        # ANSI 颜色列表：用于控制台高亮不同扩展名的文件
+        color_list = [
+            '\033[91m',  # 红色
+            '\033[92m',  # 绿色
+            '\033[93m',  # 黄色
+            '\033[94m',  # 蓝色
+            '\033[95m',  # 紫色
+            '\033[96m',  # 青色
+            '\033[90m',  # 灰色
+        ]
+        reset = '\033[0m'  # 重置颜色
+
+        files_list = []  # 存储所有符合条件的结果（绝对路径）
+
+        # 标准化 target_suffix：统一转为小写列表，方便后续匹配
+        if isinstance(target_suffix, str):
+            target_suffix = [target_suffix.lower()]
+        elif isinstance(target_suffix, list):
+            if not all(isinstance(s, str) for s in target_suffix):
+                method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+                raise ValueError(f"033[95mIn {method_name}\033[0m,"
+                                 f"all elements in the target_suffix list must be strings")
+            target_suffix = [s.lower() for s in target_suffix]
+        elif target_suffix is not None:
+            method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+            raise ValueError(f"033[95mIn {method_name}\033[0m,"
+                             f"target_suffix must be a string, a list of strings, or None")
+
+        directories = [] if seek_directory else None  # 用于记录子目录（如果开启）
+        files = []  # 用于记录符合条件的文件（仅文件名）
+
+        # 遍历当前目录下的所有子项
+        for item in os.listdir(folder_path):
+            item_path = os.path.join(folder_path, item)
+
+            # 处理子目录
+            if os.path.isdir(item_path) and seek_directory:
+                directories.append(item)
+                files_list.append(item_path)
+
+            # 处理文件并按扩展名筛选
+            elif os.path.isfile(item_path):
+                if target_suffix is None or any(item.lower().endswith(suf) for suf in target_suffix):
+                    files.append(item)
+                    files_list.append(item_path)
+
+        # 扩展名颜色映射（自动为每种扩展名分配颜色）
+        ext_color_map = {}
+        color_index = 0
+
+        def get_color(external):
+            nonlocal color_index
+            if external not in ext_color_map:
+                if color_index < len(color_list):
+                    ext_color_map[external] = color_list[color_index]
+                    color_index += 1
+                else:
+                    ext_color_map[external] = '\033[97m'  # 白色
+            return ext_color_map[external]
+
+        # 控制是否打印结果
+        if show:
+            print(f"\nDirectory: \033[4m{folder_path}{reset}")
+
+            # 打印子目录（若有且允许）
+            if directories:
+                print(f"Subdirectories ({len(directories)}):")
+                for idx, d in enumerate(directories, 1):
+                    print(f"   {idx:>2}. \033[1m{d}{reset}")
+
+            # 打印文件（若有）
+            if files:
+                print(f"Files ({len(files)}):")
+                for idx, f in enumerate(files, 1):
+                    ext = os.path.splitext(f)[1].lower()
+                    color = get_color(ext)
+                    print(f"   {idx:>2}. {color}{f}{reset}")
+
+        return files_list
+
+    # 在 list 中对文件名排序
+    @staticmethod
+    def sort_file_list(file_list: List[str], show=True) -> List[str]:
+        """
+        对一个包含文件名或目录名的字符串列表进行分类和排序（符合 macOS 排序习惯）
+        Classify and sort a list of strings containing file names or directory names
+        (in line with macOS sorting habits).
+
+        :param file_list: (list) 要排序的文件名/目录名列表，元素必须是字符串
+        :param show: (bool) 是否打印排序结果
+
+        :return sorted_list: (list) 排序后的列表，目录在前，文件按扩展名分类后自然排序
+        """
+
+        # ANSI 颜色列表：用于控制台高亮不同扩展名的文件
+        color_list = [
+            '\033[91m',  # 红色
+            '\033[92m',  # 绿色
+            '\033[93m',  # 黄色
+            '\033[94m',  # 蓝色
+            '\033[95m',  # 紫色
+            '\033[96m',  # 青色
+            '\033[90m',  # 灰色
+        ]
+        reset = '\033[0m'  # 重置颜色
+
+        # 检查是否为字符串列表
+        if not isinstance(file_list, list):
+            method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+            raise ValueError(f"033[95mIn {method_name}\033[0m, file_list must be of the list type")
+        if not all(isinstance(item, str) for item in file_list):
+            method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+            raise ValueError(f"033[95mIn {method_name}\033[0m, all elements in file_list must be of type str")
+
+        directories = []
+        files_by_extension = {}
+
+        # 分类：目录和按扩展名分组的文件
+        for name in file_list:
+            if '.' not in name or name.startswith('.'):
+                directories.append(name)
+            else:
+                _, ext = os.path.splitext(name)
+                ext = ext.lower()
+                files_by_extension.setdefault(ext, []).append(name)
+
+        sorted_dirs = natsorted(directories)
+        sorted_files = []
+
+        # 颜色分配字典
+        ext_color_map = {}
+        color_index = 0
+
+        # 为扩展名分配颜色
+        for ext in sorted(files_by_extension.keys()):
+            if ext not in ext_color_map:
+                if color_index < len(color_list):
+                    ext_color_map[ext] = color_list[color_index]
+                    color_index += 1
+                else:
+                    ext_color_map[ext] = '\033[97m'  # 超出颜色列表用白色
+            sorted_files.extend(natsorted(files_by_extension[ext]))
+
+        sorted_list = sorted_dirs + sorted_files
+
+        if show:
+            print("Sorted result:\n")
+            if sorted_dirs:
+                print("Directories:")
+                for d in sorted_dirs:
+                    print(f"  - {color_list[0]}{d}{reset}")  # 目录统一用第一个颜色
+            if sorted_files:
+                print("\nFiles:")
+                for f in sorted_files:
+                    ext = os.path.splitext(f)[1].lower()
+                    color = ext_color_map.get(ext, '\033[97m')
+                    print(f"  - {color}{f}{reset}")
+            print()
+
+        return sorted_list
 
     # 使 Excel 数据重新排序
     @staticmethod
@@ -660,13 +838,13 @@ class Function:
 
     # 复制文件到目标文件夹 (不包括文件夹)
     @staticmethod
-    def copy_files(source_path: str, destination_path: str, search_all: bool = False, ignore_list: list = None) -> None:
+    def copy_files(source_path: str, target_path: str, search_all: bool = False, ignore_list: list = None) -> None:
         """
         根据指定的参数将文件从源目录复制到目标目录。
         Copies files from the source directory to the destination directory based on the specified parameters.
 
         :param source_path: (str) 文件 (夹) 来源的目录，此路径必需是目录
-        :param destination_path: (str) 文件 (夹) 复制到的路径，此路径必需是目录
+        :param target_path: (str) 文件 (夹) 复制到的路径，此路径必需是目录
         :param search_all: (bool) 是否搜寻来源目录的所有子文件夹，默认为 False.
         :param ignore_list: (list) 需要忽略的文件或文件夹，默认为 None。如果提供，将自动包含 '.DS_Store'。
                             该忽略如果是路径的情况下只会记录最后的文件 / 文件夹名 (而无视其路径)，如果忽略了一个文件夹也只算一次忽略。
@@ -682,12 +860,12 @@ class Function:
             raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
                              f"source path '{source_path}' must be a directory.")
 
-        # 检查 destination_path 是否为文件夹
-        if not os.path.isdir(destination_path):
+        # 检查 target_path 是否为文件夹
+        if not os.path.isdir(target_path):
             class_name = self.__class__.__name__  # 获取类名
             method_name = inspect.currentframe().f_code.co_name  # 获取方法名
             raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
-                             f"destination path '{destination_path}' must be a directory.")
+                             f"destination path '{target_path}' must be a directory.")
 
         # 初始化忽略列表，自动包含 '.DS_Store'
         if ignore_list is None:
@@ -728,21 +906,21 @@ class Function:
 
         # 检查是否有文件需要复制
         if not files_to_copy:
-            print(f"\033[31mNo files to copy from \033[34m{source_path}\033[0m to \033[34m{destination_path}\033[0m.")
+            print(f"\033[31mNo files to copy from \033[34m{source_path}\033[0m to \033[34m{target_path}\033[0m.")
             return None
 
         # 复制文件到目标路径
         copied_count = 0
         for file in files_to_copy:
             base_name = os.path.basename(file)
-            destination_file = os.path.join(destination_path, base_name)
+            destination_file = os.path.join(target_path, base_name)
 
             # 检查文件名冲突
             if os.path.exists(destination_file):
                 base, ext = os.path.splitext(base_name)
                 counter = 1
                 while os.path.exists(destination_file):
-                    destination_file = os.path.join(destination_path, f"{base}_{counter}{ext}")
+                    destination_file = os.path.join(target_path, f"{base}_{counter}{ext}")
                     counter += 1
 
             shutil.copy2(file, destination_file)  # 使用 copy2 保留文件元数据
@@ -751,12 +929,12 @@ class Function:
         # 打印忽略和复制信息
         if ignored_items:
             print(
-                f"Copied \033[32m{copied_count}\033[0m files to \033[34m{destination_path}\033[0m, "
+                f"Copied \033[32m{copied_count}\033[0m files to \033[34m{target_path}\033[0m, "
                 f"and ignored \033[33m{len(ignored_items)}\033[0m other items."
             )
         else:
             print(
-                f"Copied \033[32m{copied_count}\033[0m files to \033[34m{destination_path}\033[0m."
+                f"Copied \033[32m{copied_count}\033[0m files to \033[34m{target_path}\033[0m."
             )
 
         return None
@@ -1042,7 +1220,7 @@ class Optimizer(Function):
         :param which_position: (str) 选择更改列或行，默认为 column，可选 row
         :param overwrite: (bool) 是否覆盖原 data_dic 数据，默认为 True
 
-        :return: randomized_dic: (dict) 修改后的数据 dict
+        :return randomized_dic: (dict) 修改后的数据 dict
         """
 
         # 将需要处理的数据赋给 data_dic
@@ -1129,7 +1307,7 @@ class Optimizer(Function):
         :param median_val: (float) 数据的中位数限制，默认为 None，此时会使用各列数据的中值
         :param overwrite: (bool) 是否覆盖原 data_dic 数据，默认为 True
 
-        :return: normalized_dic: (dict) 正态化后的数据 dict
+        :return normalized_dic: (dict) 正态化后的数据 dict
         """
 
         # 将需要处理的数据赋给 data_dic
@@ -1646,7 +1824,7 @@ class Optimizer(Function):
         :param data_dic: (dict) 输入长度为 1 的数据 dict ，其中 key 是数据的名称，value 是 DataFrame 表格
         :param overwrite: (bool) 是否覆盖原 data_dic 数据，默认为 True
 
-        :return: converted_dic: (dict) 转换形式之后的 dict
+        :return converted_dic: (dict) 转换形式之后的 dict
         """
 
         # 将需要处理的数据赋给 data_dic
@@ -1727,7 +1905,7 @@ class Optimizer(Function):
         :param index: (list) 插入或替换的行 / 列的起始和结束位置，长度必须为2，默认为 None，表示所有
         :param overwrite: (bool) 是否覆盖原 data_dic 数据，默认为 True
 
-        :return: inserted_dic: (dict) 插入或修改数据之后的 dict
+        :return inserted_dic: (dict) 插入或修改数据之后的 dict
         """
 
         # 将需要处理的数据赋给 data_dic
@@ -1830,7 +2008,7 @@ class Optimizer(Function):
         :param position: (list / tuple) 需要进行排序的行 / 列，默认为 None，表示所有的行 / 列
         :param overwrite: (bool) 是否覆盖原 data_dic 数据，默认为 True
 
-        :return: sorted_dic: (dict) 排序之后的 dict
+        :return sorted_dic: (dict) 排序之后的 dict
         """
 
         # 将需要处理的数据赋给 data_dic

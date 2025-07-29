@@ -1,5 +1,5 @@
 
-__version__ = '6.2.1'
+__version__ = '6.3.0'
 
 __all__ = ['general', 'grapher', 'projector', 'performer', 'potter', 'author', 'inspector']
 
@@ -54,14 +54,16 @@ MAGIC
  -XRF_Window-    XRF 窗口 (QMainWindow)： 进行 XRF 计算的小窗口
  -SubWindow-     附加小窗口 (QMainWindow)： 附加的小窗口，可进行其它功能设置
  
-  ----------------------------------------------------- potter ----------------------------------------------------------
+  ---------------------------------------------------- potter ----------------------------------------------------------
  
  -PotteryBase-   基因库操作区：用于写入、读取和比较陶器数据
  -Pottery-       基因库读取区：用于简单，明快地查找和读取数据和浏览图片
  
-  ----------------------------------------------------- author ----------------------------------------------------------
+  ---------------------------------------------------- author ----------------------------------------------------------
  
- -Helper-        文本编辑区：用于检查、修改和比较文本内容
+ -Report-        文本编辑区：用于检查、修改和比较文本内容
+ -Word-          Word 文档修改区：用于检查、修改和编辑 Word 文档中的内容
+ -PDF-           PDF 修改区：用于对 PDF 文件进行拼接、抽取、转换及压缩的功能
 
 ---------------------------------------------------- inspector ---------------------------------------------------------
 
@@ -104,14 +106,16 @@ MAGIC
  -XRF_Window-    XRF Window (QMainWindow): A small window for performing XRF calculations
  -SubWindow-     Additional Small Window (QMainWindow): An additional small window for setting other functions
  
-  ----------------------------------------------------- potter ----------------------------------------------------------
+  ---------------------------------------------------- potter ----------------------------------------------------------
 
  -PotteryBase-   Gene Bank operation area: used to write, read and compare pottery data
  -Pottery-       Gene Library Reading area: for easy, crisp finding and reading data and viewing images
  
  ----------------------------------------------------- author ----------------------------------------------------------
 
- -Helper-        Text Editing: Used to examine, modify, and compare text content
+ -Report-        Text Editing: Used to examine, modify, and compare text content
+ -Word-          Word area: Used for checking, modifying and editing the content in Word documents
+ -PDF-           PDF area：The function for splicing, extracting, converting and compressing PDF files
 
 ---------------------------------------------------- inspector ---------------------------------------------------------
 
@@ -263,6 +267,8 @@ MAGIC
                 Add a new method dendrogram_clustering() to class Statistics.
                 Add a new method agglomerative_clustering() to class Statistics.
                 Changed the self.color_palette 20 color scheme in class Manager to remove white.
+-> 6.3.0 Beta   25-07-29 17:26 Add a new method get_files() & sort_file_list() to class Function.
+                Add a new class PDF in module author, and add two method merge_files_to_pdf() & extract_pages() in it.
                
                     
  ------ Needing ------
@@ -337,6 +343,8 @@ get_point_normal()
 calculate_std()
 calculate_probability()
 get_subdirectories()
+get_files()
+sort_file_list()
 sort_data()
 find_most_color_pixel()
 copy_files()
@@ -605,7 +613,7 @@ run()
 
 Style
 
------- Helper ------
+------ Report ------
 count_words()
 compare_text()
 normalize_spaces()
@@ -614,6 +622,10 @@ normalize_spaces()
 Style
 
 format_word_document()
+
+------ PDF ------
+merge_files_to_pdf()
+extract_pages()
 
 
 / / / / / * inspector * / / / / /

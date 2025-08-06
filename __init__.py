@@ -269,6 +269,8 @@ MAGIC
                 Changed the self.color_palette 20 color scheme in class Manager to remove white.
 -> 6.3.0 Beta   25-07-29 17:26 Add a new method get_files() & sort_file_list() to class Function.
                 Add a new class PDF in module author, and add two method merge_files_to_pdf() & extract_pages() in it.
+-> 6.3.0        25-08-06 17:48 In the principal component analysis of the Statistic class, the Explained variance ratio 
+                calculation has been added, and the explanation of the printed content is clearer.
                
                     
  ------ Needing ------

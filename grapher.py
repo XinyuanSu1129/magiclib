@@ -170,7 +170,8 @@ class Statistics(general.Manager):
         :param width_height: (tuple) 图片的宽度和高度，默认为(6, 4.5)
         :param category: (str) 用于分类的列，默认为 Statistics.Category_Index
         :param colors: (str / list) 置信椭圆的填充颜色
-        :param show_result: (bool) 是否打印结果，默认为 True
+        :param show_result: (bool) 是否打印结果，默认为 True。结果为 PCA scores (PCA 得分)
+                                   与 Explained variance ratio (方差解释率)
         :param show_legend: (bool) 是否显示图例，默认为 True
         :param show_figure: (bool) 是否显示图片，默认为 True，此项是确保被内部方法调用时不会绘制图像
         :param loadings_analysis: (bool) 是否一同绘制载荷图，使用的参数为默认值，默认为 False
@@ -255,6 +256,9 @@ class Statistics(general.Manager):
         # 使用 PCA 将数据降至 2D
         pca = PCA(n_components=2)
         pca_features = pca.fit_transform(x_scaled)
+
+        # 获取方差解释率（数组形式，长度=2）
+        explained_variance_ratio = pca.explained_variance_ratio_
 
         # 转换 PCA 处理后的结果为 DataFrame，方便后续操作
         pca_df = pd.DataFrame(data=pca_features, columns=['PC1', 'PC2'])
@@ -373,7 +377,11 @@ class Statistics(general.Manager):
             plt.clf()  # 清空当前的画板
 
         if show_result:
-            print(pca_df)
+            print(f'\033[34mPCA scores\033[0m:\n{pca_df}\n')
+            print('\033[32mExplained variance ratio\033[0m:')
+            print(f"PC1 explains {explained_variance_ratio[0] * 100:.2f}% of variance")
+            print(f"PC2 explains {explained_variance_ratio[1] * 100:.2f}% of variance")
+            print()
 
         # 创建 pca_dic 用于返回 PCA 分析后的数据
         pca_dic = {title: pca_df}
@@ -402,7 +410,7 @@ class Statistics(general.Manager):
         :param width_height: (tuple) 图片的宽度和高度，默认为(6, 4.5)
         :param category: (str) 用于分类的列，默认为 Statistics.Category_Index
         :param colors: (str / list) 第一个颜色为箭头颜色，第二个颜色为文本颜色，默认为红与黑
-        :param show_result: (bool) 是否打印结果，默认为 True
+        :param show_result: (bool) 是否打印结果，默认为 True。打印内容为 Loadings matrix (载荷矩阵)
         :param show_legend: (bool) 是否显示图例，默认为 True
         :param kwargs: Ellipse 方法中的关键字参数
 
@@ -538,7 +546,8 @@ class Statistics(general.Manager):
         plt.show()
 
         if show_result:
-            print(pca_loadings)
+            print(f'\033[33mLoadings matrix\033[0m:\n{pca_loadings}')
+            print()
 
         # 创建 pca_dic 用于返回 PCA 分析后的数据
         pca_loadings_dic = {title: pca_loadings}

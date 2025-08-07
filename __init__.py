@@ -1,7 +1,7 @@
 
 __version__ = '6.3.0'
 
-__all__ = ['general', 'grapher', 'projector', 'performer', 'potter', 'author', 'inspector']
+__all__ = ['general', 'grapher', 'projector', 'performer', 'potter', 'author', 'generator', 'inspector']
 
 
 # Import warning
@@ -21,7 +21,7 @@ MAGIC
 
 ========================================================================================================================
 
----------------------------------------------------- general -----------------------------------------------------------
+ --------------------------------------------------- general -----------------------------------------------------------
 
  -Function-      函数插件区： 完成小功能
  -Optimizer-     数据重组区 (Function)： 对数据进行处理和优化
@@ -29,13 +29,13 @@ MAGIC
  -Module-        模组控制区 (Optimizer)： 对 DataFrame 进行操作，在中心函数前后布置
  -Magic-         中心函数区 (Manager, Module)： 数据处理的中心部分
 
----------------------------------------------------- grapher -----------------------------------------------------------
+ --------------------------------------------------- grapher -----------------------------------------------------------
 
  -Statistics-    统计学类 (Manager)： 用于统计学分析和绘图
  -Plotter-       绘图类 (Manager)：用于绘制各种图像
  -Fitter-        拟合类 (Manager)：用于拟合数据，绘制拟合后的图像
 
---------------------------------------------------- projector ----------------------------------------------------------
+ -------------------------------------------------- projector ----------------------------------------------------------
 
  -Keyword-       标准函数组 (ABC)： 对特定作业进行的特定函数组合的准备，为抽象类
  -Tensile-       拉伸曲线类 (Keyword)： 绘制拉伸曲线 (应力-应变)
@@ -54,18 +54,23 @@ MAGIC
  -XRF_Window-    XRF 窗口 (QMainWindow)： 进行 XRF 计算的小窗口
  -SubWindow-     附加小窗口 (QMainWindow)： 附加的小窗口，可进行其它功能设置
  
-  ---------------------------------------------------- potter ----------------------------------------------------------
+ ----------------------------------------------------- potter ----------------------------------------------------------
  
  -PotteryBase-   基因库操作区：用于写入、读取和比较陶器数据
  -Pottery-       基因库读取区：用于简单，明快地查找和读取数据和浏览图片
  
-  ---------------------------------------------------- author ----------------------------------------------------------
+ ----------------------------------------------------- author ----------------------------------------------------------
  
  -Report-        文本编辑区：用于检查、修改和比较文本内容
  -Word-          Word 文档修改区：用于检查、修改和编辑 Word 文档中的内容
  -PDF-           PDF 修改区：用于对 PDF 文件进行拼接、抽取、转换及压缩的功能
 
----------------------------------------------------- inspector ---------------------------------------------------------
+ --------------------------------------------------- generator ---------------------------------------------------------
+ 
+ -AI-            AI 参数公有区：用于管理公有参数与 OpenAI 实例化
+ -DeepSeek-      DeepSeek 区：利用 DeepSeek 进行对话与分析操作
+ 
+ --------------------------------------------------- inspector ---------------------------------------------------------
 
  -Tool-          工具类： 用于直接调用的属性和方法
  -Observer-      观察类： 用于观测可用数据
@@ -73,7 +78,7 @@ MAGIC
 
 ========================================================================================================================
 
----------------------------------------------------- general -----------------------------------------------------------
+ --------------------------------------------------- general -----------------------------------------------------------
 
  -Function-      Function Plugin Area: Completes small functions
  -Optimizer-     Data Reorganization Area (Function): Processes and optimizes data
@@ -81,13 +86,13 @@ MAGIC
  -Module-        Module Control Area (Optimizer): Operates on DataFrame, arranges around the central function
  -Magic-         Central Function Area (Manager, Module): The central part of data processing
 
----------------------------------------------------- grapher -----------------------------------------------------------
+ --------------------------------------------------- grapher -----------------------------------------------------------
 
  -Statistics-    Statistics Class (Manager): For statistical analysis and plotting
  -Plotter-       Plotting Class (Manager): For drawing various images
  -Fitter-        Fitting Class (Manager): For fitting data and plotting the fitted images
 
---------------------------------------------------- projector ----------------------------------------------------------
+ -------------------------------------------------- projector ----------------------------------------------------------
 
  -Keyword-       Standard Function Group (ABC): Preparation for specific function combinations for specific tasks
  -Tensile-       Tensile Curve Class (Keyword): Draws tensile curves (stress-strain)
@@ -106,7 +111,7 @@ MAGIC
  -XRF_Window-    XRF Window (QMainWindow): A small window for performing XRF calculations
  -SubWindow-     Additional Small Window (QMainWindow): An additional small window for setting other functions
  
-  ---------------------------------------------------- potter ----------------------------------------------------------
+ ----------------------------------------------------- potter ----------------------------------------------------------
 
  -PotteryBase-   Gene Bank operation area: used to write, read and compare pottery data
  -Pottery-       Gene Library Reading area: for easy, crisp finding and reading data and viewing images
@@ -116,8 +121,13 @@ MAGIC
  -Report-        Text Editing: Used to examine, modify, and compare text content
  -Word-          Word area: Used for checking, modifying and editing the content in Word documents
  -PDF-           PDF area：The function for splicing, extracting, converting and compressing PDF files
+ 
+ --------------------------------------------------- generator ---------------------------------------------------------
+  
+ -AI-            AI Parameter Public Zone: Used for managing public parameters and OpenAI instantiations
+ -DeepSeek-      DeepSeek area: Utilize DeepSeek for dialogue and analysis operations
 
----------------------------------------------------- inspector ---------------------------------------------------------
+ --------------------------------------------------- inspector ---------------------------------------------------------
 
  -Tool-          Utility Class: Attributes and methods used for direct calls
  -Observer-      Observation Class: For observing available data
@@ -269,8 +279,10 @@ MAGIC
                 Changed the self.color_palette 20 color scheme in class Manager to remove white.
 -> 6.3.0 Beta   25-07-29 17:26 Add a new method get_files() & sort_file_list() to class Function.
                 Add a new class PDF in module author, and add two method merge_files_to_pdf() & extract_pages() in it.
--> 6.3.0        25-08-06 17:48 In the principal component analysis of the Statistic class, the Explained variance ratio 
+-> 6.3.0        25-08-07 20:49 In the principal component analysis of the Statistic class, the Explained variance ratio 
                 calculation has been added, and the explanation of the printed content is clearer.
+                A new module, generator, has been added. This module enables the integration of large AI models 
+                for data analysis and dialogue.
                
                     
  ------ Needing ------
@@ -628,6 +640,18 @@ format_word_document()
 ------ PDF ------
 merge_files_to_pdf()
 extract_pages()
+
+
+/ / / / / * generator * / / / / /
+
+current_time_zone_location
+DeepSeek_api
+
+------ AI ------
+chat()
+
+------ DeepSeek ------
+chat()
 
 
 / / / / / * inspector * / / / / /

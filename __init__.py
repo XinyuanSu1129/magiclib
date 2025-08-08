@@ -652,6 +652,10 @@ chat()
 
 ------ DeepSeek ------
 chat()
+calculate_cost()
+summarize_conversation()
+reset_conversation()
+revise_manuscript()
 
 
 / / / / / * inspector * / / / / /

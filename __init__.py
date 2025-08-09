@@ -668,18 +668,19 @@ avaliable_model
 set_api_config()
 
 ------ AI ------
-chat()
 
 ------ Human ------
+chat()
 
 ------ DeepSeek ------
-chat()
+continue_chat()
 calculate_cost()
 summarize_conversation()
 reset_conversation()
 
 ------ OtherAI ------
 chat()
+continue_chat()
 
 ------ Assist ------
 revise_manuscript()

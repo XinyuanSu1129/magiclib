@@ -91,7 +91,7 @@ class AI:
         self.presence_penalty = presence_penalty
         self.frequency_penalty = frequency_penalty
 
-        # 回答
+        # 输出信息
         self.response = None
 
         # 初始化字符统计计数器
@@ -130,9 +130,81 @@ class Human:
         self.instance_id = instance_id
         self.model = model
 
+        # 输入信息
+        self.messages = None
+
+        # 输出信息
+        self.response = None
+
     # 确保可以从实例变量中找到 instance_id
     def __repr__(self):
         return f"{self.instance_id}"
+
+    # 用户输入内容
+    def chat(self, messages: Optional[List[dict]] = None) -> str:
+        """
+        用户收到信息，返回信息，仅一次，不会循环
+        The user receives the message and returns it only once, without any loops.
+
+        :param messages: (List[dict]) 用户收到的信息，用户收到信息中 'system' 将突出显示，'user' 将为主要内容
+
+        :return human_reply: (str) 用户返回的信息，返回的信息将保存在 self.messages 中的最后一条并以 'assistant' 的身份保存
+        """
+
+        # 检查 messages 是否输入
+        if messages is None:
+            class_name = self.__class__.__name__  # 获取类名
+            method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+            raise TypeError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                            f"messages cannot be None.")
+
+        if len(messages) == 0:
+            class_name = self.__class__.__name__  # 获取类名
+            method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                             f"messages cannot be an empty list.")
+
+        # 检查最后一条消息角色必须是'user'
+        if messages[-1]['role'] != 'user':
+            class_name = self.__class__.__name__  # 获取类名
+            method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                             f"The character of the last message in messages must be 'user'.")
+
+        self.messages = messages.copy()  # 拷贝一份，避免修改外部列表
+
+        # 打印所有消息内容 (role 和 content），根据角色加颜色
+        print("\n\033[3mAll messages\033[0m:")
+        for i, msg in enumerate(self.messages, 1):
+            role = msg['role']
+            content = msg['content']
+            if role == 'user':
+                print(f"{i}. \033[1m\033[95mUser\033[0m:\033[35;2m {content}\033[0m")
+            elif role == 'system':
+                print(f"{i}. \033[1m\033[91mSystem\033[0m:\033[31m {content}\033[0m")
+            elif role == 'assistant':
+                print(f"{i}. \033[1m\033[92mAssistant\033[0m: \033[32m {content}\033[0m")
+            else:
+                # 其他角色正常打印，无色彩
+                print(f"{i}. {role}: {content}")
+
+        # 从 messages 中找到 system 内容
+        system_content = ""
+        for msg in messages:
+            if msg['role'] == 'system':
+                system_content = msg['content']
+                break
+
+        # 提示输入
+        human_reply = input("\n\033[1m\033[92mAssistant\033[0m: ")
+
+        # 将用户输入以 assistant 角色追加到 self.messages
+        self.messages.append({'role': 'assistant', 'content': human_reply})
+
+        # 保存回复内容
+        self.response = human_reply
+
+        return human_reply
 
 
 """ DeepSeek 大模型 """
@@ -241,7 +313,7 @@ class DeepSeek(AI):
     # 与 DeepSeek 聊天
     def chat(self, model: Optional[str] = None, system_content: Optional[str] = None, max_tokens: int = 500,
              temperature: float = 0.7, top_p: float = 1.0, presence_penalty: float = 0.0,
-             frequency_penalty: float = 0.0) -> None:
+             frequency_penalty: float = 0.0) -> str:
         """
         与 DeepSeek 的指定模型聊天，在优惠时段 (北京时间 00:30-08:30) 时改用 deepseek-reasoner 模型
         Chat with the designated model of DeepSeek and switch to the deepseek-reasoner model during
@@ -266,7 +338,7 @@ class DeepSeek(AI):
         :param presence_penalty: (float)  避免重复主题 (-2.0-2.0)，正值降低重复提及同一概念的概率，适合长文本生成
         :param frequency_penalty: (float) 避免重复词汇 (-2.0-2.0)，正值降低重复用词概率，适合技术文档写作
 
-        :return: None
+        :return ai_reply: (str) DeepSeek AI 返回的消息
         """
 
         # 检查赋值
@@ -302,6 +374,7 @@ class DeepSeek(AI):
             print(f"Let's start chatting! The current model is \033[31m{model} ({model_verison})\033[0m.")
 
         # 对话循环
+        ai_reply = ''
         while True:
 
             # 获取用户输入
@@ -379,7 +452,7 @@ class DeepSeek(AI):
             print(f"\033[1m\033[95mDeepSeek\033[0m:\033[35;2m {ai_reply}\033[0m\n")
             self.messages.append(dict({"role": "assistant", "content": ai_reply}))
 
-        return None
+        return ai_reply
 
     # 计算使用的费用
     def calculate_cost(self) -> None:
@@ -606,7 +679,7 @@ class OtherAI(AI):
     #  与 AI 大模型聊天
     def chat(self, model: Optional[str] = None, system_content: Optional[str] = None, max_tokens: int = 500,
              temperature: float = 0.7, top_p: float = 1.0, presence_penalty: float = 0.0,
-             frequency_penalty: float = 0.0) -> None:
+             frequency_penalty: float = 0.0) -> str:
         """
         与 AI 大模型聊天，该部分语言模型将不会统计输入、输出 tokens 与费用
         When chatting with the AI large model, this part of the language model will not count the input,
@@ -631,7 +704,7 @@ class OtherAI(AI):
         :param presence_penalty: (float)  避免重复主题 (-2.0-2.0)，正值降低重复提及同一概念的概率，适合长文本生成
         :param frequency_penalty: (float) 避免重复词汇 (-2.0-2.0)，正值降低重复用词概率，适合技术文档写作
 
-        :return: None
+        :return ai_reply: (str) AI 返回的消息
         """
 
         # 检查赋值
@@ -644,6 +717,7 @@ class OtherAI(AI):
         print(f"Let's start chatting! The current model is \033[31m{model}\033[0m.")
 
         # 对话循环
+        ai_reply = ''
         while True:
 
             # 获取用户输入
@@ -686,7 +760,7 @@ class OtherAI(AI):
             print(f"\033[1m\033[95mAI\033[0m:\033[35;2m {ai_reply}\033[0m\n")
             self.messages.append(dict({"role": "assistant", "content": ai_reply}))
 
-        return None
+        return ai_reply
 
 
 """ AI 大模型的应用 """

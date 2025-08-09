@@ -26,8 +26,24 @@ DeepSeek_api_key = 'sk-cc2167b962444015a28d989478add7eb'  # MiaomiaoSu from 2025
 DeepSeek_base_url = 'https://api.deepseek.com/v1'
 
 # Avaliable large AI models 1
-deepseek_api_key_1 = 'sk-flk6RxbjuWqApkKaU0DUJDP3FsG6QBI2hjHkwRRyU6briHqZ'  # DeepSeek-R1-671B to 2025-09-09
-deepseek_base_url_1 = 'https://lmhub.fatui.xyz/v1'
+other_api_key_1 = 'sk-flk6RxbjuWqApkKaU0DUJDP3FsG6QBI2hjHkwRRyU6briHqZ'  # DeepSeek-R1-671B to 2025-09-09
+other_base_url_1 = 'https://lmhub.fatui.xyz/v1'
+avaliable_model_1 = ['deepseek-ai/DeepSeek-R1',  # DeepSeek
+                     'gemini-2.5-pro',  # Gemini
+                     'gpt-oss-120b',  # ChatGPT
+                     'moonshot-v1-128k',  # Moonshot
+                     'glm-4-0520',  # 智谱
+                     'Qwen/QVQ-72B-Preview',  # 通义千问
+                     'abab6.5s',  # MiniMax
+                     'baidu/ERNIE-4.5-300B-A47B',  # 文心一言
+                     'SparkDesk-4.0Ultra',  # 讯飞星火
+                     'hunyuan-large-longcontext',  # 腾讯混元
+                     'command-r-plus',  # Cohere
+                     'yi-large',  # 零一万物
+                     'mistral-large-pixtral-2411',  # Mistral AI
+                     'meta-llama/llama-4-maverick-17b-128e-instruct',  # Llama
+                     'doubao-1.5-thinking-pro',  # 豆包
+                     ]
 
 """ AI 大模型总类 """
 class AI:
@@ -566,8 +582,8 @@ class OtherAI(AI):
                          max_tokens=max_tokens, temperature=temperature, top_p=top_p, n=n, stream=stream, stop=stop,
                          presence_penalty=presence_penalty, frequency_penalty=frequency_penalty)
 
-        self.api_key = deepseek_api_key_1  # DeepSeek-R1-671B to 2025-09-09
-        self.base_url = deepseek_base_url_1
+        self.api_key = other_api_key_1  # DeepSeek-R1-671B to 2025-09-09
+        self.base_url = other_base_url_1
 
         # 检查 OpenAI 实例化
         if client is None:
@@ -986,7 +1002,7 @@ def set_api_config(ai_instance: object, api_url_pair: str):
             # DeepSeek 官方
             'ds': {"api_key": DeepSeek_api_key, "base_url": DeepSeek_base_url},
             # 渠道 AI
-            '1': {"api_key": deepseek_api_key_1, "base_url": deepseek_base_url_1},
+            '1': {"api_key": other_api_key_1, "base_url": other_base_url_1},
         }
     except NameError as e:
         raise NameError(f"\033[95mIn {method_name}\033[0m, Configuration variable not found: {str(e)}") from None

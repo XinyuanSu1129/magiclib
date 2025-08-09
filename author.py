@@ -2,8 +2,8 @@
 magiclib / author
 
 Attention:
-1. statements should be abbreviated
-2. This module is a standalone module and does not depend on other parts of the Magic library
+1.  statements should be abbreviated
+2.  This module is a standalone module and does not depend on other parts of the Magic library
 """
 
 # 导入顺序不同有可能导致程序异常
@@ -122,10 +122,12 @@ class Report:
         The number of words/words used to check the content of the text is the number of words in Chinese
         and the number of words in English.
 
-        注意：1. 英文会按照在一起的字母来检索，不会检查拼写是否正确
-             2. 不会检查标点或者其它 emoji 符号
-        Attention: 1. English is searched by the letters together, without checking for correct spelling.
-                   2. Don't check punctuation or other emojis.
+        注意：
+        1.  英文会按照在一起的字母来检索，不会检查拼写是否正确
+        2.  不会检查标点或者其它 emoji 符号
+        Note:
+        1.  English is searched by the letters together, without checking for correct spelling.
+        2.  Don't check punctuation or other emojis.
 
         :param show_print: (bool) 是否打印结果，默认为 True
 
@@ -169,11 +171,13 @@ class Report:
         比较两个文本内容，输出差异并高亮显示，并返回所有打印的内容。
         Compare the two text contents, print the difference and highlight it, and return all the printed content.
 
-        注意：1. 根据中文和英文的句号来拆分句子，然后来判断每一句话是否一致
-             2. 每个句号后会包容任意数量的与之相连的空白字符，即会忽略这些的存在
-        Attention: 1. Split sentences according to the Chinese and English periods, and then determine whether
-                      each sentence is consistent.
-                   2. Any number of associated whitespace characters are ignored after each period.
+        注意：
+        1.  根据中文和英文的句号来拆分句子，然后来判断每一句话是否一致
+        2.  每个句号后会包容任意数量的与之相连的空白字符，即会忽略这些的存在
+        Note:
+        1. Split sentences according to the Chinese and English periods, and then determine whether
+           each sentence is consistent.
+        2. Any number of associated whitespace characters are ignored after each period.
 
         :param show_print: (bool) 是否打印结果，默认为 True
 
@@ -242,14 +246,16 @@ class Report:
         根据中英文的要求来修正文本中空格的数量
         Normalize the number of Spaces in the text according to the requirements of Chinese and English.
 
-        注意：1. 中文标点 '。！？，、；：' 后会直接接文本，而英文 '.!?,;:' 后会加一个空格再接文本
-             2. 中文和英文之间会加上空格，无论哪个在前哪个在后
-             3. 会删除开头和结尾的换行符，且删除多余一个的换行符使其保留一个
-        Attention: 1. Chinese punctuation '。！？，、；：' After will be directly followed by text,
-                      while English '.!?,;:' is followed by a space before the text.
-                   2. A space is added between Chinese and English, whichever comes first and whichever comes last.
-                   3. The beginning and ending newlines are deleted, and the extra newline character is deleted
-                      so that it remains one.
+        注意：
+        1.  中文标点 '。！？，、；：' 后会直接接文本，而英文 '.!?,;:' 后会加一个空格再接文本
+        2.  中文和英文之间会加上空格，无论哪个在前哪个在后
+        3.  会删除开头和结尾的换行符，且删除多余一个的换行符使其保留一个
+        Note:
+        1.  Chinese punctuation '。！？，、；：' After will be directly followed by text,
+            while English '.!?,;:' is followed by a space before the text.
+        2.  A space is added between Chinese and English, whichever comes first and whichever comes last.
+        3.  The beginning and ending newlines are deleted, and the extra newline character is deleted
+            so that it remains one.
 
         :param show_print: (bool) 是否打印结果，默认为 True
 
@@ -333,16 +339,16 @@ class Word:
         Modify the format of content in a Word document, using the predefined self.Font_Style dictionary
 
         文章需要以下格式才能正常被识别：
-            1. 开头第一段直接为文章的标题内容
-            2. 图名必需以 'Fig.' 开头
-            3. 表标题必需第一行以 'Table' 开头，且第二行为其名
-            4. 正文在首个二级标题到参考文献之间
+        1.  开头第一段直接为文章的标题内容
+        2.  图名必需以 'Fig.' 开头
+        3.  表标题必需第一行以 'Table' 开头，且第二行为其名
+        4.  正文在首个二级标题到参考文献之间
 
         The article must follow the format below to be properly recognized:
-            1.	The first paragraph at the beginning should directly contain the title of the article.
-            2.	Figure captions must start with “Fig.”
-            3.	Table captions must begin with “Table” on the first line, followed by the name on the second line.
-            4.	The main text should be located between the first second-level heading and the references section.
+        1.	The first paragraph at the beginning should directly contain the title of the article.
+        2.	Figure captions must start with “Fig.”
+        3.	Table captions must begin with “Table” on the first line, followed by the name on the second line.
+        4.  The main text should be located between the first second-level heading and the references section.
 
         :param inspection_mode: (bool) 是否打开检查模式，默认为 False
 

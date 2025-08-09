@@ -2,7 +2,7 @@
 magiclib / potter
 
 Attention:
-1. statements should be abbreviated
+1.  statements should be abbreviated
 """
 
 

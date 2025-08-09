@@ -2,7 +2,7 @@
 magiclib / projector
 
 Attention:
-1. statements should be abbreviated
+1.  statements should be abbreviated
 """
 
 
@@ -1001,10 +1001,10 @@ class XRD(Keyword):
         打开匹配规则的表格，并使得 PDF 卡片与 XRD 数据相匹配
         Open the table with matching rules and align the PDF card with the XRD data.
 
-        分为两个部分：1. 建立 XRD 与 PDF 对应库：这个库有英文和拼音两种解析形式
-                   2. XRD 名称与 PDF 卡片的匹配：从 self.xrd_data_dic 为起点，提取 xrd_name_base，查看是否在 matching_rule 中，
-                      从相应位置提取
-                   注意：匹配时只能匹配小写字母 [a-z], 如果匹配有匹配项而没有导入 PDF 卡片时会报错
+        分为两个部分:1.  建立 XRD 与 PDF 对应库：这个库有英文和拼音两种解析形式
+                   2.  XRD 名称与 PDF 卡片的匹配：从 self.xrd_data_dic 为起点，提取 xrd_name_base，查看是否在 matching_rule 中，
+                       从相应位置提取
+                   注意: 匹配时只能匹配小写字母 [a-z], 如果匹配有匹配项而没有导入 PDF 卡片时会报错
 
         :return matching_rule： (dict) dict，PDF 卡片与 XRD 数据的匹配规则。例：{'pdf_name1': ['PDF#number1', 'PDF#number2]}
         :return matched_dic： (dict) dict，PDF 卡片与 XRD 已配对的数据。例：{'pdf_name1': ['PDF#number1', 'PDF#number2]}

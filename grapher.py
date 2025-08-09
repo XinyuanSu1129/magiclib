@@ -2,7 +2,7 @@
 magiclib / grapher
 
 Attention:
-1. statements should be abbreviated
+1.  statements should be abbreviated
 """
 
 
@@ -920,8 +920,14 @@ class Statistics(general.Manager):
 """ 绘图 """
 class Plotter(general.Manager):
     """
-    1. 有关键字参数时，用 pop 来获取，以确保关键字变量在原曲线方法中仍然有效
-    2. 部分函数，对表格处理时需要删除 general.Category_Index 列
+    绘图工具
+
+    1.  有关键字参数时，用 pop 来获取，以确保关键字变量在原曲线方法中仍然有效
+    2.  部分函数，对表格处理时需要删除 general.Category_Index 列
+
+    1.  When there are keyword parameters, use pop to obtain them to ensure that the keyword variables remain valid
+        in the original curve method.
+    2.  For some functions, when processing tables, the general.Category_Index column needs to be deleted.
     """
 
     Category_Index = general.Category_Index  # 分类索引
@@ -3304,12 +3310,12 @@ class Plotter(general.Manager):
 class Fitter(general.Manager):
     """
     注意：
-    1. 部分方法要求 data_dic 的长度为 1
-    2. 以列名为横坐标
+    1.  部分方法要求 data_dic 的长度为 1
+    2.  以列名为横坐标
 
-    Attention:
-    1. Some methods require the length of data_dic to be 1
-    2. The column name is the horizontal coordinate
+    Note:
+    1.  Some methods require the length of data_dic to be 1
+    2.  The column name is the horizontal coordinate
     """
 
     # 初始化
@@ -3592,11 +3598,12 @@ class Fitter(general.Manager):
         and give the fitting formula.
 
         注意：
-        1. 输入 DataFrame 应当至少有两列，第一列为 X，第二列为 Y
-        2. 输入的 function_model 必需有且只有一个变量参数，且只能在第一个位置
-        Attention:
-        1. The DataFrame should have at least two columns, with the first column X and the second column Y;
-        2. The input function_model must have only one variable parameter, and it can only be in the first position.
+        1.  输入 DataFrame 应当至少有两列，第一列为 X，第二列为 Y
+        2.  输入的 function_model 必需有且只有一个变量参数，且只能在第一个位置
+
+        Note:
+        1.  The DataFrame should have at least two columns, with the first column X and the second column Y;
+        2.  The input function_model must have only one variable parameter, and it can only be in the first position.
 
         :param data_dic: (dict) 包含一个键值对，键为 title，值为包含多个指标及类别序号的 DataFrame
         :param function_model: (Callable) 进行拟合的函数，此项必需输入
@@ -3837,12 +3844,13 @@ class Fitter(general.Manager):
         Process the data as required, then perform curve fitting, and be able to draw statistical graphs after fitting.
 
         注意：
-        1. 输入的 DataFrame 应当为多列，按每列的数据进行要求取值
-        2. 输入的 function_model 必需有且只有一个变量参数，且只能在第一个位置
-        Attention:
-        1. The input DataFrame should consist of multiple columns,
+        1.  输入的 DataFrame 应当为多列，按每列的数据进行要求取值
+        2.  输入的 function_model 必需有且只有一个变量参数，且只能在第一个位置
+
+        Note:
+        1.  The input DataFrame should consist of multiple columns,
             with values fetched according to requirements for each column.;
-        2. The input function_model must have only one variable parameter, and it can only be in the first position.
+        2.  The input function_model must have only one variable parameter, and it can only be in the first position.
 
         :param data_dic: (dict) 包含一个键值对，键为 title，值为包含多个指标及类别序号的 DataFrame
         :param function_model: (Callable) 进行拟合的函数，默认不拟合
@@ -4263,12 +4271,13 @@ class Fitter(general.Manager):
         Process the data as required, then perform curve fitting, and be able to draw statistical graphs after fitting.
 
         注意：
-        1. 输入的 DataFrame 应当为多列，按每列的数据进行要求取值
-        2. 输入的 function_model 必需有且只有一个变量参数，且只能在第一个位置
-        Attention:
-        1. The input DataFrame should consist of multiple columns,
+        1.  输入的 DataFrame 应当为多列，按每列的数据进行要求取值
+        2.  输入的 function_model 必需有且只有一个变量参数，且只能在第一个位置
+
+        Note:
+        1.  The input DataFrame should consist of multiple columns,
             with values fetched according to requirements for each column.;
-        2. The input function_model must have only one variable parameter, and it can only be in the first position.
+        2.  The input function_model must have only one variable parameter, and it can only be in the first position.
 
         :param data_dic: (dict) 包含一个键值对，键为 title，值为包含多个指标及类别序号的 DataFrame
         :param function_model: (Callable) 进行拟合的函数，默认不拟合

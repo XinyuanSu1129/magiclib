@@ -2,9 +2,9 @@
 magiclib / general
 
 Attention:
-1. statements should be written in detail
-2. When adding a method in the classes Optimizer, Module, and Magic, it is necessary to include self.current_dic.
-3. Please place the package (magiclib) in the same directory as the database (Database).
+1.  statements should be written in detail
+2.  When adding a method in the classes Optimizer, Module, and Magic, it is necessary to include self.current_dic.
+3.  Please place the package (magiclib) in the same directory as the database (Database).
 """
 
 
@@ -6185,27 +6185,27 @@ class Module(Optimizer):
     locating plateaus, and so on.
 
     注意：
-    1. 删除点时，返回删除后的表格(重要)，记录删除的点
-       添加点时，返回添加点的表格，记录添加的点(重要，与原表格)
-    2. 分开添加的点是为了加权
-    3. 顺序：手动 -> 自动 -> 寻找
-    4. 用 data_dic 代表 DataFrame 表格，只在最后转换为需要的变量名
-    5. 输出前均需要进行排序和更新行索引
-    6. 如果坐标输出多项，则用 tuple 输出
-    7. 手动点用 data_dic，自动随机用 data_dic
-    8. 数据的检索顺序与 self.current_dic 相关，且不会改变 self.data_dic
+    1.  删除点时，返回删除后的表格(重要)，记录删除的点
+        添加点时，返回添加点的表格，记录添加的点(重要，与原表格)
+    2.  分开添加的点是为了加权
+    3.  顺序：手动 -> 自动 -> 寻找
+    4.  用 data_dic 代表 DataFrame 表格，只在最后转换为需要的变量名
+    5.  输出前均需要进行排序和更新行索引
+    6.  如果坐标输出多项，则用 tuple 输出
+    7.  手动点用 data_dic，自动随机用 data_dic
+    8.  数据的检索顺序与 self.current_dic 相关，且不会改变 self.data_dic
 
-    Attention:
-    1. When deleting a point, return to the deleted table (important) and record the deleted point
-       When adding a point, return the table where the point was added, recording the added point
-       (important, with the original table)
-    2. The points added separately are for weighting
-    3. Sequence: Manual -&gt; Automatic -&gt; Look for
-    4. Use data_dic to represent the DataFrame table and only convert to the desired variable name at the end
-    5. Sort and update the row index before output
-    6. If the coordinates output multiple items, use the tuple output
-    7. data_dic is selected manually and data_dic is selected automatically
-    8. The retrieval order of the data is related to self.current_dic and does not change self.data_dic
+    Note:
+    1.  When deleting a point, return to the deleted table (important) and record the deleted point
+        When adding a point, return the table where the point was added, recording the added point
+        (important, with the original table)
+    2.  The points added separately are for weighting
+    3.  Sequence: Manual -&gt; Automatic -&gt; Look for
+    4.  Use data_dic to represent the DataFrame table and only convert to the desired variable name at the end
+    5.  Sort and update the row index before output
+    6.  If the coordinates output multiple items, use the tuple output
+    7.  data_dic is selected manually and data_dic is selected automatically
+    8.  The retrieval order of the data is related to self.current_dic and does not change self.data_dic
     """
 
     # 初始化
@@ -7247,20 +7247,20 @@ class Magic(Manager, Module):
     optimization tasks.
 
     注意：
-    1. 所有方法中先运用临时变量来存储结果，来提高代码的可读性和可维护性
-    2. 返回的结果只是为了其它数据获取的需要，类属性中的结果对曲线的操作要更重要
-    3. 所有点输入均为 list 包含 tuple 类型，返回均为 DataFrame 类型
-    4. 只有输入的参数不为 dict 其余均为 dict 格式
-    5. 数据的检索顺序与 self.current_dic 相关，且不会改变 self.data_dic
+    1.  所有方法中先运用临时变量来存储结果，来提高代码的可读性和可维护性
+    2.  返回的结果只是为了其它数据获取的需要，类属性中的结果对曲线的操作要更重要
+    3.  所有点输入均为 list 包含 tuple 类型，返回均为 DataFrame 类型
+    4.  只有输入的参数不为 dict 其余均为 dict 格式
+    5.  数据的检索顺序与 self.current_dic 相关，且不会改变 self.data_dic
 
-    Attention:
-    1. All methods use temporary variables to store results first to improve the readability
-       and maintainability of the code
-    2. The returned result is only for the need of other data acquisition,
-       and the result in the class attribute is more important for the operation of the curve
-    3. All entries are of the tuple type and the DataFrame type is returned
-    4. Only the entered parameters are not dict. All other parameters are dict
-    5. The retrieval order of the data is related to self.current_dic and does not change self.data_dic
+    Note:
+    1.  All methods use temporary variables to store results first to improve the readability
+        and maintainability of the code
+    2.  The returned result is only for the need of other data acquisition,
+        and the result in the class attribute is more important for the operation of the curve
+    3.  All entries are of the tuple type and the DataFrame type is returned
+    4.  Only the entered parameters are not dict. All other parameters are dict
+    5.  The retrieval order of the data is related to self.current_dic and does not change self.data_dic
     """
 
     # 0 初始化

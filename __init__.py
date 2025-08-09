@@ -1,5 +1,5 @@
 
-__version__ = '6.3.0'
+__version__ = '6.3.1 Alpha'
 
 __all__ = ['general', 'grapher', 'projector', 'performer', 'potter', 'author', 'generator', 'inspector']
 
@@ -68,7 +68,11 @@ MAGIC
  --------------------------------------------------- generator ---------------------------------------------------------
  
  -AI-            AI 参数公有区：用于管理公有参数与 OpenAI 实例化
+ -Human-         用户交互区：用于单或多用户与 AI 交互
  -DeepSeek-      DeepSeek 区：利用 DeepSeek 进行对话与分析操作
+ -OtherAI-       渠道 AI 区：利用非官方渠道的 AI，其成本低，利于非精准作业
+ -Assist-        AI 生产力区：AI 大模型协助用户进行生产力工作
+ -Muse-          AI 灵感区：AI 大模型与用户休闲交互，娱乐
  
  --------------------------------------------------- inspector ---------------------------------------------------------
 
@@ -125,7 +129,11 @@ MAGIC
  --------------------------------------------------- generator ---------------------------------------------------------
   
  -AI-            AI Parameter Public Zone: Used for managing public parameters and OpenAI instantiations
+ -Human-         User Interaction Area: Used for single or multiple users to interact with AI
  -DeepSeek-      DeepSeek area: Utilize DeepSeek for dialogue and analysis operations
+ -OtherAI-       Channel AI Zone: Utilizing AI from unofficial channels
+ -Assist-        AI Productivity Zone: AI large models assist users in productivity work
+ -Muse-          AI Inspiration Zone: AI large models interact with users in a casual and entertaining way
 
  --------------------------------------------------- inspector ---------------------------------------------------------
 
@@ -283,6 +291,11 @@ MAGIC
                 calculation has been added, and the explanation of the printed content is clearer.
                 A new module, generator, has been added. This module enables the integration of large AI models 
                 for data analysis and dialogue.
+                The naming of serial number '1. 'has been standardized.
+-> 6.3.1 Alpha  25-08-09 17:51 The content in the generator module has been improved, and classes such as AI, Human, 
+                DeepSeek, OtherAI, Assist, and Muse have been added. It is currently still in the development and 
+                testing stage. There are still many functions that need to be adjusted.
+                The layout format of the serial numbers has been changed. Now it is the same as the /t indentation.
                
                     
  ------ Needing ------
@@ -339,6 +352,7 @@ MAGIC
 
 / / / / / * general * / / / / /
 
+current_dir
 database_path
 Magic_Database
 Standard_Database
@@ -645,17 +659,33 @@ extract_pages()
 / / / / / * generator * / / / / /
 
 current_time_zone_location
-DeepSeek_api
+DeepSeek_api_key
+DeepSeek_base_url
+deepseek_api_key_1
+deepseek_base_url_1
+
+set_api_config()
 
 ------ AI ------
 chat()
+
+------ Human ------
 
 ------ DeepSeek ------
 chat()
 calculate_cost()
 summarize_conversation()
 reset_conversation()
+
+------ OtherAI ------
+chat()
+
+------ Assist ------
 revise_manuscript()
+
+------ Muse ------
+setup_environment()
+
 
 
 / / / / / * inspector * / / / / /

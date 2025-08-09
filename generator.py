@@ -26,24 +26,24 @@ DeepSeek_api_key = 'sk-cc2167b962444015a28d989478add7eb'  # MiaomiaoSu from 2025
 DeepSeek_base_url = 'https://api.deepseek.com/v1'
 
 # Avaliable large AI models 1
-other_api_key_1 = 'sk-flk6RxbjuWqApkKaU0DUJDP3FsG6QBI2hjHkwRRyU6briHqZ'  # DeepSeek-R1-671B to 2025-09-09
-other_base_url_1 = 'https://lmhub.fatui.xyz/v1'
-avaliable_model_1 = ['deepseek-ai/DeepSeek-R1',  # DeepSeek
-                     'gemini-2.5-pro',  # Gemini
-                     'gpt-oss-120b',  # ChatGPT
-                     'moonshot-v1-128k',  # Moonshot
-                     'glm-4-0520',  # 智谱
-                     'Qwen/QVQ-72B-Preview',  # 通义千问
-                     'abab6.5s',  # MiniMax
-                     'baidu/ERNIE-4.5-300B-A47B',  # 文心一言
-                     'SparkDesk-4.0Ultra',  # 讯飞星火
-                     'hunyuan-large-longcontext',  # 腾讯混元
-                     'command-r-plus',  # Cohere
-                     'yi-large',  # 零一万物
-                     'mistral-large-pixtral-2411',  # Mistral AI
-                     'meta-llama/llama-4-maverick-17b-128e-instruct',  # Llama
-                     'doubao-1.5-thinking-pro',  # 豆包
-                     ]
+other_api_key = 'sk-flk6RxbjuWqApkKaU0DUJDP3FsG6QBI2hjHkwRRyU6briHqZ'  # DeepSeek-R1-671B to 2025-09-09
+other_base_url = 'https://lmhub.fatui.xyz/v1'
+avaliable_model = ['deepseek-ai/DeepSeek-R1',  # DeepSeek
+                   'gpt-oss-120b',  # ChatGPT
+                   'gemini-2.5-pro',  # Gemini
+                   'moonshot-v1-128k',  # Moonshot
+                   'glm-4-0520',  # 智谱
+                   'Qwen/QVQ-72B-Preview',  # 通义千问
+                   'abab6.5s',  # MiniMax
+                   'baidu/ERNIE-4.5-300B-A47B',  # 文心一言
+                   'SparkDesk-4.0Ultra',  # 讯飞星火
+                   'hunyuan-large-longcontext',  # 腾讯混元
+                   'command-r-plus',  # Cohere
+                   'yi-large',  # 零一万物
+                   'mistral-large-pixtral-2411',  # Mistral AI
+                   'meta-llama/llama-4-maverick-17b-128e-instruct',  # Llama
+                   'doubao-1.5-thinking-pro',  # 豆包
+                   ]
 
 """ AI 大模型总类 """
 class AI:
@@ -182,8 +182,8 @@ class DeepSeek(AI):
                          max_tokens=max_tokens, temperature=temperature, top_p=top_p, n=n, stream=stream, stop=stop,
                          presence_penalty=presence_penalty, frequency_penalty=frequency_penalty)
 
-        self.api_key = DeepSeek_api_key  # MiaomiaoSu from 2025-08-07 ¥20
-        self.base_url = DeepSeek_base_url
+        self.api_key = other_api_key    # DeepSeek-R1-671B to 2025-09-09
+        self.base_url = other_base_url
 
         # 检查 OpenAI 实例化
         if client is None:
@@ -582,8 +582,8 @@ class OtherAI(AI):
                          max_tokens=max_tokens, temperature=temperature, top_p=top_p, n=n, stream=stream, stop=stop,
                          presence_penalty=presence_penalty, frequency_penalty=frequency_penalty)
 
-        self.api_key = other_api_key_1  # DeepSeek-R1-671B to 2025-09-09
-        self.base_url = other_base_url_1
+        self.api_key = other_api_key  # DeepSeek-R1-671B to 2025-09-09
+        self.base_url = other_base_url
 
         # 检查 OpenAI 实例化
         if client is None:
@@ -925,17 +925,41 @@ class Muse:
 
     # 配置环境，几位真人，几个 AI
     def setup_environment(self, man_number: Optional[int] = None, ai_number: Optional[int] = None,
-                          deepseek_ai_number: int = 0) -> dict:
+                          default_ai: str = 'deepseek', show_result: bool = False, **kwargs) -> dict:
         """
-        环境配置，有几位真人玩家与几个 AI，
-        The environmental configuration features several real players and several ais
+        环境配置，有几位真人玩家与几个 AI，多出的 AI 用 DeepSeek 补全
+        The environmental configuration includes several real players and several ais.
+        The extra ais are completed with DeepSeek.
 
         :param man_number: (int) 真人玩家的数量，默认为 None，表示根据需要分配
         :param ai_number: (int) AI 玩家的数量，分配 AI 之和的总数需要小于等于 AI 玩家的总数。不足的用 DeepSeek AI 补全。
                                 默认为 None，表示根据需要分配
-        :param deepseek_ai_number: (int) DeepSeek AI 玩家的数量，默认为 None，表示根据需要分配
+        :param default_ai: (str) 默认的 AI 模型为哪个，即多出的 AI，默认为 DeepSeek，可用的 AI 模型如下：
+                           ['deepseek', 'chatgpt', 'gemini', 'moonshot', 'zhipu', 'tongyiqianwen', 'minimax',
+                           'wenxinyiyan', 'xunfeixinghuo', 'tengxunhunyuan', 'cohere', 'lingyiwanwu', 'mistral',
+                           'llama', 'doubao']
+        :param show_result: (bool) 是否打印分配结果，默认为 False
 
         :return instance: (dict) 实例化的全部玩家，key 值与 instance_id 一样，value 为类 Human 或 AI 对象
+
+        --- **kwargs ---
+
+        # 可用 AI 大模型 (15)
+        - deepseek_ai_number: (int) DeepSeek 的 AI 大模型的个数
+        - chatgpt_ai_number: (int) ChatGPT 的 AI 大模型的个数
+        - gemini_ai_number: (int) Gemini 的 AI 大模型的个数
+        - moonshot_ai_number: (int) Moonshot 的 AI 大模型的个数
+        - zhipu_ai_number: (int) ZHIPU 的 AI 大模型的个数
+        - tongyiqianwen_ai_number: (int) TONGYIQIANWEN 的 AI 大模型的个数
+        - minimax_ai_number: (int) MiniMax 的 AI 大模型的个数
+        - wenxinyiyan_ai_number: (int) WENXINYIYAN 的 AI 大模型的个数
+        - xunfeixinghuo_ai_number: (int) XUNFEIXINGHUO 的 AI 大模型的个数
+        - tengxunhunyuan_ai_number: (int) TENGXUNHUNYUAN 的 AI 大模型的个数
+        - cohere_ai_number: (int) Cohere 的 AI 大模型的个数
+        - lingyiwanwu_ai_number: (int) LINGYIWANWU 的 AI 大模型的个数
+        - mistral_ai_number: (int) Mistral 的 AI 大模型的个数
+        - llama_ai_number: (int) Llama 的 AI 大模型的个数
+        - doubao_ai_number: (int) DOUBAO 的 AI 大模型的个数
         """
 
         # 玩家数量分配
@@ -945,19 +969,30 @@ class Muse:
             ai_number = self.ai_number
 
         # 检查输入是否均大于 0
-        if man_number < 0 or ai_number < 0 or deepseek_ai_number < 0:
+        if man_number < 0 or ai_number < 0:
             class_name = self.__class__.__name__  # 获取类名
             method_name = inspect.currentframe().f_code.co_name  # 获取方法名
             raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
-                             f"All parameters must be greater than 0.")
+                             f"all parameters must be greater than 0.")
 
-        # 检查 AI 玩家总数
-        if ai_number < deepseek_ai_number:
-            class_name = self.__class__.__name__  # 获取类名
-            method_name = inspect.currentframe().f_code.co_name  # 获取方法名
-            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
-                             f"The number of assigned AI players ({deepseek_ai_number}) should be less than "
-                             f"or equal to the ai_number ({ai_number}).")
+        # 模型种类与完整模型名的映射
+        ai_model_map = {
+            'deepseek': 'deepseek-ai/DeepSeek-R1',  # DeepSeek
+            'chatgpt': 'gpt-oss-120b',  # ChatGPT
+            'gemini': 'gemini-2.5-pro',  # Gemini
+            'moonshot': 'moonshot-v1-128k',  # Moonshot
+            'zhipu': 'glm-4-0520',  # 智谱
+            'tongyiqianwen': 'Qwen/QVQ-72B-Preview',  # 通义千问
+            'minimax': 'abab6.5s',  # MiniMax
+            'wenxinyiyan': 'baidu/ERNIE-4.5-300B-A47B',  # 文心一言
+            'xunfeixinghuo': 'SparkDesk-4.0Ultra',  # 讯飞星火
+            'tengxunhunyuan': 'hunyuan-large-longcontext',  # 腾讯混元
+            'cohere': 'command-r-plus',  # Cohere
+            'lingyiwanwu': 'yi-large',  # 零一万物
+            'mistral': 'mistral-large-pixtral-2411',  # Mistral AI
+            'llama': 'meta-llama/llama-4-maverick-17b-128e-instruct',  # Llama
+            'doubao': 'doubao-1.5-thinking-pro',  # 豆包
+        }
 
         instances = {}
 
@@ -966,16 +1001,46 @@ class Muse:
             human_key = f"human_{i + 1}"
             instances[human_key] = Human(instance_id=human_key, model=None)
 
-        # 实例化 DeepSeek 类
-        for i in range(deepseek_ai_number):
-            deepseek_key = f"deepseek_{i + 1}"
-            instances[deepseek_key] = DeepSeek(instance_id=deepseek_key, model='deepseek-reasoner')
+        # 校验 default_ai
+        if default_ai not in ai_model_map:
+            class_name = self.__class__.__name__  # 获取类名
+            method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                             f"default_ai must be one of the following: {list(ai_model_map.keys())}")
 
-        # 实例化 OtherAI 类
-        other_ai_number = ai_number - deepseek_ai_number  # 注意更新
-        for i in range(other_ai_number):
-            other_ai_key = f"other_ai_{i + 1}"
-            instances[other_ai_key] = OtherAI(instance_id=other_ai_key, model='deepseek-ai/DeepSeek-R1')
+        # 获取各类型数量并校验
+        ai_counts = {}
+        for ai_type in ai_model_map.keys():
+            count = kwargs.get(f"{ai_type}_ai_number", 0) or 0
+            if count < 0:
+                raise ValueError(f"{ai_type}_ai_number cannot be less than 0.")
+            ai_counts[ai_type] = count
+
+        # 校验 ai_number
+        total_specified = sum(ai_counts.values())
+        if ai_number < total_specified:
+            class_name = self.__class__.__name__  # 获取类名
+            method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                             f"ai_number ({ai_number}) must be greater than or equal to the sum of the quantities "
+                             f"of each type ({total_specified}).")
+
+        # 分配多余的到 default_ai
+        if ai_number > total_specified:
+            ai_counts[default_ai] += ai_number - total_specified
+
+        # 实例化 OtherAI
+        for ai_type, model_name in ai_model_map.items():
+            for i in range(ai_counts[ai_type]):
+                instance_id = f"{ai_type}_{i + 1}"
+                instances[instance_id] = OtherAI(instance_id=instance_id, model=model_name)
+
+        # 可选调试输出
+        if show_result:
+            print("AI allocation result:")
+            for ai_type, count in ai_counts.items():
+                print(f"{ai_type}: {count}")
+            print(f"\nTotal: {man_number + sum(ai_counts.values())}  Human: {man_number}  AI: {ai_number}")
 
         self.player = instances
 
@@ -1002,7 +1067,7 @@ def set_api_config(ai_instance: object, api_url_pair: str):
             # DeepSeek 官方
             'ds': {"api_key": DeepSeek_api_key, "base_url": DeepSeek_base_url},
             # 渠道 AI
-            '1': {"api_key": other_api_key_1, "base_url": other_base_url_1},
+            '1': {"api_key": other_api_key, "base_url": other_base_url},
         }
     except NameError as e:
         raise NameError(f"\033[95mIn {method_name}\033[0m, Configuration variable not found: {str(e)}") from None

@@ -661,8 +661,9 @@ extract_pages()
 current_time_zone_location
 DeepSeek_api_key
 DeepSeek_base_url
-other_api_key_1
-other_base_url_1
+other_api_key
+other_base_url
+avaliable_model
 
 set_api_config()
 

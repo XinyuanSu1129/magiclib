@@ -164,13 +164,6 @@ class Human:
             raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
                              f"messages cannot be an empty list.")
 
-        # 检查最后一条消息角色必须是'user'
-        if messages[-1]['role'] != 'user':
-            class_name = self.__class__.__name__  # 获取类名
-            method_name = inspect.currentframe().f_code.co_name  # 获取方法名
-            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
-                             f"The character of the last message in messages must be 'user'.")
-
         self.messages = messages.copy()  # 拷贝一份，避免修改外部列表
 
         # 打印所有消息内容 (role 和 content），根据角色加颜色

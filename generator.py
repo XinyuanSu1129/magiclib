@@ -65,7 +65,7 @@ class AI:
 
         :param instance_id: (str) AI 大模型的实例化 id，该 id 可以直接被实例化对象打印
         :param client: (OpenAI) OpenAI 实例化对象
-        :param model: (str) 指定使用的模型，如 'deepseek-continue_chat' 或 'deepseek-reasoner'
+        :param model: (str) 指定使用的模型，如 'deepseek-chat' 或 'deepseek-reasoner'
         :param messages: (list) 对话消息列表，包含完整对话历史，最后一条为当前发送的信息
         :param max_tokens: (int) 生成的最大 token 数 (输入 + 输出)
         :param temperature: (float) 控制输出的随机性 (0.0-2.0)，数值越低越确定，越高越有创意
@@ -261,7 +261,7 @@ class DeepSeek(AI):
         # 公有参数 (12)
         :param instance_id: (str) AI 大模型的实例化 id，该 id 可以直接被实例化对象打印
         :param client: (OpenAI) OpenAI 实例化对象
-        :param model: (str) 指定使用的模型，如 'deepseek-continue_chat' 或 'deepseek-reasoner'
+        :param model: (str) 指定使用的模型，如 'deepseek-chat' 或 'deepseek-reasoner'
         :param messages: (list) 对话消息列表，包含完整对话历史，最后一条为当前发送的信息
         :param max_tokens: (int) 生成的最大 token 数 (输入 + 输出)
         :param temperature: (float) 控制输出的随机性 (0.0-2.0)，数值越低越确定，越高越有创意
@@ -294,7 +294,7 @@ class DeepSeek(AI):
 
         # 检查 model 实例化
         if model is None:
-            self.model = 'deepseek-continue_chat'
+            self.model = 'deepseek-chat'
 
         # 检查 messages 实例化
         if messages is None:
@@ -309,9 +309,9 @@ class DeepSeek(AI):
         self.cache_enabled = cache_enabled
 
         # 初始化字符统计计数器
-        self.total_input_deepseek_chat_hit_tokens = 0  # 用户输入命中 tokens deepseek-continue_chat
-        self.total_input_deepseek_chat_miss_tokens = 0  # 用户输入未命中 tokens deepseek-continue_chat
-        self.total_input_deepseek_chat_tokens = 0  # 用户输入总 tokens deepseek-continue_chat
+        self.total_input_deepseek_chat_hit_tokens = 0  # 用户输入命中 tokens deepseek-chat
+        self.total_input_deepseek_chat_miss_tokens = 0  # 用户输入未命中 tokens deepseek-chat
+        self.total_input_deepseek_chat_tokens = 0  # 用户输入总 tokens deepseek-chat
         self.total_output_deepseek_chat_tokens = 0  # AI 模型输出总 tokens deepseek-reasoner
 
         self.total_input_deepseek_reasoner_hit_tokens = 0  # 用户输入命中 tokens deepseek-reasoner
@@ -320,9 +320,9 @@ class DeepSeek(AI):
         self.total_output_deepseek_reasoner_tokens = 0  # AI 模型输出总 tokens deepseek-reasoner
 
         # 模型与价格
-        self.input_price_of_millions_of_hit_tokens_of_deepseek_chat = 0.5  # 命中 deepseek-continue_chat
-        self.input_price_of_millions_of_miss_tokens_of_deepseek_chat = 2  # 未命中 deepseek-continue_chat
-        self.output_price_of_millions_of_tokens_of_deepseek_chat = 8  # 输出 deepseek-continue_chat
+        self.input_price_of_millions_of_hit_tokens_of_deepseek_chat = 0.5  # 命中 deepseek-chat
+        self.input_price_of_millions_of_miss_tokens_of_deepseek_chat = 2  # 未命中 deepseek-chat
+        self.output_price_of_millions_of_tokens_of_deepseek_chat = 8  # 输出 deepseek-chat
 
         self.input_price_of_millions_of_hit_tokens_of_deepseek_reasoner = 1  # 命中 deepseek-reasoner
         self.input_price_of_millions_of_miss_tokens_of_deepseek_reasoner = 4  # 未命中 deepseek-reasoner
@@ -330,9 +330,9 @@ class DeepSeek(AI):
 
         self.in_discounts = False  # 是否在折扣范围内
         self.current_price = 0.0
-        self.input_price_of_millions_of_hit_tokens_of_deepseek_chat_discounts = 0.25  # 命中 deepseek-continue_chat
-        self.input_price_of_millions_of_miss_tokens_of_deepseek_chat_discounts = 1  # 未命中 deepseek-continue_chat
-        self.output_price_of_millions_of_tokens_of_deepseek_chat_discounts = 4  # 输出 deepseek-continue_chat
+        self.input_price_of_millions_of_hit_tokens_of_deepseek_chat_discounts = 0.25  # 命中 deepseek-chat
+        self.input_price_of_millions_of_miss_tokens_of_deepseek_chat_discounts = 1  # 未命中 deepseek-chat
+        self.output_price_of_millions_of_tokens_of_deepseek_chat_discounts = 4  # 输出 deepseek-chat
 
         self.input_price_of_millions_of_hit_tokens_of_deepseek_reasoner_discounts = 0.25  # 命中 deepseek-reasoner
         self.input_price_of_millions_of_miss_tokens_of_deepseek_reasoner_discounts = 1  # 未命中 deepseek-reasoner
@@ -357,7 +357,7 @@ class DeepSeek(AI):
             the content be input into the AI model; otherwise, it will simply move to the next line and wait
             for further input.
 
-        :param model: (str) 指定使用的模型，如 'deepseek-continue_chat' 或 'deepseek-reasoner'
+        :param model: (str) 指定使用的模型，如 'deepseek-chat' 或 'deepseek-reasoner'
         :param system_content: (str) 'role': 'system' 中的 content 的内容，被赋值时会消除前面的所有对话记录。
                                如果未赋值则运用初始信息，默认为初始信息
         :param end_token: (str) 输入结束 token，在检测到该 token 并后紧跟 '\n' 时结束输入过程并输入，默认为换行符 '\n'
@@ -386,7 +386,7 @@ class DeepSeek(AI):
         end_time = (8, 30)  # 08:30
 
         # 判断是否在优惠时间 (Beijing 00:30-08:30) 内
-        if start_time <= current_hour_min < end_time and model == 'deepseek-continue_chat':
+        if start_time <= current_hour_min < end_time and model == 'deepseek-chat':
             model = 'deepseek-reasoner'
             model_verison = 'DeepSeek-R1-0528'
             self.in_discounts = True
@@ -395,7 +395,7 @@ class DeepSeek(AI):
                   f'\033[31m{model} ({model_verison})\033[0m.')
         else:
             model_verison = ''
-            if model == 'deepseek-continue_chat':
+            if model == 'deepseek-chat':
                 model_verison = 'DeepSeek-V3-0324'
             elif model == 'deepseek-reasoner':
                 model_verison = 'DeepSeek-R1-0528'
@@ -466,7 +466,7 @@ class DeepSeek(AI):
             completion_tokens = self.response.usage.completion_tokens  # 输出 tokens
 
             # prompt_tokens 计算
-            if self.response.model == 'deepseek-continue_chat':
+            if self.response.model == 'deepseek-chat':
                 self.total_input_deepseek_chat_tokens += prompt_tokens
                 self.total_input_deepseek_chat_hit_tokens += prompt_hit_tokens
                 self.total_input_deepseek_chat_miss_tokens += prompt_miss_tokens
@@ -477,7 +477,7 @@ class DeepSeek(AI):
             self.total_input_tokens += prompt_tokens  # 总长度添加
 
             # completion_tokens 计算
-            if self.response.model == 'deepseek-continue_chat':
+            if self.response.model == 'deepseek-chat':
                 self.total_output_deepseek_chat_tokens += completion_tokens
             elif self.response.model == 'deepseek-reasoner':
                 self.total_output_deepseek_reasoner_tokens += completion_tokens
@@ -506,9 +506,9 @@ class DeepSeek(AI):
 
         if not self.in_discounts:
             # 输入价格
-            input_price += (self.total_input_deepseek_chat_hit_tokens * 1 / 1000000 *  # 命中 deepseek-continue_chat 模型
+            input_price += (self.total_input_deepseek_chat_hit_tokens * 1 / 1000000 *  # 命中 deepseek-chat 模型
                             self.input_price_of_millions_of_hit_tokens_of_deepseek_chat)
-            input_price += (self.total_input_deepseek_chat_miss_tokens * 1 / 1000000 *  # 未命中 deepseek-continue_chat
+            input_price += (self.total_input_deepseek_chat_miss_tokens * 1 / 1000000 *  # 未命中 deepseek-chat
                             self.input_price_of_millions_of_miss_tokens_of_deepseek_chat)
 
             input_price += (self.total_input_deepseek_reasoner_hit_tokens * 1 / 1000000 *  # 命中 deepseek-reasoner 模型
@@ -518,7 +518,7 @@ class DeepSeek(AI):
             self.current_price += input_price
 
             # 输出价格
-            output_price += (self.total_output_deepseek_chat_tokens * 1 / 1000000 *  # deepseek-continue_chat 模型
+            output_price += (self.total_output_deepseek_chat_tokens * 1 / 1000000 *  # deepseek-chat 模型
                              self.output_price_of_millions_of_tokens_of_deepseek_chat)
             output_price += (self.total_output_deepseek_reasoner_tokens * 1 / 1000000 *  # deepseek-reasoner 模型
                              self.output_price_of_millions_of_tokens_of_deepseek_reasoner)
@@ -526,9 +526,9 @@ class DeepSeek(AI):
 
         else:  # 在折扣范围内
             # 输入价格
-            input_price += (self.total_input_deepseek_chat_hit_tokens * 1 / 1000000 *  # 命中 deepseek-continue_chat 模型
+            input_price += (self.total_input_deepseek_chat_hit_tokens * 1 / 1000000 *  # 命中 deepseek-chat 模型
                             self.input_price_of_millions_of_hit_tokens_of_deepseek_chat_discounts)
-            input_price += (self.total_input_deepseek_chat_miss_tokens * 1 / 1000000 *  # 未命中 deepseek-continue_chat
+            input_price += (self.total_input_deepseek_chat_miss_tokens * 1 / 1000000 *  # 未命中 deepseek-chat
                             self.input_price_of_millions_of_miss_tokens_of_deepseek_chat_discounts)
 
             input_price += (self.total_input_deepseek_reasoner_hit_tokens * 1 / 1000000 *  # 命中 deepseek-reasoner 模型
@@ -538,7 +538,7 @@ class DeepSeek(AI):
             self.current_price += input_price
 
             # 输出价格
-            output_price += (self.total_output_deepseek_chat_tokens * 1 / 1000000 *  # deepseek-continue_chat 模型
+            output_price += (self.total_output_deepseek_chat_tokens * 1 / 1000000 *  # deepseek-chat 模型
                             self.output_price_of_millions_of_tokens_of_deepseek_chat_discounts)
             output_price += (self.total_output_deepseek_reasoner_tokens * 1 / 1000000 *  # deepseek-reasoner 模型
                             self.output_price_of_millions_of_tokens_of_deepseek_reasoner_discounts)
@@ -676,7 +676,7 @@ class OtherAI(AI):
 
         :param instance_id: (str) AI 大模型的实例化 id，该 id 可以直接被实例化对象打印
         :param client: (OpenAI) OpenAI 实例化对象
-        :param model: (str) 指定使用的模型，如 'deepseek-continue_chat' 或 'deepseek-reasoner'
+        :param model: (str) 指定使用的模型，如 'deepseek-chat' 或 'deepseek-reasoner'
         :param messages: (list) 对话消息列表，包含完整对话历史，最后一条为当前发送的信息
         :param max_tokens: (int) 生成的最大 token 数 (输入 + 输出)
         :param temperature: (float) 控制输出的随机性 (0.0-2.0)，数值越低越确定，越高越有创意
@@ -784,7 +784,7 @@ class OtherAI(AI):
             the content be input into the AI model; otherwise, it will simply move to the next line and wait
             for further input.
 
-        :param model: (str) 指定使用的模型，如 'deepseek-continue_chat' 或 'deepseek-reasoner'
+        :param model: (str) 指定使用的模型，如 'deepseek-chat' 或 'deepseek-reasoner'
         :param system_content: (str) 'role': 'system' 中的 content 的内容，被赋值时会消除前面的所有对话记录。
                                如果未赋值则运用初始信息，默认为初始信息
         :param end_token: (str) 输入结束 token，在检测到该 token 并后紧跟 '\n' 时结束输入过程并输入，默认为换行符 '\n'
@@ -888,7 +888,7 @@ class Assist(DeepSeek):
         # 公有参数 (12)
         :param instance_id: (str) AI 大模型的实例化 id，该 id 可以直接被实例化对象打印
         :param client: (OpenAI) OpenAI 实例化对象
-        :param model: (str) 指定使用的模型，如 'deepseek-continue_chat' 或 'deepseek-reasoner'
+        :param model: (str) 指定使用的模型，如 'deepseek-chat' 或 'deepseek-reasoner'
         :param messages: (list) 对话消息列表，包含完整对话历史，最后一条为当前发送的信息
         :param max_tokens: (int) 生成的最大 token 数 (输入 + 输出)
         :param temperature: (float) 控制输出的随机性 (0.0-2.0)，数值越低越确定，越高越有创意
@@ -1039,7 +1039,7 @@ class Assist(DeepSeek):
         completion_tokens = self.response.usage.completion_tokens  # 输出 tokens
 
         # prompt_tokens 计算
-        if self.response.model == 'deepseek-continue_chat':
+        if self.response.model == 'deepseek-chat':
             self.total_input_deepseek_chat_tokens += prompt_tokens
             self.total_input_deepseek_chat_hit_tokens += prompt_hit_tokens
             self.total_input_deepseek_chat_miss_tokens += prompt_miss_tokens
@@ -1050,7 +1050,7 @@ class Assist(DeepSeek):
         self.total_input_tokens += prompt_tokens  # 总长度添加
 
         # completion_tokens 计算
-        if self.response.model == 'deepseek-continue_chat':
+        if self.response.model == 'deepseek-chat':
             self.total_output_deepseek_chat_tokens += completion_tokens
         elif self.response.model == 'deepseek-reasoner':
             self.total_output_deepseek_reasoner_tokens += completion_tokens

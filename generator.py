@@ -149,7 +149,8 @@ class Human:
 
         :param messages: (List[dict]) 用户收到的信息，用户收到信息中 'system' 将突出显示，'user' 将为主要内容
         :param input_role_user: (bool) 用户输入在 messages 中记录为 'user' (True) 还是 'assistant' (False)，默认为 True
-        :param end_token: (str) 输入结束 token，在检测到该 token 并后紧跟 '\n' 时结束输入过程并输入，默认为换行符 '\n'
+        :param end_token: (str) 此参数不允许包含换行符。end_token 默认情况下，只有在空的一行输入换行符 '\n' 或空按“回车”才会将
+                                内容输入，否则只是换到下一行并等待继续输入，此情况下最下面的换行符 \n 不会保留
 
         :return reply_messages: (List[dict]) 用户回复后的消息列表，包含新追加的消息
         """
@@ -166,6 +167,13 @@ class Human:
             method_name = inspect.currentframe().f_code.co_name  # 获取方法名
             raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
                              f"messages cannot be an empty list.")
+
+        # 检查 end_token 是否包含换行符 '\n'
+        if '\n' in end_token or '\r' in end_token:
+            class_name = self.__class__.__name__  # 获取类名
+            method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                             f"end_token cannot contain line breaks.")
 
         self.messages = messages.copy()  # 拷贝一份，避免修改外部列表
 
@@ -196,14 +204,37 @@ class Human:
 
         input_prompt = f"\n{input_color_start}{input_role_name}{input_color_end}: "
 
+        # 获取用户输入
         if end_token == '':
-            human_reply = input(input_prompt)
-        else:
+            # 空 token：出现一个空行就结束
             lines = []
             first_line = input(input_prompt)
+
+            if first_line != '':
+                lines.append(first_line)
+                # 计算续行提示符长度
+                main_prompt_text = f"{input_role_name}: "
+                main_prompt_len = len(main_prompt_text)
+                continuation_prompt_text = '-' * (main_prompt_len - 3) + '-> '
+                continuation_prompt = f"{input_color_start}{continuation_prompt_text}{input_color_end}"
+
+                while True:
+                    line = input(continuation_prompt)
+                    if line == '':
+                        break
+                    lines.append(line)
+
+            human_reply = "\n".join(lines)
+
+        else:
+            # 非空 token：以 token 结尾换行才结束
+            lines = []
+            first_line = input(input_prompt)
+
             if first_line.endswith(end_token):
+                # 保留去掉 end_token 后的内容
                 content_line = first_line[:-len(end_token)].rstrip()
-                human_reply = content_line
+                lines.append(content_line)
             else:
                 lines.append(first_line)
                 # 计算续行提示符长度
@@ -216,10 +247,11 @@ class Human:
                     line = input(continuation_prompt)
                     if line.endswith(end_token):
                         content_line = line[:-len(end_token)].rstrip()
-                        lines.append(content_line)
+                        lines.append(content_line)  # 这里保留去掉 token 的内容
                         break
                     lines.append(line)
-                human_reply = "\n".join(lines)
+
+            human_reply = "\n".join(lines)
 
         # 决定追加消息的角色
         role_to_append = 'user' if input_role_user else 'assistant'
@@ -349,18 +381,21 @@ class DeepSeek(AI):
 
         注意：
         1.  想要退出需要输入：'退出', 'exit' 或 'quit'
-        2.  只有在空的一行输入换行符 '\n' 或空按“回车”才会将内容输入给 AI 模型，否则只是换到下一行并等待继续输入
+        2.  end_token 默认情况下，只有在空的一行输入换行符 '\n' 或空按“回车”才会将内容输入给 AI 模型，否则只是换到下一行并等待继续输入，
+            此情况下最下面的换行符 \n 不会保留
 
         Note:
         1.  To exit, you need to enter: '退出', 'exit' or 'quit'.
-        2.  Only when a newline character '\n' is entered on an empty line or an empty "Enter" is pressed will
-            the content be input into the AI model; otherwise, it will simply move to the next line and wait
-            for further input.
+        2.  By default, the content of end_token will only be input to the AI model when a newline character
+            '\n' is entered on an empty line or when an empty "Enter" is pressed; otherwise, it will simply move to
+            the next line and wait for further input. In this case, the bottom newline character \n will
+            not be retained.
 
         :param model: (str) 指定使用的模型，如 'deepseek-chat' 或 'deepseek-reasoner'
         :param system_content: (str) 'role': 'system' 中的 content 的内容，被赋值时会消除前面的所有对话记录。
                                如果未赋值则运用初始信息，默认为初始信息
-        :param end_token: (str) 输入结束 token，在检测到该 token 并后紧跟 '\n' 时结束输入过程并输入，默认为换行符 '\n'
+        :param end_token: (str) 输入结束 token，在检测到该 token 并后紧跟 '\n' 时结束输入过程并输入，默认为换行符 '' 代表换行符，
+                                此时在检测到一个空行后紧跟一个换行符代表输入结束。此参数不允许包含换行符
         :param max_tokens: (int) 生成的最大 token 数 (输入 + 输出)
         :param temperature: (float) 控制输出的随机性 (0.0-2.0)，数值越低越确定，越高越有创意
         :param top_p: (float) 核采样概率 (0.0-1.0)，仅保留概率累计在前 top_p 的词汇，与 temperature 二选一
@@ -376,6 +411,13 @@ class DeepSeek(AI):
         if system_content is not None:
             self.messages = [{"role": "system",
                               "content": system_content}]
+
+        # 检查 end_token 是否包含换行符 '\n'
+        if '\n' in end_token or '\r' in end_token:
+            class_name = self.__class__.__name__  # 获取类名
+            method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                             f"end_token cannot contain line breaks.")
 
         # 获取当前北京时间
         beijing_time = datetime.now(ZoneInfo(f"Asia/{current_time_zone_location}"))
@@ -410,16 +452,28 @@ class DeepSeek(AI):
             user_input_list = []
             prompt = f"\033[1m\033[92mUser\033[0m: "  # 绿色加粗 User:
 
-            while True:
-                line = input(prompt)
-                if line.endswith(end_token):
-                    content_line = line[:-len(end_token)].rstrip()
-                    if content_line:
-                        user_input_list.append(content_line)
-                    break
-                user_input_list.append(line)
-                # 输入第二行及后续行时改用简短续行提示
-                prompt = f"\033[1m\033[92m---->\033[0m "  # 绿色加粗箭头
+            if end_token == '':
+                # 空 token：空行换行直接结束
+                while True:
+                    line = input(prompt)
+                    if line == '':  # 空行直接结束
+                        break
+                    user_input_list.append(line)
+                    prompt = f"\033[1m\033[92m---->\033[0m "
+            else:
+                # 非空 token：以 token 结尾换行才结束
+                while True:
+                    line = input(prompt)
+                    if line.endswith(end_token):
+                        content_line = line[:-len(end_token)].rstrip()
+                        # 如果这一行只有 token（去掉后为空），保留一个空行
+                        if content_line == '':
+                            user_input_list.append('')
+                        else:
+                            user_input_list.append(content_line)
+                        break
+                    user_input_list.append(line)
+                    prompt = f"\033[1m\033[92m---->\033[0m "
 
             user_input = "\n".join(user_input_list)
 
@@ -776,18 +830,21 @@ class OtherAI(AI):
 
         注意：
         1.  想要退出需要输入：'退出', 'exit' 或 'quit'
-        2.  只有在空的一行输入换行符 '\n' 或空按“回车”才会将内容输入给 AI 模型，否则只是换到下一行并等待继续输入
+        2.  end_token 默认情况下，只有在空的一行输入换行符 '\n' 或空按“回车”才会将内容输入给 AI 模型，否则只是换到下一行并等待继续输入，
+            此情况下最下面的换行符 \n 不会保留
 
         Note:
         1.  To exit, you need to enter: '退出', 'exit' or 'quit'.
-        2.  Only when a newline character '\n' is entered on an empty line or an empty "Enter" is pressed will
-            the content be input into the AI model; otherwise, it will simply move to the next line and wait
-            for further input.
+        2.  By default, the content of end_token will only be input to the AI model when a newline character
+            '\n' is entered on an empty line or when an empty "Enter" is pressed; otherwise, it will simply move to
+            the next line and wait for further input. In this case, the bottom newline character \n will
+            not be retained.
 
         :param model: (str) 指定使用的模型，如 'deepseek-chat' 或 'deepseek-reasoner'
         :param system_content: (str) 'role': 'system' 中的 content 的内容，被赋值时会消除前面的所有对话记录。
                                如果未赋值则运用初始信息，默认为初始信息
-        :param end_token: (str) 输入结束 token，在检测到该 token 并后紧跟 '\n' 时结束输入过程并输入，默认为换行符 '\n'
+        :param end_token: (str) 输入结束 token，在检测到该 token 并后紧跟 '\n' 时结束输入过程并输入，默认为换行符 '' 代表换行符，
+                                此时在检测到一个空行后紧跟一个换行符代表输入结束。此参数不允许包含换行符
         :param max_tokens: (int) 生成的最大 token 数 (输入 + 输出)
         :param temperature: (float) 控制输出的随机性 (0.0-2.0)，数值越低越确定，越高越有创意
         :param top_p: (float) 核采样概率 (0.0-1.0)，仅保留概率累计在前 top_p 的词汇，与 temperature 二选一
@@ -804,6 +861,13 @@ class OtherAI(AI):
             self.messages = [{"role": "system",
                               "content": system_content}]
 
+        # 检查 end_token 是否包含换行符 '\n'
+        if '\n' in end_token or '\r' in end_token:
+            class_name = self.__class__.__name__  # 获取类名
+            method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                             f"end_token cannot contain line breaks.")
+
         print(f"Let's start chatting! The current model is \033[31m{model}\033[0m.")
 
         # 对话循环
@@ -814,16 +878,28 @@ class OtherAI(AI):
             user_input_list = []
             prompt = f"\033[1m\033[92mUser\033[0m: "  # 绿色加粗 User:
 
-            while True:
-                line = input(prompt)
-                if line.endswith(end_token):
-                    content_line = line[:-len(end_token)].rstrip()
-                    if content_line:
-                        user_input_list.append(content_line)
-                    break
-                user_input_list.append(line)
-                # 输入第二行及后续行时改用简短续行提示
-                prompt = f"\033[1m\033[92m---->\033[0m "  # 绿色加粗箭头
+            if end_token == '':
+                # 空 token：空行换行直接结束
+                while True:
+                    line = input(prompt)
+                    if line == '':  # 空行直接结束
+                        break
+                    user_input_list.append(line)
+                    prompt = f"\033[1m\033[92m---->\033[0m "
+            else:
+                # 非空 token：以 token 结尾换行才结束
+                while True:
+                    line = input(prompt)
+                    if line.endswith(end_token):
+                        content_line = line[:-len(end_token)].rstrip()
+                        # 如果这一行只有 token（去掉后为空），保留一个空行
+                        if content_line == '':
+                            user_input_list.append('')
+                        else:
+                            user_input_list.append(content_line)
+                        break
+                    user_input_list.append(line)
+                    prompt = f"\033[1m\033[92m---->\033[0m "
 
             user_input = "\n".join(user_input_list)
 

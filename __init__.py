@@ -67,6 +67,7 @@ MAGIC
 
  --------------------------------------------------- generator ---------------------------------------------------------
  
+ -Tools-         AI 工具区：用于存放 AI 可以调用的工具
  -AI-            AI 参数公有区：用于管理公有参数与 OpenAI 实例化
  -Human-         用户交互区：用于单或多用户与 AI 交互
  -DeepSeek-      DeepSeek 区：利用 DeepSeek 进行对话与分析操作
@@ -129,6 +130,7 @@ MAGIC
  
  --------------------------------------------------- generator ---------------------------------------------------------
   
+ -Tools-         AI Tool area: It is used to store tools that AI can invoke
  -AI-            AI Parameter Public Zone: Used for managing public parameters and OpenAI instantiations
  -Human-         User Interaction Area: Used for single or multiple users to interact with AI
  -DeepSeek-      DeepSeek area: Utilize DeepSeek for dialogue and analysis operations
@@ -298,8 +300,9 @@ MAGIC
                 DeepSeek, OtherAI, Assist, and Muse have been added. It is currently still in the development and 
                 testing stage. There are still many functions that need to be adjusted.
                 The layout format of the serial numbers has been changed. Now it is the same as the /t indentation.
--> 6.3.1 Beta   25-08-13 11:54 A major overhaul of the module generator has been made, replacing OpenAI 
+-> 6.3.1 Beta   25-08-14 00:25 A major overhaul of the module generator has been made, replacing OpenAI 
                 with tequests () requests. 
+                Added the function that AI can invoke tools.
                
                     
  ------ Needing ------
@@ -671,7 +674,18 @@ avaliable_model
 
 set_api_config()
 
+------ Tools ------
+read_txt()
+read_excel()
+read_json()
+plot_line()
+plot_scatter()
+
 ------ AI ------
+tools_instance
+toolkit
+tool_methods
+
 chat()
 continue_chat()
 calculate_cost()

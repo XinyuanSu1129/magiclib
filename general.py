@@ -2786,7 +2786,7 @@ class Manager(Optimizer):
 
         # 返回值 (1)
         :return data_dic: (dict) 返回该 TXT 文件的 dict，key 为文件名的测TXT的名称，value 为 DataFrame (该文件的有效数据)
-                 如果初始化时为 TXT 文件路径，则返回的dict中仅有该文件一个数据的 key & value
+                 如果初始化时为 TXT 文件路径，则返回的 dict 中仅有该文件一个数据的 key & value
                  如果初始化时为 TXT 文件的目录路径，则返回的dict中含有该目录下所有 TXT 文件数据的 key & value
         DataFrame: column1:       float64
                    column2:       float64
@@ -3085,7 +3085,7 @@ class Manager(Optimizer):
 
         # 返回值 (1)
         :return data_dic: (dict) 返回该 Excel 文件的 dict，key 为文件名的测 Excel 的名称，value 为 DataFrame (该文件的有效数据)
-                 如果初始化时为 Excel 文件路径，则返回的dict中仅有该文件一个数据的 key & value
+                 如果初始化时为 Excel 文件路径，则返回的 dict 中仅有该文件一个数据的 key & value
                  如果初始化时为 Excel 文件的目录路径，则返回的dict中含有该目录下所有 Excel 文件数据的 key & value
         DataFrame: column1:       float64
                    column2:       float64
@@ -3358,11 +3358,11 @@ class Manager(Optimizer):
         :param update_to: (bool) 是否更新至原来的 data_dic，如果 key 有重名则覆盖
 
         # 返回值 (3)
-        :return data_dic: (dict) 返回该 JSON 文件的 dict，key 为文件名的测 TXT 的名称，value 为 DataFrame (该文件的有效数据)
-        :return key_point_dic: (dict) 返回该 JSON 文件的 dict，key 为文件名的测 TXT 的名称，value 为 DataFrame (该文件的关键点)
-        :return sampled_dic: (dict) 返回该 JSON 文件的 dict，key 为文件名的测 TXT 的名称，value 为 DataFrame (有效数据 + 关键点)
-                            如果初始化时为 TXT 文件路径，则返回的 dict 中仅有该文件一个数据的 key & value
-                            如果初始化时为 TXT 文件的目录路径，则返回的dict中含有该目录下所有 TXT 文件数据的 key & value
+        :return data_dic: (dict) 返回该 JSON 文件的 dict，key 为文件名，value 为 DataFrame (该文件的有效数据)
+        :return key_point_dic: (dict) 返回该 JSON 文件的 dict，key 为文件名，value 为 DataFrame (该文件的关键点)
+        :return sampled_dic: (dict) 返回该 JSON 文件的 dict，key 为文件名，value 为 DataFrame (有效数据 + 关键点)
+                            如果初始化时为文件路径，则返回的 dict 中仅有该文件一个数据的 key & value
+                            如果初始化时为文件的目录路径，则返回的 dict 中含有该目录下所有 JSON 文件数据的 key & value
 
         DataFrame: column1:       float64
                    column2:       float64

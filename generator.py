@@ -9,11 +9,13 @@ Attention:
 
 
 # 导入顺序不同有可能导致程序异常
-from . import general  # 当前未用到，预计参与分析时用到
+from . import general, grapher
 
+import time
 import json
 import inspect
 import requests
+from pandas import DataFrame
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from abc import abstractmethod
@@ -46,6 +48,102 @@ avaliable_model = ['deepseek-ai/DeepSeek-R1',  # DeepSeek
                    'doubao-1.5-thinking-pro',  # 豆包
                    ]
 
+
+""" AI 工具包 """
+class Tools:
+    """
+    AI 大模型可以调用此部分的工具
+
+    The AI invokes the tools of this part when the model is permitted. This part may accept class attributes
+    and proceed step by step, as well as static methods.
+    """
+
+    # 无需初始化，被调用时赋值
+    def __init__(self):
+
+        # 实例化类 grapher.Plotter
+        self.graphter_instanced = grapher.Plotter()
+
+    # 读取 TXT 文件
+    def read_txt(self, txt_path: str) -> str:
+        """
+        让 AI 大模型读取 TXT 中的数据，返回为数据的 data_dic。读取时的数据为两例并用空格分割
+        Let the AI large model read the data in TXT and return the data_dic of the data.
+        The data at the time of reading consists of two examples separated by Spaces.
+
+        :param txt_path: (str) TXT 文件路径，可以是文件路径，也可以是目录，若被赋值则对该路径文件 / 目录进行处理
+
+        :return status: (str) 返回信息，让 AI 大模型明白数据已经读取
+        """
+
+        self.graphter_instanced.read_txt(txt_path=txt_path)
+        status = 'The data in the TXT file has been read.'
+
+        return status
+
+    # 读取 Excel 文件
+    def read_excel(self, excel_path: str) -> str:
+        """
+        让 AI 大模型读取 Excel 中的数据，返回为数据的 data_dic。读取时无行索引且第一列为表头
+        Let the AI large model read the data in Excel and return the data_dic of the data. When reading,
+        there is no row index and the first column is the header of the table.
+        The data at the time of reading consists of two examples separated by Spaces.
+
+        :param excel_path: (str) Excel 文件路径，可以是文件路径，也可以是目录，若被赋值则对该路径文件 / 目录进行处理
+
+        :return status: (str) 返回信息，让 AI 大模型明白数据已经读取
+        """
+
+        self.graphter_instanced.read_excel(excel_path=excel_path)
+        status = 'The data in the Excel file has been read.'
+
+        return status
+
+    # 读取 JSON 文件
+    def read_json(self, json_path: str) -> str:
+        """
+        让 AI 大模型读取 JSON 中的数据，该数据需要为 magiclib 保存的 JSON 格式
+        Let the AI large model read the data in JSON, which needs to be in the JSON format saved for magiclib.
+
+        :param json_path: (str) Excel 文件路径，可以是文件路径，也可以是目录，若被赋值则对该路径文件 / 目录进行处理
+
+        :return status: (str) 返回信息，让 AI 大模型明白数据已经读取
+        """
+
+        self.graphter_instanced.read_json(json_path=json_path)
+        status = 'The data in the JSON file has been read.'
+
+        return status
+
+    # 绘制线形图
+    def plot_line(self):
+        """
+        根据读取到的数据绘制线形图
+        Draw a line graph based on the read data.
+
+        :return status: (str) 返回信息，让 AI 大模型明白线形图已绘制
+        """
+
+        self.graphter_instanced.plot_line()
+        status = 'The line graph has been drawn.'
+
+        return status
+
+    # 绘制散点形图
+    def plot_scatter(self):
+        """
+        根据读取到的数据绘制散点图
+        Draw a scatter graph based on the read data.
+
+        :return status: (str) 返回信息，让 AI 大模型明白散点图已绘制
+        """
+
+        self.graphter_instanced.plot_scatter()
+        status = 'The scatter plot has been drawn.'
+
+        return status
+
+
 """ AI 大模型总类 """
 class AI:
     """
@@ -55,12 +153,104 @@ class AI:
     The methods should include continue_chat().
     """
 
+    # 创建 Tools 实例
+    tools_instance = Tools()
+    # 可用工具及描述
+    toolkit = [
+        {
+            "type": "function",
+            "function": {
+                "name": "read_txt",
+                "description": "Read a TXT file and save a dictionary of data, with the file name as the key and "
+                               "DataFrame as the value.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "txt_path": {
+                            "type": "string",
+                            "description": "Path to the TXT file or directory."
+                        }
+                    },
+                    "required": ["txt_path"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "read_excel",
+                "description": "Read an Excel file and save a dictionary of data, with the file name as the key and "
+                               "DataFrame as the value.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "excel_path": {
+                            "type": "string",
+                            "description": "Path to the Excel file or directory."
+                        }
+                    },
+                    "required": ["excel_path"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "read_json",
+                "description": "Read a JSON file in magiclib format and save a dictionary of data, with "
+                               "the file name as the key and DataFrame as the value.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "json_path": {
+                            "type": "string",
+                            "description": "Path to the JSON file or directory."
+                        }
+                    },
+                    "required": ["json_path"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "plot_line",
+                "description": "Draw a line plot based on the data previously read. No parameters required.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {}
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "plot_scatter",
+                "description": "Draw a scatter plot based on the data previously read. No parameters required.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {}
+                }
+            }
+        }
+    ]
+    # 工具与对应方法
+    tool_methods = {
+        "read_txt": tools_instance.read_txt,
+        "read_excel": tools_instance.read_excel,
+        "read_json": tools_instance.read_json,
+        "plot_line": tools_instance.plot_line,
+        "plot_scatter": tools_instance.plot_scatter
+    }
+
     # 公有参数初始化
     def __init__(self, api_key: Optional[str] = None, base_url: Optional[str] = None, model: Optional[str] = None,
                  messages: Optional[List[dict]] = None, ai_keyword: Optional[str] = None,
                  instance_id: Optional[str] = None, information: Optional[str] = None,
                  max_tokens: int = 2048, temperature: float = 0.7, top_p: float = 1.0, n: int = 1, stream: bool = False,
-                 stop: Union[str, list, None] = None, presence_penalty: float = 0.0, frequency_penalty: float = 0.0):
+                 stop: Union[str, list, None] = None, presence_penalty: float = 0.0, frequency_penalty: float = 0.0,
+                 seed: Optional[int] = None, tools: Optional[list] = None, tool_choice: str = "auto"
+                 ):
         """
         推理 AI 大模型公有参数
         Public parameters of the inference AI large model.
@@ -76,7 +266,7 @@ class AI:
         :param instance_id: (str) AI 大模型的实例化 id，该 id 可以直接被实例化对象打印
         :param information: (str) 当前 AI 被实例化后的信息，自定义输入，用于区分多个 AI 模型
 
-        # 附加参数 (8)
+        # 附加参数 (11)
         :param max_tokens: (int) 生成的最大 token 数 (输入 + 输出)
         :param temperature: (float) 控制输出的随机性 (0.0-2.0)，数值越低越确定，越高越有创意
         :param top_p: (float) 核采样概率 (0.0-1.0)，仅保留概率累计在前 top_p 的词汇，与 temperature 二选一
@@ -85,6 +275,37 @@ class AI:
         :param stop: (str / list) 停止生成的标记，遇到这些字符串时终止输出
         :param presence_penalty: (float)  避免重复主题 (-2.0-2.0)，正值降低重复提及同一概念的概率，适合长文本生成
         :param frequency_penalty: (float) 避免重复词汇 (-2.0-2.0)，正值降低重复用词概率，适合技术文档写作
+        :param seed: (int) 随机种子，默认为 None，表示完全随机
+        :param tools: (list) 工具包，默认为无工具，[]，为防止可变实参，因而为 None
+        :param tool_choice: (str) 工具选取方式，"auto" 为自动选取，"none" 为决不会选取"，
+                            {"type": "function", "function": {"name": "xxx"}} 为强制调用指定工具，并且只能调用它。
+                            "required"(部分文档称为 {"type": "function", "function": "required"} 的形式)，
+                            模型必须调用某个工具，但可以自己选择哪一个
+
+        # 数据结构
+        1.  一般文本对话时的 messages 结构:
+        messages = [  # message 是一个 list，包含多个消息对象，最后一个消息对象为当前发的内容
+                    {"role": "system",   # role 是消息发送者的身份，有 "system", "user", "assistant", ("tool")
+                     "content": "You are a helpful AI assistant who answers users' questions."}  # 消息文本内容
+                    ]
+        2.  收到带有 tool 请求的 messages:
+        messages = {
+                    "role": "assistant",
+                    "content": "",
+                    "tool_calls": [{
+                        "id": "call_001",
+                        "function": {
+                            "name": "my_function",
+                            "arguments": "{\"x\":3, \"y\":5}"
+                            }
+                        }]
+                    }
+        3.  返回带有 tool 请求的 messages:
+        {
+          "role": "tool",
+          "tool_call_id": "call_001",
+          "content": "{\"result\": 8}"
+        }
         """
 
         # 必要参数 (4)
@@ -106,22 +327,27 @@ class AI:
         if messages is not None:
             self.messages = messages
         else:
-            self.messages = [{"role": "system", "content": "You are a helpful assistant."}]
+            self.messages = [{"role": "system", "content": "You are a helpful assistant. You will kindly answer "
+                                                           "users' messages and use tools at the appropriate time."}]
 
         # 自定义参数 (3)
         self.ai_keyword = ai_keyword
         self.instance_id = instance_id
         self.information = information
 
-        # 附加参数 (8)
+        # 附加参数 (11)
         self.max_tokens = max_tokens
         self.temperature = temperature
         self.top_p = top_p
-        self.n = n
-        self.stream = stream
-        self.stop = stop
+        self.n = n  # 一般模型不用该参数
+        self.stream = stream  # 一般模型不用该参数
+        self.stop = stop  # 一般模型不用该参数
         self.presence_penalty = presence_penalty
         self.frequency_penalty = frequency_penalty
+        self.seed = seed
+        if tools is None:  # 为防止可变实参，因而为 None
+            self.tools = AI.toolkit
+        self.tool_choice = tool_choice
 
         # 输入参数 (3)
         self.target_url = None
@@ -151,6 +377,9 @@ class AI:
         self.assistant_role_color = '\033[95m'  # 亮粉色
         self.assistant_content_color = '\033[35;2m'  # 粉色
         self.assistant_remark_color = '\033[35;2m'  # 暗粉色
+        self.tool_role_color = '\033[94m',  # 亮蓝色
+        self.tool_content_color = '\033[34m'  # 蓝色
+        self.tool_remark_color = '\033[34;2m',  # 暗蓝色
 
         self.bold = '\033[1m'  # 加粗
         self.system_remind = '\033[90m'  # 亮黑色
@@ -160,6 +389,9 @@ class AI:
         self.total_cost = 0  # 总价格
         self.input_price_per_million_tokens = 4  # 输入价格 (百万 tokens) 默认为 DeepSeek-R1 模型的费用，均按照未命中处理
         self.output_price_per_million_tokens = 16  # 输出价格 (百万 tokens)
+
+        # 其他参数
+        self.stream_begin_output = True  # stream 开始返回信息
 
     # 确保可以从实例变量中找到 instance_id
     def __repr__(self):
@@ -195,13 +427,20 @@ class AI:
 
         # 构建请求体
         request_body_dict = {
+            # 重要参数
             "model": self.model,
             "messages": self.messages,
+            # 文本参数
             "max_tokens": self.max_tokens,
             "temperature": self.temperature,
             "top_p": self.top_p,
             "presence_penalty": self.presence_penalty,
-            "frequency_penalty": self.frequency_penalty
+            "frequency_penalty": self.frequency_penalty,
+            # 种子参数
+            "seed": self.seed,
+            # 工具参数
+            "tools": self.tools,
+            "tool_choice": self.tool_choice
         }
 
         # 发送请求
@@ -226,9 +465,9 @@ class AI:
             self.response_index = first_choice.get("index")  # 选项索引
 
         usage = response_dict.get("usage", {})  # 令牌使用情况统计
-        self.response_prompt_tokens += usage.get("prompt_tokens")  # 提示词消耗的 tokens 数
-        self.response_completion_tokens += usage.get("completion_tokens")  # 生成内容消耗的 tokens 数
-        self.response_total_tokens += usage.get("total_tokens")  # 总共消耗的 tokens 数
+        self.response_prompt_tokens += usage.get("prompt_tokens", 0)  # 提示词消耗的 tokens 数
+        self.response_completion_tokens += usage.get("completion_tokens", 0)  # 生成内容消耗的 tokens 数
+        self.response_total_tokens += usage.get("total_tokens", 0)  # 总共消耗的 tokens 数
 
         # 打印回复
         if print_response:
@@ -244,18 +483,16 @@ class AI:
 
     #  与 AI 大模型持续聊天
     def continue_chat(self, system_content: Optional[str] = None, messages: Optional[List[dict]] = None,
-                      end_token: str = '', max_tokens: Optional[int] = None, temperature: Optional[float] = None,
-                      top_p: Optional[float] = None, presence_penalty: Optional[float] = None,
-                      frequency_penalty: Optional[float] = None, stream: bool = True) -> List[dict]:
+                      end_token: str = '', stream: bool = True) -> List[dict]:
         """
-        与 AI 大模型聊天，该部分语言模型将不会统计输入、输出 tokens 与费用
-        When chatting with the AI large model, this part of the language model will not count the input,
-        output tokens and fees.
+        与 AI 大模型连续聊天，支持流式，可使用类 Tools 中的工具
+        Continuous chatting with AI large models, supporting streaming, can use the Tools in the class Tools.
 
         注意：
         1.  想要退出需要输入：'退出', 'exit' 或 'quit'
         2.  end_token 默认情况下，只有在空的一行输入换行符 '\n' 或空按“回车”才会将内容输入给 AI 模型，否则只是换到下一行并等待继续输入，
             此情况下最下面的换行符 \n 不会保留
+        3.  允许使用类 Tools 中的方法。顺序为：user-assistant-tool-assistant
 
         Note:
         1.  To exit, you need to enter: '退出', 'exit' or 'quit'.
@@ -263,17 +500,13 @@ class AI:
             '\n' is entered on an empty line or when an empty "Enter" is pressed; otherwise, it will simply move to
             the next line and wait for further input. In this case, the bottom newline character \n will
             not be retained.
+        3.  Methods in the class Tools are allowed to be used. The sequence is: user-assistant-tool-assistant
 
         :param system_content: (str) 'role': 'system' 中的 content 的内容，被赋值时会消除前面的所有对话记录。
                                如果未赋值则运用初始信息，默认为初始信息
         :param messages: (List[dict]) 完整对话消息列表，包括 system、user 等角色消息
         :param end_token: (str) 输入结束 token，在检测到该 token 并后紧跟 '\n' 时结束输入过程并输入，默认为换行符 '' 代表换行符，
                                 此时在检测到一个空行后紧跟一个换行符代表输入结束。此参数不允许包含换行符
-        :param max_tokens: (int) 生成的最大 token 数 (输入 + 输出)
-        :param temperature: (float) 控制输出的随机性 (0.0-2.0)，数值越低越确定，越高越有创意
-        :param top_p: (float) 核采样概率 (0.0-1.0)，仅保留概率累计在前 top_p 的词汇，与 temperature 二选一
-        :param presence_penalty: (float)  避免重复主题 (-2.0-2.0)，正值降低重复提及同一概念的概率，适合长文本生成
-        :param frequency_penalty: (float) 避免重复词汇 (-2.0-2.0)，正值降低重复用词概率，适合技术文档写作
         :param stream: (bool) 是否启用流输出 (逐字返回)，默认为 True
 
         :return ai_reply: (list) AI 返回的消息列表 messages
@@ -308,14 +541,22 @@ class AI:
 
         # 构建请求体
         request_body_dict = {
+            # 重要参数
             "model": self.model,
             "messages": self.messages,
-            "max_tokens": self.max_tokens if max_tokens is None else max_tokens,
-            "temperature": self.temperature if temperature is None else temperature,
-            "top_p": self.top_p if top_p is None else top_p,
-            "presence_penalty": self.presence_penalty if presence_penalty is None else presence_penalty,
-            "frequency_penalty": self.frequency_penalty if frequency_penalty is None else frequency_penalty,
-            "stream": stream
+            # 文本参数
+            "max_tokens": self.max_tokens,
+            "temperature": self.temperature,
+            "top_p": self.top_p,
+            "presence_penalty": self.presence_penalty,
+            "frequency_penalty": self.frequency_penalty,
+            # 流式输出
+            "stream": stream,
+            # 种子参数
+            "seed": self.seed,
+            # 工具参数
+            "tools": self.tools,
+            "tool_choice": self.tool_choice
         }
 
         print(f"Let's start chatting! The current model is \033[31m{self.model}\033[0m.")
@@ -378,15 +619,18 @@ class AI:
 
                 # 流式请求 使用 requests 以流式方式 POST 请求接口
                 with requests.post(url=target_url, headers=headers, json=request_body_dict, stream=True) as response:
+                    # 判断请求是否成功
+                    if response.status_code != 200:
+                        print(f"\033[31mRequest failed!\033[0m status_code: {response.status_code}")
 
                     ai_reply = ""
-                    response_id = None
+                    tool_calls = {}  # 用于累积工具调用信息
 
                     # iter_lines() 会按行（以换行符分隔）逐行读取服务器返回的流数据
                     for line in response.iter_lines():
                         if line:  # 过滤掉空行（有些 SSE 数据可能包含心跳或空行）
                             decoded_line = line.decode("utf-8")  # 将字节数据解码成字符串
-                            # OpenAI 风格的 SSE（Server-Sent Events）数据以 "data: " 开头
+                            # OpenAI 风格的 SSE(Server-Sent Events) 数据以 "data: " 开头
                             if decoded_line.startswith("data: "):
                                 # 去掉开头的 "data: " 前缀，获取纯 JSON 数据部分
                                 json_data = decoded_line[len("data: "):]
@@ -400,42 +644,99 @@ class AI:
                                     content_dict = json.loads(json_data)
 
                                     # 只在第一次解析时获取元信息
-                                    if response_id is None:
-                                        response_id = content_dict.get("id")
-                                        response_model = content_dict.get("model")
-                                        response_object = content_dict.get("object")
-                                        response_created = content_dict.get("created")
-
-                                        # 将参数输入到类属性中
-                                        self.response_id = response_id
-                                        self.response_model = response_model
-                                        self.response_object = response_object
-                                        self.response_created = response_created
+                                    if self.stream_begin_output:
+                                        self.response_id = content_dict.get("id")
+                                        self.response_model = content_dict.get("model")
+                                        self.response_object = content_dict.get("object")
+                                        self.response_created = content_dict.get("created")
 
                                         print(f"{self.bold}{self.assistant_role_color}{self.model}{self.end_style}: "
                                               f"{self.assistant_content_color}", end="", flush=True)
 
-                                    # 从返回数据中取出 "choices" 列表（通常是模型输出选项）
+                                        self.stream_begin_output = False  # 获取本次信息后关闭
+
+                                    # 处理 choices
                                     choices = content_dict.get("choices", [])
                                     if choices:
-                                        # 在流式模式中，每次只返回部分增量内容（delta）
-                                        delta = choices[0].get("delta", {})
+                                        first_choice = choices[0]
+                                        delta = first_choice.get("delta", {})
 
-                                        # 如果 delta 中包含 "content" 字段，说明是新增的文本片段
+                                        # 追加文本
                                         if "content" in delta:
                                             text_piece = delta["content"]
                                             if isinstance(text_piece, str):
                                                 ai_reply += text_piece
                                                 print(text_piece, end="", flush=True)
 
+                                        # 处理工具调用（累积参数）
+                                        if "tool_calls" in delta:
+                                            for call in delta["tool_calls"]:
+                                                index = call["index"]
+
+                                                # 初始化工具调用记录
+                                                if index not in tool_calls:
+                                                    tool_calls[index] = {
+                                                        "id": "",
+                                                        "function": {"name": "", "arguments": ""}
+                                                    }
+
+                                                # 更新工具调用ID
+                                                if call.get("id"):
+                                                    tool_calls[index]["id"] = call["id"]
+
+                                                # 更新函数名称
+                                                if "function" in call and call["function"].get("name"):
+                                                    tool_calls[index]["function"]["name"] = call["function"]["name"]
+
+                                                # 累积参数
+                                                if "function" in call and call["function"].get("arguments"):
+                                                    tool_calls[index]["function"]["arguments"] += call["function"][
+                                                        "arguments"]
+
                                 except json.JSONDecodeError:
                                     # 如果解析 JSON 出错（可能是心跳包或非 JSON 格式内容），则跳过
                                     continue
 
                     print(f"{self.end_style}\n")  # 结束颜色
+                    self.stream_begin_output = True  # 下一次打印时变成首次输出
 
+                    # 添加AI回复到消息历史
                     self.messages.append({"role": "assistant", "content": ai_reply})
-                    reply_messages = self.messages
+
+                    # 处理累积的工具调用 (在流结束后)
+                    if tool_calls:
+                        # 按索引排序工具调用
+                        sorted_tool_calls = [tool_calls[idx] for idx in sorted(tool_calls.keys())]
+
+                        for call in sorted_tool_calls:
+                            func_name = call["function"]["name"]
+                            args_str = call["function"]["arguments"]
+
+                            try:
+                                # 尝试解析参数
+                                args = json.loads(args_str) if args_str.strip() else {}
+
+                                if func_name in AI.tool_methods:
+                                    # 尝试调用工具
+                                    result = AI.tool_methods[func_name](**args)
+                                else:
+                                    result = f"Unknown tool: {func_name}"
+                            except json.JSONDecodeError:
+                                result = f"Invalid arguments format for tool: {func_name}"
+                            except Exception as e:
+                                result = f"The tool cannot be executed {func_name}: {str(e)}"
+
+                            # 发送工具结果回模型
+                            self.messages.append({
+                                "role": "tool",
+                                "tool_call_id": call["id"],
+                                "content": json.dumps(obj={"result": result}, ensure_ascii=False)
+                            })
+
+                            # 获取调用工具后的AI回答
+                            self.chat()
+
+                        reply_messages = self.messages
 
             # 非 '流式'
             else:
@@ -453,24 +754,50 @@ class AI:
                 self.response_object = response_dict.get("object")  # 返回对象类型，一般是 "chat.completion"
                 self.response_created = response_dict.get("created")  # 创建时间，Unix 时间戳
 
-                choices = response_dict.get("choices", [])  # 返回的回答列表，通常只有一个
+                choices = response_dict.get("choices", [])
                 if choices:
                     first_choice = choices[0]
-                    self.response_content = first_choice.get("message", {}).get("content")  # AI 生成的回答文本
-                    self.response_finish_reason = first_choice.get("finish_reason")  # 结束原因，如 "stop"
-                    self.response_index = first_choice.get("index")  # 选项索引
+                    message = first_choice.get("message", {})
+
+                    # 保存 AI 消息内容
+                    self.response_content = message.get("content")
+                    self.response_finish_reason = first_choice.get("finish_reason")
+                    self.response_index = first_choice.get("index")
+
+                    # 保存 AI 回复为 assistant 角色追加到 self.messages
+                    self.messages.append({"role": "assistant", "content": self.response_content})
+
+                    # 打印回复
+                    print(f"{self.bold}{self.assistant_role_color}{self.model}{self.end_style}: "
+                          f"{self.assistant_content_color}{self.response_content}{self.end_style}\n")
+
+                    #  处理 tool_calls
+                    if "tool_calls" in message:
+
+                        for call in message["tool_calls"]:
+                            func_name = call["function"]["name"]
+                            args = json.loads(call["function"]["arguments"])
+
+                            # 动态调用对应函数
+                            if func_name in AI.tool_methods:  # 注意用你之前定义的工具字典
+                                result = AI.tool_methods[func_name](**args)
+                            else:
+                                result = f"Unknown tool: {func_name}"
+
+                            # 把结果发回给模型
+                            self.messages.append({
+                                "role": "tool",
+                                "tool_call_id": call["id"],
+                                "content": json.dumps(obj={"result": result}, ensure_ascii=False)
+                            })
+
+                            # 获取调用工具后的 AI 回答
+                            self.chat()
 
                 usage = response_dict.get("usage", {})  # 令牌使用情况统计
-                self.response_prompt_tokens += usage.get("prompt_tokens")  # 提示词消耗的 tokens 数
-                self.response_completion_tokens += usage.get("completion_tokens")  # 生成内容消耗的 tokens 数
-                self.response_total_tokens += usage.get("total_tokens")  # 总共消耗的 tokens 数
-
-                # 打印回复
-                print(f"{self.bold}{self.assistant_role_color}{self.model}{self.end_style}: "
-                      f"{self.assistant_content_color}{self.response_content}{self.end_style}\n")
-
-                # 保存 AI 回复为 assistant 角色追加到 self.messages
-                self.messages.append({"role": "assistant", "content": self.response_content})
+                self.response_prompt_tokens += usage.get("prompt_tokens", 0)  # 提示词消耗的 tokens 数
+                self.response_completion_tokens += usage.get("completion_tokens", 0)  # 生成内容消耗的 tokens 数
+                self.response_total_tokens += usage.get("total_tokens", 0)  # 总共消耗的 tokens 数
 
                 reply_messages = self.messages
 
@@ -670,15 +997,22 @@ class Human:
         self.response = None
 
         # 颜色设置
-        self.system_role_color = '\033[91m'
-        self.system_content_color = '\033[31m'
-        self.user_role_color = '\033[92m'
-        self.user_content_color = '\033[32m'
-        self.assistant_role_color = '\033[95m'
-        self.assistant_content_color = '\033[35;2m'
+        self.system_role_color = '\033[91m'  # 亮红色
+        self.system_content_color = '\033[31m'  # 红色
+        self.system_remark_color = '\033[31;2m'  # 暗红色
+        self.user_role_color = '\033[92m'  # 亮绿色
+        self.user_content_color = '\033[32m'  # 绿色
+        self.user_remark_color = '\033[32;2m'  # 暗绿色
+        self.assistant_role_color = '\033[95m'  # 亮粉色
+        self.assistant_content_color = '\033[35;2m'  # 粉色
+        self.assistant_remark_color = '\033[35;2m'  # 暗粉色
+        self.tool_role_color = '\033[94m'  # 亮蓝色
+        self.tool_content_color = '\033[34m'  # 蓝色
+        self.tool_remark_color = '\033[34;2m',  # 暗蓝色
 
-        self.bold = '\033[1m'
-        self.end_style = '\033[0m'
+        self.bold = '\033[1m'  # 加粗
+        self.system_remind = '\033[90m'  # 亮黑色
+        self.end_style = '\033[0m'  # 还原
 
     # 确保可以从实例变量中找到 instance_id
     def __repr__(self):
@@ -735,6 +1069,10 @@ class Human:
             elif role == 'system':
                 print(f"{i}. {self.bold}{self.system_role_color}System{self.end_style}: "
                       f"{self.system_content_color}{content}{self.end_style}")
+            elif role == 'tool':
+                result_str = json.loads(content)["result"]
+                print(f"{i}. {self.bold}{self.tool_role_color}Tool{self.end_style}: "
+                      f"{self.tool_content_color}{result_str}{self.end_style}")
             else:
                 # 其他角色正常打印，无色彩
                 print(f"{i}. {role}: {content}")
@@ -1001,13 +1339,20 @@ class Assist(AI):
 
         # 构建请求体
         request_body_dict = {
+            # 重要参数
             "model": model_revise_manuscript,
             "messages": self.messages,
+            # 文本参数
             "max_tokens": self.max_tokens,
             "temperature": self.temperature,
             "top_p": self.top_p,
             "presence_penalty": self.presence_penalty,
-            "frequency_penalty": self.frequency_penalty
+            "frequency_penalty": self.frequency_penalty,
+            # 种子参数
+            "seed": self.seed,
+            # 工具参数
+            "tools": self.tools,
+            "tool_choice": self.tool_choice
         }
 
         # 发送请求
@@ -1033,9 +1378,9 @@ class Assist(AI):
             self.response_index = first_choice.get("index")  # 选项索引
 
         usage = response_dict.get("usage", {})  # 令牌使用情况统计
-        self.response_prompt_tokens = usage.get("prompt_tokens")  # 提示词消耗的 tokens 数
-        self.response_completion_tokens = usage.get("completion_tokens")  # 生成内容消耗的 tokens 数
-        self.response_total_tokens = usage.get("total_tokens")  # 总共消耗的 tokens 数
+        self.response_prompt_tokens = usage.get("prompt_tokens", 0)  # 提示词消耗的 tokens 数
+        self.response_completion_tokens = usage.get("completion_tokens", 0)  # 生成内容消耗的 tokens 数
+        self.response_total_tokens = usage.get("total_tokens", 0)  # 总共消耗的 tokens 数
 
         # 打印回复
         print(f"{self.bold}{self.assistant_role_color}{self.model}{self.end_style}: "

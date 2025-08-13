@@ -1,5 +1,5 @@
 
-__version__ = '6.3.1 Alpha'
+__version__ = '6.3.1 Beta'
 
 __all__ = ['general', 'grapher', 'projector', 'performer', 'potter', 'author', 'generator', 'inspector']
 
@@ -70,7 +70,8 @@ MAGIC
  -AI-            AI 参数公有区：用于管理公有参数与 OpenAI 实例化
  -Human-         用户交互区：用于单或多用户与 AI 交互
  -DeepSeek-      DeepSeek 区：利用 DeepSeek 进行对话与分析操作
- -OtherAI-       渠道 AI 区：利用非官方渠道的 AI，其成本低，利于非精准作业
+ -Gemini-        Gemini 区：利用 Gemini 进行对话与分析操作，还可以处理图像、音频与视频数据
+ -Jimeng-        即梦 AI 区：利用 即梦 AI 创造图片与视频
  -Assist-        AI 生产力区：AI 大模型协助用户进行生产力工作
  -Muse-          AI 灵感区：AI 大模型与用户休闲交互，娱乐
  
@@ -131,7 +132,8 @@ MAGIC
  -AI-            AI Parameter Public Zone: Used for managing public parameters and OpenAI instantiations
  -Human-         User Interaction Area: Used for single or multiple users to interact with AI
  -DeepSeek-      DeepSeek area: Utilize DeepSeek for dialogue and analysis operations
- -OtherAI-       Channel AI Zone: Utilizing AI from unofficial channels
+ -Gemini-        Gemini Zone: Utilize Gemini for dialogue and analysis operations, and also handle audio and video data
+ -Jimeng-        Dream AI Zone: Create pictures and videos with Dream AI
  -Assist-        AI Productivity Zone: AI large models assist users in productivity work
  -Muse-          AI Inspiration Zone: AI large models interact with users in a casual and entertaining way
 
@@ -296,6 +298,8 @@ MAGIC
                 DeepSeek, OtherAI, Assist, and Muse have been added. It is currently still in the development and 
                 testing stage. There are still many functions that need to be adjusted.
                 The layout format of the serial numbers has been changed. Now it is the same as the /t indentation.
+-> 6.3.1 Beta   25-08-13 11:54 A major overhaul of the module generator has been made, replacing OpenAI 
+                with tequests () requests. 
                
                     
  ------ Needing ------
@@ -668,19 +672,20 @@ avaliable_model
 set_api_config()
 
 ------ AI ------
-
------- Human ------
 chat()
-
------- DeepSeek ------
 continue_chat()
 calculate_cost()
 summarize_conversation()
 reset_conversation()
 
------- OtherAI ------
+------ Human ------
 chat()
-continue_chat()
+
+------ DeepSeek ------
+
+------ Gemini ------
+
+------ Jimeng ------
 
 ------ Assist ------
 revise_manuscript()

@@ -682,6 +682,7 @@ plot_line()
 plot_scatter()
 generate_image()
 save_image()
+generate_voice()
 
 ------ AI ------
 tools_instance

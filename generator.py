@@ -1899,7 +1899,7 @@ class Muse:
         """
 
         # 玩家配置
-        self.player = None
+        self.player_configuration = None
 
         # 真人玩家参数
         self.man_number = man_number
@@ -2026,7 +2026,7 @@ class Muse:
                 print(f"{ai_type}: {count}")
             print(f"\nTotal: {man_number + sum(ai_counts.values())}  Human: {man_number}  AI: {ai_number}")
 
-        self.player = instances
+        self.player_configuration = instances
 
         return instances
 

@@ -11,14 +11,19 @@ Attention:
 # 导入顺序不同有可能导致程序异常
 from . import general, grapher
 
+import os
 import time
 import json
+import base64
 import inspect
 import requests
+from PIL import Image
+from io import BytesIO
 from pandas import DataFrame
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from abc import abstractmethod
+import matplotlib.pyplot as plt
 from typing import Union, Optional, List, Dict, Callable, Tuple
 
 # 所用时区
@@ -28,25 +33,65 @@ current_time_zone_location = 'Shanghai'
 DeepSeek_api_key = 'sk-cc2167b962444015a28d989478add7eb'  # MiaomiaoSu from 2025-08-07 ¥20
 DeepSeek_base_url = 'https://api.deepseek.com/v1'
 
-# Avaliable large AI models 1
+# Avaliable large AI models
 other_api_key = 'sk-flk6RxbjuWqApkKaU0DUJDP3FsG6QBI2hjHkwRRyU6briHqZ'  # DeepSeek-R1-671B to 2025-09-09
 other_base_url = 'https://lmhub.fatui.xyz/v1'
-avaliable_model = ['deepseek-ai/DeepSeek-R1',  # DeepSeek
-                   'gpt-oss-120b',  # ChatGPT
-                   'gemini-2.5-pro',  # Gemini
-                   'moonshot-v1-128k',  # Moonshot
-                   'glm-4-0520',  # 智谱
-                   'Qwen/QVQ-72B-Preview',  # 通义千问
-                   'abab6.5s',  # MiniMax
-                   'baidu/ERNIE-4.5-300B-A47B',  # 文心一言
-                   'SparkDesk-4.0Ultra',  # 讯飞星火
-                   'hunyuan-large-longcontext',  # 腾讯混元
-                   'command-r-plus',  # Cohere
-                   'yi-large',  # 零一万物
-                   'mistral-large-pixtral-2411',  # Mistral AI
-                   'meta-llama/llama-4-maverick-17b-128e-instruct',  # Llama
-                   'doubao-1.5-thinking-pro',  # 豆包
-                   ]
+avaliable_model = [
+    # Avaliable & Free
+    'deepseek-ai/DeepSeek-R1'  # DeepSeek
+    'deepseek-ai/DeepSeek-V3'  # DeepSeek
+    'gemini-2.5-flash',  # Gemini
+    'gemini-2.0-flash',  # Gemini
+    'gpt-oss-120b',  # ChatGPT
+    'command-r-plus'  # Cohere
+    'mistral-large-latest'  # Mistral AI
+    'mistral-large-pixtral-2411'  # Mistral AI
+    'doubao-1.5-thinking-pro',  # 豆包
+    'doubao-1.5-ui-tars',  # 豆包
+    'glm-4-0520',  # 智谱清言
+    'internvl3-latest',  # 浦源书生
+    'internlm3-latest',  # 浦源书生
+    'hunyuan-large-vision',  # 腾讯混元
+    'hunyuan-large-longcontext',  # 腾讯混元
+    'SparkDesk-4.0Ultra',  # 讯飞星火
+    'Qwen/Qwen3-235B-A22B-Instruct-2507',  # 通义千问
+    'Qwen/Qwen3-235B-A22B-Thinking-2507',  # 通义千问
+    'yi-large',  # 零一万物
+    'yi-large-fc',  # 零一万物
+    'yi-large-preview',  # 零一万物
+
+    # Unavaliable
+    'gemini-2.5-pro',  # Gemini
+    'meta-llama/llama3-70b-8192'  # Meta
+    'MiniMaxAI/MiniMax-M1-80k'  # MiniMax
+    'abab6.5s',  # MiniMax
+
+    'distil-whisper-large-v3-en',  # ChatGPT
+    'stabilityai/stable-diffusion-3-5-large',  # StabilityAI
+    'BAAI/bge-reranker-v2-m3',  # 智源研究院
+    'moonshotai/Kimi-Dev-72B',  # 月之暗面
+    'moonshot-v1-128k',  # 月之暗面
+    'zyAI/netzy-latest',  # 正一 AI
+    'baidu/ERNIE-4.5-300B-A47B',  # 文心一言
+    'stepfun-ai/step3',  # 阶跃星辰
+
+    # Charging
+    'claude-sonnet-4',  # Claude
+
+    # Generate image
+    'black-forest-labs/FLUX.1-pro',  # Black Forest Lab  目前无法使用
+    'black-forest-labs/FLUX.1-dev',  # Black Forest Lab
+    'black-forest-labs/FLUX.1-schnell',  # Black Forest Lab
+    'LoRA/black-forest-labs/FLUX.1-dev',  # Black Forest Lab
+    'stabilityai/stable-diffusion-3-5-large',  # StabilityAI
+    'stabilityai/stable-diffusion-xl-base-1.0',  # StabilityAI
+    'Kwai-Kolors/Kolors'  # Kolors
+
+    # Unkonw or other set
+    'LoRA/black-forest-labs/FLUX.1-dev'  # Black Forest Lab
+    'fishaudio/fish-speech-1.5'  # FishAudio
+    'meta-llama/llama-4-maverick-17b-128e-instruct',  # Llama
+]
 
 
 """ AI 工具包 """
@@ -63,6 +108,18 @@ class Tools:
 
         # 实例化类 grapher.Plotter
         self.graphter_instanced = grapher.Plotter()
+
+        # generate_image()
+        self.image_data_list = []  # 图片的 list，base64格式
+        self.image_list = []  # save_image()
+        self.save_path = None  # save_image()
+        self.image_seed = None
+        self.response_created = None
+        self.response_total_tokens = 0
+        self.response_input_tokens = 0
+        self.response_output_tokens = 0
+        self.response_text_tokens = 0
+        self.response_image_tokens = 0
 
     # 读取 TXT 文件
     def read_txt(self, txt_path: str) -> str:
@@ -140,6 +197,189 @@ class Tools:
 
         self.graphter_instanced.plot_scatter()
         status = 'The scatter plot has been drawn.'
+
+        return status
+
+    # 生成图片
+    def generate_image(self, prompt: str, save_path: Optional[str] = None, model: str = 'black-forest-labs/FLUX.1-dev',
+                       size: str = '1024x1024', n: int = 1, seed: int = None) -> str:
+        """
+        根据用户要求生成图片
+        Generate images according to user requirements.
+
+        :param prompt: (str) 生成图片的英文提示词，为必需输入项。注意：在输入前必需将 prompt 转换成英文！
+        :param save_path: (str) 保存图片的目录路径，若输入则按照路径保存
+        :param model: (str) 生成图片的模型，默认为 Black Forest Lab 的 black-forest-labs/FLUX.1-dev
+        :param size: (str) 图片的大小，最大 '2048x2048'，默认为 '1024x1024'
+        :param n: (int) 生成图片的数量，默认为 1。注意：目前只能为 1
+        :param seed: (int) 随机种子，默认为无种子
+
+        :return status: (str) 图片绘制成功与否的信息
+        """
+
+        # =============== 注意更新 ===============
+        generate_image_api_key = other_api_key
+        generate_image_base_url = other_base_url
+        generate_image_model = model
+        # =============== 注意更新 ===============
+
+        # 检查输入
+        self.image_seed = seed
+        self.save_path = save_path
+
+        # 构建 URL
+        base_url = generate_image_base_url
+        endpoint = '/images/generations'
+        generate_image_url = base_url + endpoint
+
+        # 构建 headers
+        headers = {
+            "Authorization": f"Bearer {generate_image_api_key}",
+            "Content-Type": "application/json"
+        }
+
+        # 构建请求体
+        request_body = {
+            "model": generate_image_model,
+            "prompt": prompt,
+            "size": size,
+            "n": n,
+            "response_format": "b64_json",
+            "seed": seed
+        }
+
+        # 发送请求
+        response = requests.post(url=generate_image_url, headers=headers, json=request_body)
+        response_dic = response.json()  # 转化为 JSON格式
+
+        # 判断请求是否成功
+        if response.status_code != 200:
+            message = AI.status_code_messages.get(response.status_code, "Unknown Error")  # 未知错误
+            status = f"\033[31mRequest failed!\033[0m status_code: {response.status_code} ({message})"
+            return status
+
+        # 创建实例属性
+        self.response_created = response_dic.get('created', None)
+
+        # 总 tokens
+        self.response_total_tokens = response_dic.get('usage', {}).get('total_tokens', 0)
+        self.response_input_tokens = response_dic.get('usage', {}).get('input_tokens', 0)
+        self.response_output_tokens = response_dic.get('usage', {}).get('output_tokens', 0)
+
+        # 细节 tokens
+        input_tokens_details = response_dic.get('usage', {}).get('input_tokens_details', {})
+        self.response_text_tokens = input_tokens_details.get('text_tokens', 0)
+        self.response_image_tokens = input_tokens_details.get('image_tokens', 0)
+
+        self.image_data_list = response_dic.get('data', [])
+        result_list = []
+        if self.image_data_list:
+            for idx, img_item in enumerate(self.image_data_list):
+
+                # 处理 b64_json 的格式
+                if "b64_json" in img_item and img_item["b64_json"]:
+                    b64_img = img_item["b64_json"]
+                    # 去掉前缀
+                    if b64_img.startswith("data:image"):
+                        b64_img_clean = b64_img.split(",")[1]
+                    else:
+                        b64_img_clean = b64_img
+                    result_list.append(b64_img_clean)
+
+                # 处理 url 的格式
+                elif "url" in img_item and img_item["url"]:
+                    result_list.append(img_item["url"])
+
+                # 处理其它格式
+                else:
+                    result_list.append("No valid image data found")
+
+        self.image_list = result_list
+
+        status = 'No pictures were generated.'
+        for idx, b64_data in enumerate(result_list):  # 遍历多个 Base64 图片
+
+            # 显示图片
+            image_bytes = base64.b64decode(b64_data)
+            image = Image.open(BytesIO(image_bytes))
+
+            # 创建没有边距的 figure
+            fig = plt.figure(figsize=(image.width / 100, image.height / 100), dpi=100)
+            ax = plt.Axes(fig, [0., 0., 1., 1.])  # 直接占满
+            ax.set_axis_off()
+            fig.add_axes(ax)
+
+            ax.imshow(image)
+            plt.show()
+
+            # 保存图片
+            if save_path is not None:  # 如果 save_path 的值不为 None，则保存
+                status = f'The image has been generated and saved in the {save_path} directory.'
+                file_name = "Generate_image.png" if idx == 0 else f"Generate_image_{idx}.png"
+                full_file_path = os.path.join(save_path, file_name)
+
+                if os.path.exists(full_file_path):  # 查看该文件名是否存在
+                    count = 1
+                    file_name = f"Generate_image_{idx}_{count}.png"
+                    full_file_path = os.path.join(save_path, file_name)
+
+                    while os.path.exists(full_file_path):  # 不断递增，直到文件名不重复
+                        count += 1
+                        file_name = f"Generate_image_{idx}_{count}.png"
+                        full_file_path = os.path.join(save_path, file_name)
+
+                # 保存 Base64 图片
+                with open(full_file_path, "wb") as f:
+                    f.write(base64.b64decode(b64_data))
+
+            else:  # 如果 save_path 的值为 None
+                status = 'The image has been successfully generated but not saved.'
+
+        return status
+
+    # 保存图片
+    def save_image(self, save_path: Optional[str] = None) -> str:
+        """
+        将上一张用 generate_image() 生成的图片保存下来，需要在前文或此处提供保存路径
+        TTo save the previous image generated by generate_image(), you need to provide the save path in
+        the previous text or here.
+
+        :param save_path: (str) 保存图片的目录路径，若输入则按照路径保存，没有则找之前是否输入过路径
+
+        :return status: (str) 图片保存成功与否的信息
+        """
+
+        # 检查参数
+        if not self.image_data_list:   # 是否有图片需要被保存
+            status = 'No pictures need to be saved.'
+            return status
+
+        if save_path is None:  # 保存路径是否被提供
+            if self.save_path is None:
+                status = 'No save path is provided.'
+                return status
+            else:
+                save_path = self.save_path
+
+        for idx, b64_data in enumerate(self.image_list):  # 遍历多个 Base64 图片
+            file_name = "Generate_image.png" if idx == 0 else f"Generate_image_{idx}.png"
+            full_file_path = os.path.join(save_path, file_name)
+
+            if os.path.exists(full_file_path):  # 查看该文件名是否存在
+                count = 1
+                file_name = f"Generate_image_{idx}_{count}.png"
+                full_file_path = os.path.join(save_path, file_name)
+
+                while os.path.exists(full_file_path):  # 不断递增，直到文件名不重复
+                    count += 1
+                    file_name = f"Generate_image_{idx}_{count}.png"
+                    full_file_path = os.path.join(save_path, file_name)
+
+            # 保存 Base64 图片
+            with open(full_file_path, "wb") as f:
+                f.write(base64.b64decode(b64_data))
+
+        status = f'The image has been saved in the {save_path} directory.'
 
         return status
 
@@ -232,6 +472,69 @@ class AI:
                     "properties": {}
                 }
             }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "generate_image",
+                "description": "Generate images based on the prompts provided by the user. You can appropriately "
+                               "supplement the details of the pictures, but the content needs to be converted into "
+                               "English. You can choose to save the generated image to the local directory.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "prompt": {
+                            "type": "string",
+                            "description": "The English prompt for generating images. Must be provided and in English."
+                        },
+                        "save_path": {
+                            "type": ["string", "null"],
+                            "description": "Directory path to save the generated images. If not provided, "
+                                           "images will not be saved."
+                        },
+                        "model": {
+                            "type": "string",
+                            "description": "The image generation model to use. Default is "
+                                           "'black-forest-labs/FLUX.1-dev'."
+                        },
+                        "size": {
+                            "type": "string",
+                            "description": "Image size, maximum '2048x2048'. Default is '1024x1024'."
+                        },
+                        "n": {
+                            "type": "integer",
+                            "description": "Number of images to generate. Currently only 1 is supported.",
+                            "default": 1
+                        },
+                        "seed": {
+                            "type": "integer",
+                            "description": "Random seed for reproducible results. If set to a fixed integer, the same "
+                                           "prompt will produce the same image across multiple runs (given the same "
+                                           "model and parameters). If omitted, a random seed is used by default."
+                        }
+                    },
+                    "required": ["prompt"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "save_image",
+                "description": "To save the previous image generated by generate_image(), you need to provide the "
+                               "save path in the previous text or here.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "save_path": {
+                            "type": "string",
+                            "description": "Directory path to save images. Optional. If not provided, the previously "
+                                           "set path will be used."
+                        }
+                    },
+                    "required": []
+                }
+            }
         }
     ]
     # 工具与对应方法
@@ -240,7 +543,30 @@ class AI:
         "read_excel": tools_instance.read_excel,
         "read_json": tools_instance.read_json,
         "plot_line": tools_instance.plot_line,
-        "plot_scatter": tools_instance.plot_scatter
+        "plot_scatter": tools_instance.plot_scatter,
+        "generate_image": tools_instance.generate_image,
+        "save_image": tools_instance.save_image,
+    }
+
+    # 常见 HTTP 状态码说明
+    status_code_messages = {
+        200: "OK - Request succeeded",  # 请求成功
+        201: "Created - Resource successfully created",  # 已成功创建资源
+        202: "Accepted - Request accepted but not yet processed",  # 已接受请求，但尚未处理完成
+        204: "No Content - Successful request but no content returned",  # 请求成功，但无返回内容
+        301: "Moved Permanently - Resource permanently redirected",  # 资源永久重定向
+        302: "Found - Resource temporarily redirected",  # 资源临时重定向
+        304: "Not Modified - Cached version is still valid",  # 缓存未更新
+        400: "Bad Request - Invalid request parameters or format",  # 请求参数错误或格式不正确
+        401: "Unauthorized - Authentication failed or missing",  # 未授权或身份验证失败
+        403: "Forbidden - Access to the resource is denied",  # 无权限访问资源
+        404: "Not Found - Resource not found",  # 资源不存在
+        408: "Request Timeout - The request took too long",  # 请求超时
+        429: "Too Many Requests - Rate limit exceeded",  # 请求次数过多，被限流
+        500: "Internal Server Error - Server encountered an error",  # 服务器内部错误
+        502: "Bad Gateway - Invalid response from upstream server",  # 网关错误
+        503: "Service Unavailable - Server temporarily unavailable",  # 服务器暂时不可用（过载或维护中）
+        504: "Gateway Timeout - Upstream server took too long to respond"  # 网关超时
     }
 
     # 公有参数初始化
@@ -413,7 +739,7 @@ class AI:
         if messages is not None:
             self.messages = messages
 
-        # 提取 URL
+        # 构建 URL
         endpoint = "/chat/completions"
         target_url = self.base_url + endpoint
 
@@ -448,7 +774,8 @@ class AI:
 
         # 判断请求是否成功
         if response.status_code != 200:
-            print(f"\033[31mRequest failed!\033[0m status_code: {response.status_code}")
+            message = AI.status_code_messages.get(response.status_code, "Unknown Error")  # 未知错误
+            print(f"\033[31mRequest failed!\033[0m status_code: {response.status_code} ({message})")
 
         # 解析返回参数
         response_dict = response.json()
@@ -527,7 +854,7 @@ class AI:
             self.messages = [{"role": "system",
                               "content": system_content}]
 
-        # 提取 URL
+        # 构建 URL
         endpoint = "/chat/completions"
         target_url = self.base_url + endpoint
 
@@ -621,7 +948,8 @@ class AI:
                 with requests.post(url=target_url, headers=headers, json=request_body_dict, stream=True) as response:
                     # 判断请求是否成功
                     if response.status_code != 200:
-                        print(f"\033[31mRequest failed!\033[0m status_code: {response.status_code}")
+                        message = AI.status_code_messages.get(response.status_code, "Unknown Error")  # 未知错误
+                        print(f"\033[31mRequest failed!\033[0m status_code: {response.status_code} ({message})")
 
                     ai_reply = ""
                     tool_calls = {}  # 用于累积工具调用信息
@@ -745,7 +1073,8 @@ class AI:
 
                 # 判断请求是否成功
                 if response.status_code != 200:
-                    print(f"\033[31mRequest failed!\033[0m status_code: {response.status_code}")
+                    message = AI.status_code_messages.get(response.status_code, "Unknown Error")  # 未知错误
+                    print(f"\033[31mRequest failed!\033[0m status_code: {response.status_code} ({message})")
 
                 # 解析返回参数
                 response_dict = response.json()
@@ -874,7 +1203,7 @@ class AI:
                 }
             ]
 
-            # 提取 URL
+            # 构建 URL
             endpoint = "/chat/completions"
             target_url = self.base_url + endpoint
 
@@ -1325,7 +1654,7 @@ class Assist(AI):
             messages_manuscript = {"role": "user", "content": content}
             self.messages.append(messages_manuscript)
 
-        # 提取 URL
+        # 构建 URL
         endpoint = "/chat/completions"
         target_url = self.base_url + endpoint
 
@@ -1360,7 +1689,8 @@ class Assist(AI):
 
         # 判断请求是否成功
         if response.status_code != 200:
-            print(f"\033[31mRequest failed!\033[0m status_code: {response.status_code}")
+            message = AI.status_code_messages.get(response.status_code, "Unknown Error")  # 未知错误
+            print(f"\033[31mRequest failed!\033[0m status_code: {response.status_code} ({message})")
 
         # 解析返回参数
         response_dict = response.json()

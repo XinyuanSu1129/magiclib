@@ -680,6 +680,8 @@ read_excel()
 read_json()
 plot_line()
 plot_scatter()
+generate_image()
+save_image()
 
 ------ AI ------
 tools_instance

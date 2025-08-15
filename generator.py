@@ -264,7 +264,8 @@ class Tools:
         # 判断请求是否成功
         if response.status_code != 200:
             message = AI.status_code_messages.get(response.status_code, "Unknown Error")  # 未知错误
-            status = f"\033[31mRequest failed!\033[0m status_code: {response.status_code} ({message})"
+            status = (f"\033[31;2m[{model}]\033[0m \033[31mRequest failed!\033[0m status_code: "
+                      f"{response.status_code} ({message})")
             return status
 
         # 创建实例属性
@@ -447,7 +448,8 @@ class Tools:
         # 判断请求是否成功
         if response.status_code != 200:
             message = AI.status_code_messages.get(response.status_code, "Unknown Error")  # 未知错误
-            status = f"\033[31mRequest failed!\033[0m status_code: {response.status_code} ({message})"
+            status = (f"\033[31;2m[{model}]\033[0m \033[31mRequest failed!\033[0m status_code: "
+                      f"{response.status_code} ({message})")
             return status
 
         # 假设 response.content 是从 /v1/audio/speech 得到的 MP3 二进制
@@ -928,7 +930,8 @@ class AI:
         # 判断请求是否成功
         if response.status_code != 200:
             message = AI.status_code_messages.get(response.status_code, "Unknown Error")  # 未知错误
-            print(f"\033[31mRequest failed!\033[0m status_code: {response.status_code} ({message})")
+            print(f"{self.system_remark_color}[{self.model}]{self.end_style} "
+                  f"\033[31mRequest failed!\033[0m status_code: {response.status_code} ({message})")
 
         # 解析返回参数
         response_dict = response.json()
@@ -1102,7 +1105,8 @@ class AI:
                     # 判断请求是否成功
                     if response.status_code != 200:
                         message = AI.status_code_messages.get(response.status_code, "Unknown Error")  # 未知错误
-                        print(f"\033[31mRequest failed!\033[0m status_code: {response.status_code} ({message})")
+                        print(f"{self.system_remark_color}[{self.model}]{self.end_style} "
+                              f"\033[31mRequest failed!\033[0m status_code: {response.status_code} ({message})")
 
                     ai_reply = ""
                     tool_calls = {}  # 用于累积工具调用信息
@@ -1227,7 +1231,8 @@ class AI:
                 # 判断请求是否成功
                 if response.status_code != 200:
                     message = AI.status_code_messages.get(response.status_code, "Unknown Error")  # 未知错误
-                    print(f"\033[31mRequest failed!\033[0m status_code: {response.status_code} ({message})")
+                    print(f"{self.system_remark_color}[{self.model}]{self.end_style} "
+                          f"\033[31mRequest failed!\033[0m status_code: {response.status_code} ({message})")
 
                 # 解析返回参数
                 response_dict = response.json()
@@ -1843,7 +1848,8 @@ class Assist(AI):
         # 判断请求是否成功
         if response.status_code != 200:
             message = AI.status_code_messages.get(response.status_code, "Unknown Error")  # 未知错误
-            print(f"\033[31mRequest failed!\033[0m status_code: {response.status_code} ({message})")
+            print(f"{self.system_remark_color}[{self.model}]{self.end_style} "
+                  f"\033[31mRequest failed!\033[0m status_code: {response.status_code} ({message})")
 
         # 解析返回参数
         response_dict = response.json()
@@ -1909,7 +1915,7 @@ class Muse:
 
     # 配置环境，几位真人，几个 AI
     def setup_environment(self, man_number: Optional[int] = None, ai_number: Optional[int] = None,
-                          default_ai: str = 'deepseek', show_result: bool = False, **kwargs) -> dict:
+                          default_ai_model: str = 'deepseek', show_result: bool = False, **kwargs) -> dict:
         """
         环境配置，有几位真人玩家与几个 AI，多出的 AI 用 DeepSeek 补全
         The environmental configuration includes several real players and several ais.
@@ -1918,10 +1924,7 @@ class Muse:
         :param man_number: (int) 真人玩家的数量，默认为 None，表示根据需要分配
         :param ai_number: (int) AI 玩家的数量，分配 AI 之和的总数需要小于等于 AI 玩家的总数。不足的用 DeepSeek AI 补全。
                                 默认为 None，表示根据需要分配
-        :param default_ai: (str) 默认的 AI 模型为哪个，即多出的 AI，默认为 DeepSeek，可用的 AI 模型如下：
-                           ['deepseek', 'chatgpt', 'gemini', 'moonshot', 'zhipu', 'tongyiqianwen', 'minimax',
-                           'wenxinyiyan', 'xunfeixinghuo', 'tengxunhunyuan', 'cohere', 'lingyiwanwu', 'mistral',
-                           'llama', 'doubao']
+        :param default_ai_model: (str) 默认的 AI 模型，默认为 deepseek-ai/DeepSeek-R1
         :param show_result: (bool) 是否打印分配结果，默认为 False
 
         :return instance: (dict) 实例化的全部玩家，key 值与 instance_id 一样，value 为类 Human 或 AI 对象
@@ -1985,14 +1988,16 @@ class Muse:
             human_key = f"human_{i + 1}"
             instances[human_key] = Human(instance_id=human_key)
 
-        # 校验 default_ai
-        if default_ai not in ai_model_map:
-            class_name = self.__class__.__name__  # 获取类名
-            method_name = inspect.currentframe().f_code.co_name  # 获取方法名
-            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
-                             f"default_ai must be one of the following: {list(ai_model_map.keys())}")
+        # 校验 default_ai_model（直接是模型名称）
+        if not isinstance(default_ai_model, str) or not default_ai_model.strip():
+            class_name = self.__class__.__name__
+            method_name = inspect.currentframe().f_code.co_name
+            raise ValueError(
+                f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                f"default_ai_model must be a non-empty string representing the AI model name."
+            )
 
-        # 获取各类型数量并校验
+        # 获取各类型数量并校验（只校验 ai_model_map 里的）
         ai_counts = {}
         for ai_type in ai_model_map.keys():
             count = kwargs.get(f"{ai_type}_ai_number", 0) or 0
@@ -2003,27 +2008,38 @@ class Muse:
         # 校验 ai_number
         total_specified = sum(ai_counts.values())
         if ai_number < total_specified:
-            class_name = self.__class__.__name__  # 获取类名
-            method_name = inspect.currentframe().f_code.co_name  # 获取方法名
-            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
-                             f"ai_number ({ai_number}) must be greater than or equal to the sum of the quantities "
-                             f"of each type ({total_specified}).")
+            class_name = self.__class__.__name__
+            method_name = inspect.currentframe().f_code.co_name
+            raise ValueError(
+                f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                f"ai_number ({ai_number}) must be greater than or equal to the sum of the quantities "
+                f"of each type ({total_specified})."
+            )
 
-        # 分配多余的到 default_ai
+        # 分配多余的到 default_ai_model
         if ai_number > total_specified:
-            ai_counts[default_ai] += ai_number - total_specified
+            ai_counts["default_ai"] = ai_counts.get("default_ai", 0) + (ai_number - total_specified)
 
         # 实例化 OtherAI
-        for ai_type, model_name in ai_model_map.items():
-            for i in range(ai_counts[ai_type]):
+        for ai_type, count in ai_counts.items():
+            for i in range(count):
                 instance_id = f"{ai_type}_{i + 1}"
+                if ai_type == "default_ai":
+                    # 默认模型直接用 default_ai_model
+                    model_name = default_ai_model
+                else:
+                    # 其他模型用映射表
+                    model_name = ai_model_map[ai_type]
                 instances[instance_id] = AI(instance_id=instance_id, model=model_name)
 
         # 可选调试输出
         if show_result:
             print("AI allocation result:")
             for ai_type, count in ai_counts.items():
-                print(f"{ai_type}: {count}")
+                if ai_type == "default_ai":
+                    print(f"default ({default_ai_model}): {count}")
+                else:
+                    print(f"{ai_type}: {count}")
             print(f"\nTotal: {man_number + sum(ai_counts.values())}  Human: {man_number}  AI: {ai_number}")
 
         self.player_configuration = instances

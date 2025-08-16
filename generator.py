@@ -733,7 +733,7 @@ class AI:
         504: "Gateway Timeout - Upstream server took too long to respond"  # 网关超时
     }
 
-    # 公有参数初始化
+    # 参数初始化
     def __init__(self, api_key: Optional[str] = None, base_url: Optional[str] = None, model: Optional[str] = None,
                  messages: Optional[List[dict]] = None, ai_keyword: Optional[str] = None,
                  instance_id: Optional[str] = None, information: Optional[str] = None,
@@ -905,18 +905,17 @@ class AI:
 
         # 构建 URL
         endpoint = "/chat/completions"
-        target_url = self.base_url + endpoint
+        self.target_url = self.base_url + endpoint
 
         # 构建 headers
-        headers = {
+        self.headers = {
             # "User-Agent": "<…>",
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.api_key}"
         }
-        self.headers = headers
 
         # 构建请求体
-        request_body_dict = {
+        self.request_body_dict = {
             # 重要参数
             "model": self.model,
             "messages": self.messages,
@@ -934,7 +933,11 @@ class AI:
         }
 
         # 发送请求
-        response = requests.post(url=target_url, headers=headers, json=request_body_dict)
+        response = requests.post(
+            url=self.target_url,
+            headers=self.headers,
+            json=self.request_body_dict
+        )
 
         # 判断请求是否成功
         if response.status_code != 200:
@@ -1021,18 +1024,17 @@ class AI:
 
         # 构建 URL
         endpoint = "/chat/completions"
-        target_url = self.base_url + endpoint
+        self.target_url = self.base_url + endpoint
 
         # 构建 headers
-        headers = {
+        self.headers = {
             # "User-Agent": "<…>",
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.api_key}"
         }
-        self.headers = headers
 
         # 构建请求体
-        request_body_dict = {
+        self.request_body_dict = {
             # 重要参数
             "model": self.model,
             "messages": self.messages,
@@ -1104,13 +1106,18 @@ class AI:
             self.messages.append({"role": "user", "content": user_input})
 
             # 更新请求体
-            request_body_dict["messages"] = self.messages
+            self.request_body_dict["messages"] = self.messages
 
             # '流式'
             if stream:
 
                 # 流式请求 使用 requests 以流式方式 POST 请求接口
-                with requests.post(url=target_url, headers=headers, json=request_body_dict, stream=True) as response:
+                with requests.post(
+                        url=self.target_url,
+                        headers=self.headers,
+                        json=self.request_body_dict,
+                        stream=True
+                ) as response:
                     # 判断请求是否成功
                     if response.status_code != 200:
                         message = AI.status_code_messages.get(response.status_code, "Unknown Error")  # 未知错误
@@ -1235,7 +1242,11 @@ class AI:
             # 非 '流式'
             else:
                 # 发送请求
-                response = requests.post(url=target_url, headers=headers, json=request_body_dict)
+                response = requests.post(
+                    url=self.target_url,
+                    headers=self.headers,
+                    json=self.request_body_dict
+                )
 
                 # 判断请求是否成功
                 if response.status_code != 200:
@@ -1372,18 +1383,17 @@ class AI:
 
             # 构建 URL
             endpoint = "/chat/completions"
-            target_url = self.base_url + endpoint
+            self.target_url = self.base_url + endpoint
 
             # 构建 headers
-            headers = {
+            self.headers = {
                 # "User-Agent": "<…>",
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {self.api_key}"
             }
-            self.headers = headers
 
             # 构建请求体
-            request_body_dict = {
+            self.request_body_dict = {
                 "model": self.model,
                 "messages": summary_prompt,
                 "max_tokens": len_lim,
@@ -1391,7 +1401,11 @@ class AI:
             }
 
             # 发送请求
-            response_dict = requests.post(url=target_url, headers=headers, json=request_body_dict).json()
+            response_dict = requests.post(
+                url=self.target_url,
+                headers=self.headers,
+                json=self.request_body_dict
+            ).json()
             summary = response_dict.get("choices", [])[0].get("message", {}).get("content")  # 返回的回答列表，通常只有一个
 
             # 检查总结长度
@@ -1771,8 +1785,158 @@ class DeepSeek(AI):
 
 
 """ Gemini 大模型 """
-class Gemini:
-    pass
+class Gemini(AI):
+    """
+    Gemini 的 AI 大模型
+    Gemini's AI large model
+    """
+
+    # Gemini AI 所需参数
+    def __init__(self, api_key: Optional[str] = None, base_url: Optional[str] = None, model: Optional[str] = None,
+                 messages: Optional[List[dict]] = None, ai_keyword: Optional[str] = None,
+                 instance_id: Optional[str] = None, information: Optional[str] = None,
+                 max_tokens: int = 2048, temperature: float = 0.7, top_p: float = 1.0, n: int = 1, stream: bool = False,
+                 stop: Union[str, list, None] = None, presence_penalty: float = 0.0, frequency_penalty: float = 0.0,
+                 seed: Optional[int] = None, tools: Optional[list] = None, tool_choice: str = "auto"
+                 ):
+        """
+        推理 AI 大模型公有参数
+        Public parameters of the inference AI large model.
+
+        # 必要参数 (4)
+        :param api_key: (str) 输入的 API KEY，即 API 密钥
+        :param base_url: (str) 输入的 base URL
+        :param model: (str) 指定使用的模型，如 'deepseek-chat' 与 'deepseek-reasoner'
+        :param messages: (list) 对话消息列表，包含完整对话历史，最后一条为当前发送的信息
+
+        # 自定义参数 (3)
+        :param ai_keyword: (str) 自定义 AI 关键词，可以将 api_key 与 base_url 关联起来
+        :param instance_id: (str) AI 大模型的实例化 id，该 id 可以直接被实例化对象打印
+        :param information: (str) 当前 AI 被实例化后的信息，自定义输入，用于区分多个 AI 模型
+
+        # 附加参数 (11)
+        :param max_tokens: (int) 生成的最大 token 数 (输入 + 输出)
+        :param temperature: (float) 控制输出的随机性 (0.0-2.0)，数值越低越确定，越高越有创意
+        :param top_p: (float) 核采样概率 (0.0-1.0)，仅保留概率累计在前 top_p 的词汇，与 temperature 二选一
+        :param n: (int) 生成多少个独立回复选项 (消耗 n 倍 token)，如 n=3 会返回 3 种不同回答
+        :param stream: (bool) 是否启用流输出 (逐字返回)
+        :param stop: (str / list) 停止生成的标记，遇到这些字符串时终止输出
+        :param presence_penalty: (float)  避免重复主题 (-2.0-2.0)，正值降低重复提及同一概念的概率，适合长文本生成
+        :param frequency_penalty: (float) 避免重复词汇 (-2.0-2.0)，正值降低重复用词概率，适合技术文档写作
+        :param seed: (int) 随机种子，默认为 None，表示完全随机
+        :param tools: (list) 工具包，默认为无工具，[]，为防止可变实参，因而为 None
+        :param tool_choice: (str) 工具选取方式，"auto" 为自动选取，"none" 为决不会选取"，
+                            {"type": "function", "function": {"name": "xxx"}} 为强制调用指定工具，并且只能调用它。
+                            "required"(部分文档称为 {"type": "function", "function": "required"} 的形式)，
+                            模型必须调用某个工具，但可以自己选择哪一个
+
+        # 数据结构
+        1.  一般文本对话时的 contents 结构:
+        contents = {
+            "contents": [{
+                "role": "user",
+                "parts": [{
+                    "text": "Hello!"
+                }]
+            },{
+                "role": "model",
+                "parts": [{
+                    "text": "Hello! What can I do for you?"}]
+                }],
+            "system_instruction": {
+                "parts": [{
+                    "text": "You are a helpful assistant. You will kindly answer "
+                            "users' messages and use tools at the appropriate time."
+                }]
+            }
+        }
+        2.  模型返回的工具调用请求:
+        contents = {
+            "role": "model",
+            "parts": [{
+                "functionCall": {
+                    "name": "my_function",
+                    "args": {
+                        "x": 3,
+                        "y": 5
+                    }
+                }
+            }]
+        }
+        3.  返回带有 tool 请求的 contents:
+        contents = {
+            "role": "function",
+            "parts": [{
+                "functionResponse": {
+                    "name": "my_function",
+                    "response": {
+                        "content": {"result": 8}
+                    }
+                }
+            }]
+        }
+        """
+
+        # 超类初始化
+        super().__init__(
+            # 必要参数 (4)
+            api_key=api_key, base_url=base_url, model=model, messages=messages,
+
+            # 自定义参数 (3)
+            ai_keyword=ai_keyword, instance_id=instance_id, information=information,
+
+            # 附加参数 (11)
+            max_tokens=max_tokens, temperature=temperature, top_p=top_p, n=n, stream=stream, stop=stop,
+            presence_penalty=presence_penalty, frequency_penalty=frequency_penalty, seed=seed, tools=tools,
+            tool_choice=tool_choice
+        )
+
+        # 必要参数 (4)
+        if api_key is not None:
+            self.api_key = api_key
+        else:
+            self.api_key = Gemini_api_key_1
+
+        if base_url is not None:
+            self.base_url = base_url
+        else:
+            self.base_url = Gemini_base_url
+
+        if model is not None:
+            self.model = model
+        else:
+            self.model = 'gemini-2.5-pro'
+
+        if messages is not None:
+            self.messages = messages
+        else:
+            self.messages = {
+            "system_instruction": {
+                "parts": [{
+                    "text": "You are a helpful assistant. You will kindly answer "
+                            "users' messages and use tools at the appropriate time."
+                }]
+            }
+        }
+
+        # 自定义参数 (3)
+        self.ai_keyword = ai_keyword
+        self.instance_id = instance_id
+        self.information = information
+
+        # 附加参数 (11)
+        self.max_tokens = max_tokens
+        self.temperature = temperature
+        self.top_p = top_p
+        self.n = n  # 一般模型不用该参数
+        self.stream = stream  # 一般模型不用该参数
+        self.stop = stop  # 一般模型不用该参数
+        self.presence_penalty = presence_penalty  # Gemini 中无此参数
+        self.frequency_penalty = frequency_penalty  # Gemini 中无此参数
+        self.seed = seed
+        if tools is None:  # 为防止可变实参，因而为 None
+            self.tools = AI.toolkit
+        self.tool_choice = tool_choice
 
 
 """ 即梦 AI 图 & 视频模型 """
@@ -1794,7 +1958,8 @@ class Assist(AI):
                  messages: Optional[List[dict]] = None, ai_keyword: Optional[str] = None,
                  instance_id: Optional[str] = None, information: Optional[str] = None,
                  max_tokens: int = 2048, temperature: float = 0.7, top_p: float = 1.0, n: int = 1, stream: bool = False,
-                 stop: Union[str, list, None] = None, presence_penalty: float = 0.0, frequency_penalty: float = 0.0):
+                 stop: Union[str, list, None] = None, presence_penalty: float = 0.0, frequency_penalty: float = 0.0,
+                 seed: Optional[int] = None, tools: Optional[list] = None, tool_choice: str = "auto"):
         """
         推理 AI 大模型公有参数
         Public parameters of the inference AI large model.
@@ -1810,7 +1975,7 @@ class Assist(AI):
         :param instance_id: (str) AI 大模型的实例化 id，该 id 可以直接被实例化对象打印
         :param information: (str) 当前 AI 被实例化后的信息，自定义输入，用于区分多个 AI 模型
 
-        # 附加参数 (8)
+        # 附加参数 (11)
         :param max_tokens: (int) 生成的最大 token 数 (输入 + 输出)
         :param temperature: (float) 控制输出的随机性 (0.0-2.0)，数值越低越确定，越高越有创意
         :param top_p: (float) 核采样概率 (0.0-1.0)，仅保留概率累计在前 top_p 的词汇，与 temperature 二选一
@@ -1819,8 +1984,15 @@ class Assist(AI):
         :param stop: (str / list) 停止生成的标记，遇到这些字符串时终止输出
         :param presence_penalty: (float)  避免重复主题 (-2.0-2.0)，正值降低重复提及同一概念的概率，适合长文本生成
         :param frequency_penalty: (float) 避免重复词汇 (-2.0-2.0)，正值降低重复用词概率，适合技术文档写作
+        :param seed: (int) 随机种子，默认为 None，表示完全随机
+        :param tools: (list) 工具包，默认为无工具，[]，为防止可变实参，因而为 None
+        :param tool_choice: (str) 工具选取方式，"auto" 为自动选取，"none" 为决不会选取"，
+                            {"type": "function", "function": {"name": "xxx"}} 为强制调用指定工具，并且只能调用它。
+                            "required"(部分文档称为 {"type": "function", "function": "required"} 的形式)，
+                            模型必须调用某个工具，但可以自己选择哪一个
         """
 
+        # 超类初始化
         super().__init__(
             # 必要参数 (4)
             api_key=api_key, base_url=base_url, model=model, messages=messages,
@@ -1828,9 +2000,10 @@ class Assist(AI):
             # 自定义参数 (3)
             ai_keyword=ai_keyword, instance_id=instance_id, information=information,
 
-            # 附加参数 (8)
+            # 附加参数 (11)
             max_tokens=max_tokens, temperature=temperature, top_p=top_p, n=n, stream=stream, stop=stop,
-            presence_penalty=presence_penalty, frequency_penalty=frequency_penalty
+            presence_penalty=presence_penalty, frequency_penalty=frequency_penalty, seed=seed, tools=tools,
+            tool_choice=tool_choice
         )
 
     # 利用 DeepSeek 模型修改手稿
@@ -1934,18 +2107,17 @@ class Assist(AI):
 
         # 构建 URL
         endpoint = "/chat/completions"
-        target_url = self.base_url + endpoint
+        self.target_url = self.base_url + endpoint
 
         # 构建 headers
-        headers = {
+        self.headers = {
             # "User-Agent": "<…>",
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.api_key}"
         }
-        self.headers = headers
 
         # 构建请求体
-        request_body_dict = {
+        self.request_body_dict = {
             # 重要参数
             "model": model_revise_manuscript,
             "messages": self.messages,
@@ -1963,7 +2135,11 @@ class Assist(AI):
         }
 
         # 发送请求
-        response = requests.post(url=target_url, headers=headers, json=request_body_dict)
+        response = requests.post(
+            url=self.target_url,
+            headers=self.headers,
+            json=self.request_body_dict
+        )
 
         # 判断请求是否成功
         if response.status_code != 200:
@@ -2340,7 +2516,7 @@ def set_api_config(ai_instance: object, api_url_pair: str):
             # Gemini 渠道 5
             'gm_5': {"api_key": Gemini_api_key_5, "base_url": Gemini_base_url, "model": "gemini-2.5-pro"},
             # 渠道 AI
-            '1': {"api_key": other_api_key, "base_url": other_base_url, "model": "gemini-2.5-pro"},
+            '1': {"api_key": other_api_key, "base_url": other_base_url, "model": "gpt-oss-120b"},
         }
     except NameError as e:
         raise NameError(f"\033[95mIn {method_name}\033[0m, Configuration variable not found: {str(e)}") from None

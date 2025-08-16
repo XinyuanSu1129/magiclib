@@ -35,13 +35,23 @@ current_time_zone_location = 'Shanghai'
 DeepSeek_api_key = 'sk-cc2167b962444015a28d989478add7eb'  # MiaomiaoSu from 2025-08-07 ¥20
 DeepSeek_base_url = 'https://api.deepseek.com/v1'
 
+# Gemini
+Gemini_api_key_1 = 'AIzaSyBHQLoHmAj9L9H4rrwYX16ZtHbkzXJSEjw'  # 该 5 个 API 均为 2025-08-16 至少 15 天
+Gemini_api_key_2 = 'AIzaSyBoZnO3psWRAnBApWQBtTmeh5-OvLRlAXU'
+Gemini_api_key_3 = 'AIzaSyAzI0xCnZ_G80G3DTZBFhmKBAtdGmvPAS4'
+Gemini_api_key_4 = 'AIzaSyCP9cPjtmgXrg6CKhPiy8oIFZa65nQNNzg'
+Gemini_api_key_5 = 'AIzaSyBCg39nuyaoxM0-EnKIIbjmh91OKgwakfc'
+Gemini_base_url = 'https://generativelanguage.googleapis.com'
+
 # Avaliable large AI models
 other_api_key = 'sk-flk6RxbjuWqApkKaU0DUJDP3FsG6QBI2hjHkwRRyU6briHqZ'  # DeepSeek-R1-671B to 2025-09-09
 other_base_url = 'https://lmhub.fatui.xyz/v1'
+success_requests_per_minute = 20  # 在此范围内属于正常现象
 avaliable_model = [
     # Avaliable & Free
     'deepseek-ai/DeepSeek-R1'  # DeepSeek
     'deepseek-ai/DeepSeek-V3'  # DeepSeek
+    'gemini-2.5-pro',  # Gemini
     'gemini-2.5-flash',  # Gemini
     'gemini-2.0-flash',  # Gemini
     'gpt-oss-120b',  # ChatGPT
@@ -77,7 +87,6 @@ avaliable_model = [
     'FunAudioLLM/CosyVoice2-0.5B',  # CosyVoice
 
     # Unavaliable
-    'gemini-2.5-pro',  # Gemini
     'meta-llama/llama3-70b-8192'  # Meta
     'MiniMaxAI/MiniMax-M1-80k'  # MiniMax
     'abab6.5s',  # MiniMax
@@ -1449,6 +1458,117 @@ class AI:
 
         return None
 
+    # 测试 AI 大模型每分钟相应次数
+    def get_api_call_rate(self, test_api_key: Optional[str] = None, test_base_url: Optional[str] = None,
+                          test_model: Optional[str] = None, max_test_time: int = 120, show_progress: bool = True)\
+            -> dict:
+        """
+        获取过去 60 秒内 API 的调用次数
+        Obtain the number of API calls in the past 60 seconds.
+
+        :param test_api_key: (str) 需要测试的 model 所属的 API，默认为类属性中的参数
+        :param test_base_url: (str) 需要测试的 model 的 base URL，默认为类属性中的参数
+        :param test_model: (str) 需要测试的 model，如未输入则测试类属性中的模型 self.model，此为默认项
+        :param max_test_time: (int) 最大测试时长，默认为 120 秒
+        :param show_progress: (bool) 打印测试进展，默认为 True
+
+        :return ai_qps: (dict) AI 大模型的 API 调用信息
+        """
+
+        # 检查输入情况
+        if test_api_key is None:
+            test_api_key = self.api_key
+        if test_base_url is None:
+            test_base_url = self.base_url
+        if test_model is None:
+            test_model = self.model
+
+        # 构建 URL
+        endpoint = "/chat/completions"
+        target_url = test_base_url + endpoint
+
+        # 构建 headers
+        headers = {
+            # "User-Agent": "<…>",
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {test_api_key}"
+        }
+
+        # 构建 messages
+        messages = [{"role": "system", "content": "You are a helpful assistant. You will kindly answer "
+                                                  "users' messages and use tools at the appropriate time."},
+                    {"role": "user", "content": "Hello!"}]
+
+        # 构建请求体
+        request_body_dict = {
+            # 重要参数
+            "model": test_model,
+            "messages": messages,
+        }
+
+        success_count = 0
+        start_time = time.time()  # 记录开始时间
+
+        while True:
+            try:
+                # 判断是否超过最大时长
+                elapsed = time.time() - start_time
+                if elapsed >= max_test_time:
+                    return {
+                        "status": "timeout",
+                        "success_count": success_count,
+                        "elapsed_time_sec": round(elapsed, 2)
+                    }
+
+                # 发送请求
+                response = requests.post(
+                    url=target_url,
+                    headers=headers,
+                    json=request_body_dict
+                )
+
+                if response.status_code == 200:
+                    success_count += 1
+                    if show_progress:
+                        Time_difference = time.time() - start_time  # 记录当前时间
+                        print(f'The number of successful tests: '
+                              f'[{self.system_remark_color}{success_count:^3}{self.end_style}],'
+                              f'{Time_difference: 5.2f}')
+
+                elif response.status_code == 429:
+                    if show_progress:
+                        print(f'Test over [{response.status_code}]: '
+                              f'{self.system_remark_color}{success_count}{self.end_style}')
+
+                    elapsed = time.time() - start_time
+                    return {
+                        "status": 429,
+                        "success_count": success_count,
+                        "elapsed_time_sec": round(elapsed, 2)
+                    }
+
+                else:
+                    if show_progress:
+                        print(f'Test failed [{response.status_code}]: '
+                              f'{self.system_remark_color}{success_count}{self.end_style}')
+
+                    elapsed = time.time() - start_time
+                    return {
+                        "status": response.status_code,
+                        "error": response.text,
+                        "success_count": success_count,
+                        "elapsed_time_sec": round(elapsed, 2)
+                    }
+
+            except requests.exceptions.RequestException as e:
+                elapsed = time.time() - start_time
+                return {
+                    "status": "network_error",
+                    "error": str(e),
+                    "success_count": success_count,
+                    "elapsed_time_sec": round(elapsed, 2)
+                }
+
 
 """ 真人模型 """
 class Human:
@@ -1905,7 +2025,10 @@ class Muse:
         """
 
         # 玩家配置
-        self.player_configuration = None
+        self.player_configuration = {}  # setup_environment()
+        self.player_configuration_model = {}  # setup_environment_models()
+        self.player_configuration_list = {}  # setup_environment_list()
+        self.ai_models = []  # setup_environment_list()
 
         # 真人玩家参数
         self.man_number = man_number
@@ -1917,8 +2040,8 @@ class Muse:
     def setup_environment(self, man_number: Optional[int] = None, ai_number: Optional[int] = None,
                           default_ai_model: str = 'deepseek', show_result: bool = False, **kwargs) -> dict:
         """
-        环境配置，有几位真人玩家与几个 AI，多出的 AI 用 DeepSeek 补全
-        The environmental configuration includes several real players and several ais.
+        环境配置：有几位真人玩家与几个 AI，多出的 AI 用 DeepSeek 补全
+        The environmental configuration: several real players and several ais.
         The extra ais are completed with DeepSeek.
 
         :param man_number: (int) 真人玩家的数量，默认为 None，表示根据需要分配
@@ -2046,6 +2169,148 @@ class Muse:
 
         return instances
 
+    # 根据 model 来设置 AI 的环境
+    def setup_environment_models(self, man_number: Optional[int] = None, show_result: bool = False, **kwargs) -> dict:
+        """
+        环境配置：支持无限个模型，用户通过 model_1, model_1_number, model_2, model_2_number ... 指定
+        Environment configuration: Supports an unlimited number of models. Users can use model_1, model_1_number,
+        model_2, model_2_number... Specified
+
+        :param man_number: (int) 真人玩家数量
+        :param show_result: (bool) 是否打印分配结果
+        :param kwargs: 包含若干对 (model_x, model_x_number)
+
+        :return: (dict) {player_id: 实例对象}
+        """
+
+        # 玩家数量分配
+        if man_number is None:
+            man_number = self.man_number
+
+        if man_number < 0:
+            class_name = self.__class__.__name__
+            method_name = inspect.currentframe().f_code.co_name
+            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                             f"man_number must be greater than or equal to 0.")
+
+        instances = {}
+
+        # 实例化 Human
+        for i in range(man_number):
+            human_key = f"human_{i + 1}"
+            instances[human_key] = Human(instance_id=human_key)
+
+        # 解析所有 model_x
+        model_index = 1
+        ai_counts = {}
+        seen_models = set()  # 用来检查重复模型
+
+        while True:
+            model_key = f"model_{model_index}"
+            number_key = f"model_{model_index}_number"
+
+            if model_key not in kwargs:
+                break  # 没有更多模型，跳出
+
+            model_name = kwargs.get(model_key)
+            model_number = kwargs.get(number_key, 0) or 0
+
+            if not isinstance(model_name, str) or not model_name.strip():
+                class_name = self.__class__.__name__
+                method_name = inspect.currentframe().f_code.co_name
+                raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                                 f"{model_key} must be a non-empty string representing the AI model name.")
+            if not isinstance(model_number, int) or model_number < 0:
+                class_name = self.__class__.__name__
+                method_name = inspect.currentframe().f_code.co_name
+                raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                                 f"{number_key} must be a non-negative integer.")
+
+            # 检查是否有重复模型
+            if model_name in seen_models:
+                class_name = self.__class__.__name__
+                method_name = inspect.currentframe().f_code.co_name
+                raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                                 f"Duplicate model detected: '{model_name}'. Each model must be unique.")
+            seen_models.add(model_name)
+
+            ai_counts[model_name] = model_number
+            model_index += 1
+
+        # 实例化 AI
+        for model_name, count in ai_counts.items():
+            for i in range(count):
+                instance_id = f"{model_name}_{i + 1}"
+                instances[instance_id] = AI(instance_id=instance_id, model=model_name)
+
+        # 可选调试输出
+        if show_result:
+            print("AI allocation result:")
+            for model_name, count in ai_counts.items():
+                print(f"{model_name}: {count}")
+            print(
+                f"\nTotal: {man_number + sum(ai_counts.values())}  Human: {man_number}  AI: {sum(ai_counts.values())}")
+
+        self.player_configuration_model = instances
+        return instances
+
+    # 通过输入 ai_models 的 list 来配置 AI 的环境
+    def setup_environment_list(self, man_number: int, ai_models: list, show_result: bool = False) -> dict:
+        """
+        环境配置：通过 list 指定 AI 模型
+        Environment configuration: Use a list to specify AI models
+
+        :param man_number: (int) 真人玩家数量
+        :param ai_models: (list[str]) AI 模型名称的列表，如 ['gpt-oss-120b', 'GPT-5', 'gpt-oss-120b']
+        :param show_result: (bool) 是否打印分配结果
+
+        :return: (dict) {player_id: 实例对象}
+        """
+
+        if man_number < 0:
+            class_name = self.__class__.__name__
+            method_name = inspect.currentframe().f_code.co_name
+            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                             f"man_number must be greater than or equal to 0.")
+
+        if not isinstance(ai_models, list):
+            class_name = self.__class__.__name__
+            method_name = inspect.currentframe().f_code.co_name
+            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                             f"ai_models must be a list of strings representing AI model names.")
+
+        instances = {}
+
+        # 实例化 Human
+        for i in range(man_number):
+            human_key = f"human_{i + 1}"
+            instances[human_key] = Human(instance_id=human_key)
+
+        # 实例化 AI
+        ai_counts = {}
+        for model_name in ai_models:
+            if not isinstance(model_name, str) or not model_name.strip():
+                class_name = self.__class__.__name__
+                method_name = inspect.currentframe().f_code.co_name
+                raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                                 f"ai_models must only contain non-empty strings.")
+
+            ai_counts[model_name] = ai_counts.get(model_name, 0) + 1
+            instance_id = f"{model_name}_{ai_counts[model_name]}"
+            instances[instance_id] = AI(instance_id=instance_id, model=model_name)
+
+        # 可选调试输出
+        if show_result:
+            print("AI allocation result (list mode):")
+            for model_name, count in ai_counts.items():
+                print(f"{model_name}: {count}")
+            print(
+                f"\nTotal: {man_number + len(ai_models)}  Human: {man_number}  AI: {len(ai_models)}"
+            )
+
+        self.player_configuration_list = instances
+        return instances
+
 
 """ 应用 Duck Typing 来调用实例中的 API 与 URL """
 def set_api_config(ai_instance: object, api_url_pair: str):
@@ -2064,6 +2329,16 @@ def set_api_config(ai_instance: object, api_url_pair: str):
         api_configs = {
             # DeepSeek 官方
             'ds': {"api_key": DeepSeek_api_key, "base_url": DeepSeek_base_url, "model": "deepseek-reasoner"},
+            # Gemini 渠道 1
+            'gm_1': {"api_key": Gemini_api_key_1, "base_url": Gemini_base_url, "model": "gemini-2.5-pro"},
+            # Gemini 渠道 2
+            'gm_2': {"api_key": Gemini_api_key_2, "base_url": Gemini_base_url, "model": "gemini-2.5-pro"},
+            # Gemini 渠道 3
+            'gm_3': {"api_key": Gemini_api_key_3, "base_url": Gemini_base_url, "model": "gemini-2.5-pro"},
+            # Gemini 渠道 4
+            'gm_4': {"api_key": Gemini_api_key_4, "base_url": Gemini_base_url, "model": "gemini-2.5-pro"},
+            # Gemini 渠道 5
+            'gm_5': {"api_key": Gemini_api_key_5, "base_url": Gemini_base_url, "model": "gemini-2.5-pro"},
             # 渠道 AI
             '1': {"api_key": other_api_key, "base_url": other_base_url, "model": "gemini-2.5-pro"},
         }

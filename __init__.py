@@ -668,8 +668,15 @@ extract_pages()
 current_time_zone_location
 DeepSeek_api_key
 DeepSeek_base_url
+Gemini_api_key_1
+Gemini_api_key_2
+Gemini_api_key_3
+Gemini_api_key_4
+Gemini_api_key_5
+Gemini_base_url
 other_api_key
 other_base_url
+success_requests_per_minute
 avaliable_model
 
 set_api_config()
@@ -688,12 +695,14 @@ generate_voice()
 tools_instance
 toolkit
 tool_methods
+status_code_messages
 
 chat()
 continue_chat()
 calculate_cost()
 summarize_conversation()
 reset_conversation()
+get_api_call_rate()
 
 ------ Human ------
 chat()
@@ -709,6 +718,8 @@ revise_manuscript()
 
 ------ Muse ------
 setup_environment()
+setup_environment_models()
+setup_environment_list()
 
 
 / / / / / * inspector * / / / / /

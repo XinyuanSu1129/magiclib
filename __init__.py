@@ -696,6 +696,7 @@ tools_instance
 toolkit
 tool_methods
 status_code_messages
+ai_thinking_parameters
 
 chat()
 continue_chat()

@@ -711,6 +711,9 @@ chat()
 ------ DeepSeek ------
 
 ------ Gemini ------
+toolkit
+
+chat()
 
 ------ Jimeng ------
 

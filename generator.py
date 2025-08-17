@@ -828,7 +828,7 @@ class AI:
                  information: Optional[str] = None, show_reasoning: bool = False,
 
                  # 附加参数 (11)
-                 max_tokens: int = 2048, temperature: float = 0.7, top_p: float = 1.0, n: int = 1, stream: bool = False,
+                 max_tokens: int = 8192, temperature: float = 0.7, top_p: float = 1.0, n: int = 1, stream: bool = False,
                  stop: Union[str, list, None] = None, presence_penalty: float = 0.0, frequency_penalty: float = 0.0,
                  seed: Optional[int] = None, tools: Optional[list] = None, tool_choice: str = "auto"):
         """
@@ -1040,14 +1040,14 @@ class AI:
                 ai_content = ""
 
                 # iter_lines() 会按行（以换行符分隔）逐行读取服务器返回的流数据
-                for line in response.iter_lines():
-                    if line:  # 过滤掉空行（有些 SSE 数据可能包含心跳或空行
+                for chunk in response.iter_lines():
+                    if chunk:  # 过滤掉空行（有些 SSE 数据可能包含心跳或空行
 
-                        decoded_line = line.decode("utf-8")  # 将字节数据解码成字符串
+                        decoded_chunk = chunk.decode("utf-8")  # 将字节数据解码成字符串
                         # OpenAI 风格的 SSE(Server-Sent Events) 数据以 "data: " 开头
-                        if decoded_line.startswith("data: "):
+                        if decoded_chunk.startswith("data: "):
                             # 去掉开头的 "data: " 前缀，获取纯 JSON 数据部分
-                            json_data = decoded_line[len("data: "):]
+                            json_data = decoded_chunk[len("data: "):]
 
                             # 如果是 "[DONE]" 表示流式输出已经结束
                             if json_data.strip() == "[DONE]":
@@ -1209,8 +1209,8 @@ class AI:
         Note:
         1.  To exit, you need to enter: '退出', 'exit' or 'quit'.
         2.  By default, the content of end_token will only be input to the AI model when a newline character
-            '\n' is entered on an empty line or when an empty "Enter" is pressed; otherwise, it will simply move to
-            the next line and wait for further input. In this case, the bottom newline character \n will
+            '\n' is entered on an empty chunk or when an empty "Enter" is pressed; otherwise, it will simply move to
+            the next chunk and wait for further input. In this case, the bottom newline character \n will
             not be retained.
         3.  Methods in the class Tools are allowed to be used. The sequence is: user-assistant-tool-assistant
 
@@ -1233,7 +1233,7 @@ class AI:
             class_name = self.__class__.__name__  # 获取类名
             method_name = inspect.currentframe().f_code.co_name  # 获取方法名
             raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
-                             f"end_token cannot contain line breaks.")
+                             f"end_token cannot contain chunk breaks.")
 
         # 检查 messages 的赋值情况
         if messages is not None:
@@ -1287,24 +1287,24 @@ class AI:
             if end_token == '':
                 # 空 token：空行换行直接结束
                 while True:
-                    line = input(prompt)
-                    if line == '':  # 空行直接结束
+                    chunk = input(prompt)
+                    if chunk == '':  # 空行直接结束
                         break
-                    user_input_list.append(line)
+                    user_input_list.append(chunk)
                     prompt = f"{self.bold}{self.user_role_color}----> {self.end_style}"
             else:
                 # 非空 token: 以 token 结尾换行才结束
                 while True:
-                    line = input(prompt)
-                    if line.endswith(end_token):
-                        content_line = line[:-len(end_token)].rstrip()
+                    chunk = input(prompt)
+                    if chunk.endswith(end_token):
+                        content_line = chunk[:-len(end_token)].rstrip()
                         # 如果这一行只有 token（去掉后为空），保留一个空行
                         if content_line == '':
                             user_input_list.append('')
                         else:
                             user_input_list.append(content_line)
                         break
-                    user_input_list.append(line)
+                    user_input_list.append(chunk)
                     prompt = f"{self.bold}{self.user_role_color}----> {self.end_style}"
 
             user_input = "\n".join(user_input_list)
@@ -1364,14 +1364,14 @@ class AI:
                     tool_calls = {}  # 用于累积工具调用信息
 
                     # iter_lines() 会按行（以换行符分隔）逐行读取服务器返回的流数据
-                    for line in response.iter_lines():
-                        if line:  # 过滤掉空行（有些 SSE 数据可能包含心跳或空行）
+                    for chunk in response.iter_lines():
+                        if chunk:  # 过滤掉空行（有些 SSE 数据可能包含心跳或空行）
 
-                            decoded_line = line.decode("utf-8")  # 将字节数据解码成字符串
+                            decoded_chunk = chunk.decode("utf-8")  # 将字节数据解码成字符串
                             # OpenAI 风格的 SSE(Server-Sent Events) 数据以 "data: " 开头
-                            if decoded_line.startswith("data: "):
+                            if decoded_chunk.startswith("data: "):
                                 # 去掉开头的 "data: " 前缀，获取纯 JSON 数据部分
-                                json_data = decoded_line[len("data: "):]
+                                json_data = decoded_chunk[len("data: "):]
 
                                 # 如果是 "[DONE]" 表示流式输出已经结束
                                 if json_data.strip() == "[DONE]":
@@ -1963,19 +1963,25 @@ class Human:
         return f"{self.instance_id}"
 
     # 以真人的身份与 AI 大模型对话
-    def chat(self, messages: Optional[List[dict]] = None, input_role_user: bool = True,
-             end_token: str = '') -> List[dict]:
+    def chat(self, messages: Optional[List[dict]] = None, **kwargs) -> List[dict]:
         """
         用户收到信息，返回信息，仅一次，不会循环
         The user receives the message and returns it only once, without any loops.
 
         :param messages: (List[dict]) 用户收到的信息，用户收到信息中 'system' 将突出显示，'user' 将为主要内容
-        :param input_role_user: (bool) 用户输入在 messages 中记录为 'user' (True) 还是 'assistant' (False)，默认为 True
-        :param end_token: (str) 此参数不允许包含换行符。end_token 默认情况下，只有在空的一行输入换行符 '\n' 或空按“回车”才会将
+
+        --- **kwargs ---
+
+        - input_role_user: (bool) 用户输入在 messages 中记录为 'user' (True) 还是 'assistant' (False)，默认为 True
+        - end_token: (str) 此参数不允许包含换行符。end_token 默认情况下，只有在空的一行输入换行符 '\n' 或空按“回车”才会将
                                 内容输入，否则只是换到下一行并等待继续输入，此情况下最下面的换行符 \n 不会保留
 
         :return reply_messages: (List[dict]) 用户回复后的消息列表，包含新追加的消息
         """
+
+        # 参数
+        input_role_user = kwargs.get("input_role_user", True)
+        end_token = kwargs.get("end_token", "")
 
         # 检查 messages 是否输入
         if messages is None:
@@ -2112,7 +2118,56 @@ class Gemini(AI):
     """
     Gemini 的 AI 大模型
     Gemini's AI large model
+
+    # 数据结构
+    1.  一般文本对话时的 contents 结构:
+    contents = {
+        "contents": [{
+            "role": "user",
+            "parts": [{
+                "text": "Hello!"
+            }]
+        },{
+            "role": "model",
+            "parts": [{
+                "text": "Hello! What can I do for you?"}]
+            }],
+        "system_instruction": {
+            "parts": [{
+                "text": "You are a helpful assistant. You will kindly answer "
+                        "users' messages and use tools at the appropriate time."
+            }]
+        }
+    }
+    2.  模型返回的工具调用请求:
+    contents = {
+        "role": "model",
+        "parts": [{
+            "functionCall": {
+                "name": "my_function",
+                "args": {
+                    "x": 3,
+                    "y": 5
+                }
+            }
+        }]
+    }
+    3.  返回带有 tool 请求的 contents:
+    contents = {
+        "role": "function",
+        "parts": [{
+            "functionResponse": {
+                "name": "my_function",
+                "response": {
+                    "content": {"result": 8}
+                }
+            }
+        }]
+    }
     """
+
+    # 可用工具及描述
+    toolkit = {}
 
     # Gemini AI 所需参数
     def __init__(self,
@@ -2126,7 +2181,7 @@ class Gemini(AI):
                  information: Optional[str] = None, show_reasoning: bool = False,
 
                  # 附加参数 (11)
-                 max_tokens: int = 2048, temperature: float = 0.7, top_p: float = 1.0, n: int = 1, stream: bool = False,
+                 max_tokens: int = 8192, temperature: float = 0.7, top_p: float = 1.0, n: int = 1, stream: bool = False,
                  stop: Union[str, list, None] = None, presence_penalty: float = 0.0, frequency_penalty: float = 0.0,
                  seed: Optional[int] = None, tools: Optional[list] = None, tool_choice: str = "auto"):
         """
@@ -2160,52 +2215,6 @@ class Gemini(AI):
                             {"type": "function", "function": {"name": "xxx"}} 为强制调用指定工具，并且只能调用它。
                             "required"(部分文档称为 {"type": "function", "function": "required"} 的形式)，
                             模型必须调用某个工具，但可以自己选择哪一个
-
-        # 数据结构
-        1.  一般文本对话时的 contents 结构:
-        contents = {
-            "contents": [{
-                "role": "user",
-                "parts": [{
-                    "text": "Hello!"
-                }]
-            },{
-                "role": "model",
-                "parts": [{
-                    "text": "Hello! What can I do for you?"}]
-                }],
-            "system_instruction": {
-                "parts": [{
-                    "text": "You are a helpful assistant. You will kindly answer "
-                            "users' messages and use tools at the appropriate time."
-                }]
-            }
-        }
-        2.  模型返回的工具调用请求:
-        contents = {
-            "role": "model",
-            "parts": [{
-                "functionCall": {
-                    "name": "my_function",
-                    "args": {
-                        "x": 3,
-                        "y": 5
-                    }
-                }
-            }]
-        }
-        3.  返回带有 tool 请求的 contents:
-        contents = {
-            "role": "function",
-            "parts": [{
-                "functionResponse": {
-                    "name": "my_function",
-                    "response": {
-                        "content": {"result": 8}
-                    }
-                }
-            }]
-        }
         """
 
         # 超类初始化
@@ -2241,7 +2250,7 @@ class Gemini(AI):
         if messages is not None:
             self.messages = messages
         else:
-            self.messages = {
+            self.messages = {  # 与 AI 类不同
             "system_instruction": {
                 "parts": [{
                     "text": "You are a helpful assistant. You will kindly answer "
@@ -2270,6 +2279,239 @@ class Gemini(AI):
             self.tools = AI.toolkit
         self.tool_choice = tool_choice
 
+    # 与 Gemini 大模型聊天
+    def chat(self, messages: Optional[List[dict]] = None, print_response: bool = True, raise_error: bool = False) \
+            -> List[dict]:
+        """
+        与 AI 大模型聊天，单次交互，传入完整 messages，返回 AI 回复并保存
+        Chat with the AI large model, with only one interaction, return one AI response and save it.
+
+        :param messages: (List[dict]) 完整对话消息列表，包括 system、user 等角色消息
+        :param print_response: (bool) 是否打印返回的 content，默认为 True
+        :param raise_error: (bool) 遇到响应问题时为抛出错误，否则打印错误。默认为 False
+
+        :return ai_content: (list) AI 返回的消息列表 messages
+        """
+
+        # 检查 messages 的赋值情况
+        if messages is not None:
+            self.messages = messages
+
+        # 构建 URL
+        if self.stream:  # 流式输出
+            self.target_url = self.base_url + f'/v1beta/models/{self.model}:streamgenerateContent?key={self.api_key}'
+        else:  # 非流式输出
+            self.target_url = self.base_url + f'/v1beta/models/{self.model}:generateContent?key={self.api_key}'
+
+        # 构建 headers
+        self.headers = {
+            # "User-Agent": "<…>",
+            "Content-Type": "application/json",
+            # "Authorization": f"Bearer {self.api_key}"
+        }
+
+        # 构建请求体
+        self.request_body_dict = {
+            # 重要参数
+            "contents": self.messages,
+            # 文本参数
+            "generationConfig": {
+                "maxOutputTokens": self.max_tokens,
+                "temperature": self.temperature,
+                "topP": self.top_p,
+            },
+            # 工具参数
+            "tools": Gemini.toolkit
+        }
+
+        # 流式输出
+        if self.stream:
+
+            # 流式请求 使用 requests 以流式方式 POST 请求接口
+            with requests.post(
+                    url=self.target_url,
+                    headers=self.headers,
+                    json=self.request_body_dict,
+                    stream=True
+            ) as response:
+
+                # 查看状态码
+                self.response_status = response.status_code
+
+                # 判断请求是否成功
+                if self.response_status != 200:
+                    # 抛出错误
+                    if raise_error:
+                        message = AI.status_code_messages.get(self.response_status, "Unknown Error")
+                        class_name = self.__class__.__name__  # 获取类名
+                        method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+                        raise HTTPError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                                        f"request failed! status_code: {self.response_status} ({message})")
+
+                    # 改为打印信息
+                    else:
+                        message = AI.status_code_messages.get(self.response_status, "Unknown Error")  # 未知错误
+                        print(f"{self.system_remark_color}[{self.model}]{self.end_style} "
+                              f"\033[31mRequest failed!\033[0m status_code: {self.response_status} ({message})")
+
+                ai_reasoning = ""
+                ai_content = ""
+
+                # iter_lines() 会按行（以换行符分隔）逐行读取服务器返回的流数据
+                for chunk in response.iter_lines():
+                    if chunk:  # 过滤掉空行（有些 SSE 数据可能包含心跳或空行
+
+                        decoded_chunk = chunk.decode("utf-8")  # 将字节数据解码成字符串
+                        # OpenAI 风格的 SSE(Server-Sent Events) 数据以 "data: " 开头
+                        if decoded_chunk.startswith("data: "):
+                            # 去掉开头的 "data: " 前缀，获取纯 JSON 数据部分
+                            json_data = decoded_chunk[len("data: "):]
+                            print(json_data)
+
+                            # 如果是 "[DONE]" 表示流式输出已经结束
+                            if json_data.strip() == "[DONE]":
+                                break  # 跳出循环
+
+                            try:
+                                # 将 JSON 字符串解析为 Python 字典
+                                content_dict = json.loads(json_data)
+
+                                # 只在第一次解析时获取元信息
+                                if self.stream_begin_output:
+                                    self.response_id = content_dict.get("id")
+                                    self.response_model = content_dict.get("model")
+                                    self.response_object = content_dict.get("object")
+                                    self.response_created = content_dict.get("created")
+
+                                    # 打印 AI 思考过程的字体
+                                    if self.show_reasoning:
+                                        print(
+                                            f"{self.bold}{self.tool_role_color}{self.model}{self.end_style}: "
+                                            f"{self.tool_content_color}", end="", flush=True)
+                                    # 不打印 AI 思考过程的字体
+                                    else:
+                                        print(f"{self.bold}{self.assistant_role_color}{self.model}{self.end_style}:"
+                                              f" {self.assistant_content_color}", end="", flush=True)
+
+                                    self.stream_begin_output = False  # 获取本次信息后关闭
+
+                                    # 处理 choices
+                                    choices = content_dict.get("choices", [])
+                                    if choices:
+                                        first_choice = choices[0]
+                                        delta = first_choice.get("delta", {})
+
+                                        # 打印 AI 思考过程
+                                        if self.show_reasoning:
+                                            # 追加 AI 思考过程
+                                            reasoning_piece = next((delta.get(key) for key in AI.ai_thinking_parameters
+                                                                    if delta.get(key)), None)
+                                            # 如果有思考内容就打印
+                                            if isinstance(reasoning_piece, str):
+                                                ai_reasoning += reasoning_piece
+                                                print(reasoning_piece, end="", flush=True)
+
+                                        # 只在第一次收到 content 内容时转换
+                                        if delta["content"] and self.reasoning_output:
+                                            # 打印 AI 回复内容的字体
+                                            print(f"{self.bold}{self.assistant_role_color}{self.model}"
+                                                  f"{self.end_style}: {self.assistant_content_color}",
+                                                  end="", flush=True)
+                                            self.reasoning_output = False
+
+                                        # 追加 AI 回复内容
+                                        if "content" in delta:
+                                            content_piece = delta["content"]
+                                            if isinstance(content_piece, str):
+                                                ai_content += content_piece
+                                                print(content_piece, end="", flush=True)
+
+                            except json.JSONDecodeError:
+                                # 如果解析 JSON 出错（可能是心跳包或非 JSON 格式内容），则跳过
+                                continue
+
+                print(f"{self.end_style}\n")  # 结束颜色
+                self.stream_begin_output = True  # 下一次打印时变成首次输出
+                self.reasoning_output = True  # 下一次打印时变成首次输出
+
+                # 添加AI回复到消息历史
+                self.messages.append({"role": "assistant", "content": ai_content})
+
+            reply_messages = self.messages
+
+        # 非流式输出
+        else:
+
+            # 发送请求
+            self.response = requests.post(
+                url=self.target_url,
+                headers=self.headers,
+                json=self.request_body_dict
+            )
+
+            # 查看状态码
+            self.response_status = self.response.status_code
+
+            # 判断请求是否成功
+            if self.response_status != 200:
+                # 抛出错误
+                if raise_error:
+                    message = AI.status_code_messages.get(self.response_status, "Unknown Error")
+                    class_name = self.__class__.__name__  # 获取类名
+                    method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+                    raise HTTPError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                                    f"request failed! status_code: {self.response_status} ({message})")
+
+                # 改为打印信息
+                else:
+                    message = AI.status_code_messages.get(self.response_status, "Unknown Error")  # 未知错误
+                    print(f"{self.system_remark_color}[{self.model}]{self.end_style} "
+                          f"\033[31mRequest failed!\033[0m status_code: {self.response_status} ({message})")
+
+            # 解析返回参数
+            response_dict = self.response.json()
+            self.response_id = response_dict.get("id")  # 本次请求的唯一标识符
+            self.response_model = response_dict.get("model")  # 使用的模型名称
+            self.response_object = response_dict.get("object")  # 返回对象类型，一般是 "chat.completion"
+            self.response_created = response_dict.get("created")  # 创建时间，Unix 时间戳
+
+            choices = response_dict.get("choices", [])  # 返回的回答列表，通常只有一个
+            if choices:
+                first_choice = choices[0]
+                response_messages = first_choice.get("message", {})  # AI 返回的 messages
+
+                # 保存 AI 消息内容
+                for key in AI.ai_thinking_parameters:  # 遍历参数列表，找到第一个非空的思考字段
+                    if response_messages.get(key):
+                        self.response_reasoning = response_messages[key]
+                        break
+                self.response_content = response_messages.get("content")  # AI 生成的回答文本
+                self.response_finish_reason = first_choice.get("finish_reason")  # 结束原因，如 "stop"
+                self.response_index = first_choice.get("index")  # 选项索引
+
+            usage = response_dict.get("usage", {})  # 令牌使用情况统计
+            self.response_prompt_tokens += usage.get("prompt_tokens", 0)  # 提示词消耗的 tokens 数
+            self.response_completion_tokens += usage.get("completion_tokens", 0)  # 生成内容消耗的 tokens 数
+            self.response_total_tokens += usage.get("total_tokens", 0)  # 总共消耗的 tokens 数
+
+            # 打印回复
+            if print_response:
+                # 打印 AI 的思考内容
+                if self.show_reasoning:
+                    print(f"{self.bold}{self.tool_role_color}{self.model}{self.end_style}: "
+                          f"{self.tool_content_color}{self.response_reasoning}{self.end_style}")
+
+                # 打印 AI 的回复内容
+                print(f"{self.bold}{self.assistant_role_color}{self.model}{self.end_style}: "
+                      f"{self.assistant_content_color}{self.response_content}{self.end_style}\n")
+
+            # 保存 AI 回复为 assistant 角色追加到 self.messages
+            self.messages.append({"role": "assistant", "content": self.response_content})
+
+            reply_messages = self.messages
+
+        return reply_messages
+
 
 """ 即梦 AI 图 & 视频模型 """
 class Jimeng:
@@ -2297,7 +2539,7 @@ class Assist(AI):
                  information: Optional[str] = None, show_reasoning: bool = False,
 
                  # 附加参数 (11)
-                 max_tokens: int = 2048, temperature: float = 0.7, top_p: float = 1.0, n: int = 1, stream: bool = False,
+                 max_tokens: int = 8192, temperature: float = 0.7, top_p: float = 1.0, n: int = 1, stream: bool = False,
                  stop: Union[str, list, None] = None, presence_penalty: float = 0.0, frequency_penalty: float = 0.0,
                  seed: Optional[int] = None, tools: Optional[list] = None, tool_choice: str = "auto"):
         """

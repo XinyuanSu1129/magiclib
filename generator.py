@@ -19,13 +19,16 @@ import inspect
 import requests
 from PIL import Image
 from io import BytesIO
+from google import genai
 import simpleaudio as sa
 from pandas import DataFrame
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from abc import abstractmethod
-import matplotlib.pyplot as plt
+from google.genai import types
 from pydub import AudioSegment
+from google.genai import errors
+import matplotlib.pyplot as plt
 from requests.exceptions import HTTPError
 from typing import Union, Optional, List, Dict, Callable, Tuple
 
@@ -857,7 +860,7 @@ class AI:
         :param presence_penalty: (float)  避免重复主题 (-2.0-2.0)，正值降低重复提及同一概念的概率，适合长文本生成
         :param frequency_penalty: (float) 避免重复词汇 (-2.0-2.0)，正值降低重复用词概率，适合技术文档写作
         :param seed: (int) 随机种子，默认为 None，表示完全随机
-        :param tools: (list) 工具包，默认为无工具，[]，为防止可变实参，因而为 None
+        :param tools: (list) 工具包
         :param tool_choice: (str) 工具选取方式，"auto" 为自动选取，"none" 为决不会选取"，
                             {"type": "function", "function": {"name": "xxx"}} 为强制调用指定工具，并且只能调用它。
                             "required"(部分文档称为 {"type": "function", "function": "required"} 的形式)，
@@ -2114,7 +2117,7 @@ class DeepSeek(AI):
 
 
 """ Gemini 大模型 """
-class Gemini(AI):
+class Gemini:
     """
     Gemini 的 AI 大模型
     Gemini's AI large model
@@ -2167,7 +2170,7 @@ class Gemini(AI):
     """
 
     # 可用工具及描述
-    toolkit = {}
+    gemini_toolkit = {}
 
     # Gemini AI 所需参数
     def __init__(self,
@@ -2180,10 +2183,8 @@ class Gemini(AI):
                  ai_keyword: Optional[str] = None, instance_id: Optional[str] = None,
                  information: Optional[str] = None, show_reasoning: bool = False,
 
-                 # 附加参数 (11)
-                 max_tokens: int = 8192, temperature: float = 0.7, top_p: float = 1.0, n: int = 1, stream: bool = False,
-                 stop: Union[str, list, None] = None, presence_penalty: float = 0.0, frequency_penalty: float = 0.0,
-                 seed: Optional[int] = None, tools: Optional[list] = None, tool_choice: str = "auto"):
+                 # 其它参数 (2)
+                 stream: bool = False, tools: Optional[list] = None):
         """
         推理 AI 大模型公有参数
         Public parameters of the inference AI large model.
@@ -2192,7 +2193,7 @@ class Gemini(AI):
         :param api_key: (str) 输入的 API KEY，即 API 密钥
         :param base_url: (str) 输入的 base URL
         :param model: (str) 指定使用的模型，如 'deepseek-chat' 与 'deepseek-reasoner'
-        :param messages: (list) 对话消息列表，包含完整对话历史，最后一条为当前发送的信息
+        :param messages: (dict) 对话消息列表，包含完整对话历史，最后一条为当前发送的信息
 
         # 自定义参数 (4)
         :param ai_keyword: (str) 自定义 AI 关键词，可以将 api_key 与 base_url 关联起来
@@ -2200,36 +2201,13 @@ class Gemini(AI):
         :param information: (str) 当前 AI 被实例化后的信息，自定义输入，用于区分多个 AI 模型
         :param show_reasoning: (bool) 是否打印推理过程，如果有推理的话。默认为 False
 
-        # 附加参数 (11)
-        :param max_tokens: (int) 生成的最大 token 数 (输入 + 输出)
-        :param temperature: (float) 控制输出的随机性 (0.0-2.0)，数值越低越确定，越高越有创意
-        :param top_p: (float) 核采样概率 (0.0-1.0)，仅保留概率累计在前 top_p 的词汇，与 temperature 二选一
-        :param n: (int) 生成多少个独立回复选项 (消耗 n 倍 token)，如 n=3 会返回 3 种不同回答
-        :param stream: (bool) 是否启用流输出 (逐字返回)
-        :param stop: (str / list) 停止生成的标记，遇到这些字符串时终止输出
-        :param presence_penalty: (float)  避免重复主题 (-2.0-2.0)，正值降低重复提及同一概念的概率，适合长文本生成
-        :param frequency_penalty: (float) 避免重复词汇 (-2.0-2.0)，正值降低重复用词概率，适合技术文档写作
-        :param seed: (int) 随机种子，默认为 None，表示完全随机
-        :param tools: (list) 工具包，默认为无工具，[]，为防止可变实参，因而为 None
-        :param tool_choice: (str) 工具选取方式，"auto" 为自动选取，"none" 为决不会选取"，
-                            {"type": "function", "function": {"name": "xxx"}} 为强制调用指定工具，并且只能调用它。
-                            "required"(部分文档称为 {"type": "function", "function": "required"} 的形式)，
-                            模型必须调用某个工具，但可以自己选择哪一个
+        # 其它参数 (2)
+        :param stream: (list) 是否启用流输出 (逐字返回)，默认为 False
+        :param tools: (list) 工具包
+
+        --- 文本生成网址 ---
+        https://ai.google.dev/api/generate-content?
         """
-
-        # 超类初始化
-        super().__init__(
-            # 必要参数 (4)
-            api_key=api_key, base_url=base_url, model=model, messages=messages,
-
-            # 自定义参数 (4)
-            ai_keyword=ai_keyword, instance_id=instance_id, information=information, show_reasoning=show_reasoning,
-
-            # 附加参数 (11)
-            max_tokens=max_tokens, temperature=temperature, top_p=top_p, n=n, stream=stream, stop=stop,
-            presence_penalty=presence_penalty, frequency_penalty=frequency_penalty, seed=seed, tools=tools,
-            tool_choice=tool_choice
-        )
 
         # 必要参数 (4)
         if api_key is not None:
@@ -2250,14 +2228,8 @@ class Gemini(AI):
         if messages is not None:
             self.messages = messages
         else:
-            self.messages = {  # 与 AI 类不同
-            "system_instruction": {
-                "parts": [{
-                    "text": "You are a helpful assistant. You will kindly answer "
-                            "users' messages and use tools at the appropriate time."
-                }]
-            }
-        }
+            self.messages = [{"role": "system", "content": "You are a helpful assistant. You will kindly answer "
+                                                           "users' messages and use tools at the appropriate time."}]
 
         # 自定义参数 (4)
         self.ai_keyword = ai_keyword
@@ -2265,23 +2237,82 @@ class Gemini(AI):
         self.information = information
         self.show_reasoning = show_reasoning
 
-        # 附加参数 (11)
-        self.max_tokens = max_tokens
-        self.temperature = temperature
-        self.top_p = top_p
-        self.n = n  # 一般模型不用该参数
-        self.stream = stream  # 一般模型不用该参数
-        self.stop = stop  # 一般模型不用该参数
-        self.presence_penalty = presence_penalty  # Gemini 中无此参数
-        self.frequency_penalty = frequency_penalty  # Gemini 中无此参数
-        self.seed = seed
+        # 其它参数 (1)
+        self.stream = stream
         if tools is None:  # 为防止可变实参，因而为 None
             self.tools = AI.toolkit
-        self.tool_choice = tool_choice
+
+        # __gemini_client()
+        self.client = genai.Client(api_key=self.api_key)  # 初始
+
+        # __convert_openai_to_gemini()
+        self.gemini_messages = None
+        self.gemini_system = None
+
+        # chat()
+        self.response_status = 0
+        self.response_content = None
+
+        # 颜色设置
+        self.system_role_color = '\033[91m'  # 亮红色
+        self.system_content_color = '\033[31m'  # 红色
+        self.system_remark_color = '\033[31;2m'  # 暗红色
+        self.user_role_color = '\033[92m'  # 亮绿色
+        self.user_content_color = '\033[32m'  # 绿色
+        self.user_remark_color = '\033[32;2m'  # 暗绿色
+        self.assistant_role_color = '\033[95m'  # 亮粉色
+        self.assistant_content_color = '\033[35;2m'  # 粉色
+        self.assistant_remark_color = '\033[35;2m'  # 暗粉色
+        self.tool_role_color = '\033[94m'  # 亮蓝色
+        self.tool_content_color = '\033[34m'  # 蓝色
+        self.tool_remark_color = '\033[34;2m',  # 暗蓝色
+
+        self.bold = '\033[1m'  # 加粗
+        self.system_remind = '\033[90m'  # 亮黑色
+        self.end_style = '\033[0m'  # 还原
+
+    # 登陆 Gemini
+    def __gemini_client(self) -> None:
+        """
+        通过显式 API 登陆 Gemini
+        Log in to Gemini via an explicit API.
+
+        :return: None
+        """
+
+        self.client = genai.Client(api_key=self.api_key)
+
+        return None
+
+    def __convert_openai_to_gemini(self):
+        """
+        将类似 OpenAI SDK 的 messages（list of dicts with 'role' & 'content'）,
+        转换为 Gemini SDK 的 Content 对象列表
+        messages (list of dicts with 'role' & 'content') similar to those in the OpenAI SDK
+        Convert to the list of Content objects of the Gemini SDK.
+        """
+
+        system_instruction = ""
+        gemini_messages = []
+
+        if self.messages is not None:
+            for msg in self.messages:
+                role = msg["role"]
+                content = msg["content"].strip()
+
+                if role == "system":
+                    system_instruction += content + "\n"
+                elif role == "user":
+                    gemini_messages.append({"role": "user", "parts": [{"text": content}]})
+                elif role == "assistant":
+                    gemini_messages.append({"role": "model", "parts": [{"text": content}]})
+
+        self.gemini_system = system_instruction.strip()
+        self.gemini_messages = gemini_messages
 
     # 与 Gemini 大模型聊天
-    def chat(self, messages: Optional[List[dict]] = None, print_response: bool = True, raise_error: bool = False) \
-            -> List[dict]:
+    def chat(self, messages: Optional[List[dict]] = None, print_response: bool = True, raise_error: bool = False, 
+             **kwargs) -> List[dict]:
         """
         与 AI 大模型聊天，单次交互，传入完整 messages，返回 AI 回复并保存
         Chat with the AI large model, with only one interaction, return one AI response and save it.
@@ -2293,222 +2324,114 @@ class Gemini(AI):
         :return ai_content: (list) AI 返回的消息列表 messages
         """
 
+        # 初始化
+        self.__gemini_client()
+
         # 检查 messages 的赋值情况
         if messages is not None:
             self.messages = messages
 
-        # 构建 URL
-        if self.stream:  # 流式输出
-            self.target_url = self.base_url + f'/v1beta/models/{self.model}:streamgenerateContent?key={self.api_key}'
-        else:  # 非流式输出
-            self.target_url = self.base_url + f'/v1beta/models/{self.model}:generateContent?key={self.api_key}'
-
-        # 构建 headers
-        self.headers = {
-            # "User-Agent": "<…>",
-            "Content-Type": "application/json",
-            # "Authorization": f"Bearer {self.api_key}"
-        }
-
-        # 构建请求体
-        self.request_body_dict = {
-            # 重要参数
-            "contents": self.messages,
-            # 文本参数
-            "generationConfig": {
-                "maxOutputTokens": self.max_tokens,
-                "temperature": self.temperature,
-                "topP": self.top_p,
-            },
-            # 工具参数
-            "tools": Gemini.toolkit
-        }
+        # 更改请求 messages
+        self.__convert_openai_to_gemini()
 
         # 流式输出
         if self.stream:
 
-            # 流式请求 使用 requests 以流式方式 POST 请求接口
-            with requests.post(
-                    url=self.target_url,
-                    headers=self.headers,
-                    json=self.request_body_dict,
-                    stream=True
-            ) as response:
+            try:
+                # 打印 AI 的回复内容
+                if print_response:
+                    print(f"{self.bold}{self.assistant_role_color}{self.model}{self.end_style}: "
+                          f"{self.assistant_content_color}")
 
-                # 查看状态码
-                self.response_status = response.status_code
+                # 发送请求
+                response = self.client.models.generate_content_stream(
+                    model="gemini-2.5-pro",
+                    contents=self.gemini_messages,
+                    config=types.GenerateContentConfig(
+                        system_instruction=self.gemini_system,
+                        **kwargs
+                    )
+                )
 
-                # 判断请求是否成功
-                if self.response_status != 200:
-                    # 抛出错误
-                    if raise_error:
-                        message = AI.status_code_messages.get(self.response_status, "Unknown Error")
-                        class_name = self.__class__.__name__  # 获取类名
-                        method_name = inspect.currentframe().f_code.co_name  # 获取方法名
-                        raise HTTPError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
-                                        f"request failed! status_code: {self.response_status} ({message})")
+                # 流式打印
+                text_content = ""
+                for chunk in response:
 
-                    # 改为打印信息
-                    else:
-                        message = AI.status_code_messages.get(self.response_status, "Unknown Error")  # 未知错误
-                        print(f"{self.system_remark_color}[{self.model}]{self.end_style} "
-                              f"\033[31mRequest failed!\033[0m status_code: {self.response_status} ({message})")
+                    if print_response:
+                        print(chunk.text, end="")
+                    text_content += chunk.text
 
-                ai_reasoning = ""
-                ai_content = ""
+                # 结束打印
+                if print_response:
+                    print(f"{self.end_style}\n")
 
-                # iter_lines() 会按行（以换行符分隔）逐行读取服务器返回的流数据
-                for chunk in response.iter_lines():
-                    if chunk:  # 过滤掉空行（有些 SSE 数据可能包含心跳或空行
+            except errors.ClientError as e:
+                self.response_status = e.status_code
+                message = AI.status_code_messages.get(self.response_status, "Unknown Error")
 
-                        decoded_chunk = chunk.decode("utf-8")  # 将字节数据解码成字符串
-                        # OpenAI 风格的 SSE(Server-Sent Events) 数据以 "data: " 开头
-                        if decoded_chunk.startswith("data: "):
-                            # 去掉开头的 "data: " 前缀，获取纯 JSON 数据部分
-                            json_data = decoded_chunk[len("data: "):]
-                            print(json_data)
-
-                            # 如果是 "[DONE]" 表示流式输出已经结束
-                            if json_data.strip() == "[DONE]":
-                                break  # 跳出循环
-
-                            try:
-                                # 将 JSON 字符串解析为 Python 字典
-                                content_dict = json.loads(json_data)
-
-                                # 只在第一次解析时获取元信息
-                                if self.stream_begin_output:
-                                    self.response_id = content_dict.get("id")
-                                    self.response_model = content_dict.get("model")
-                                    self.response_object = content_dict.get("object")
-                                    self.response_created = content_dict.get("created")
-
-                                    # 打印 AI 思考过程的字体
-                                    if self.show_reasoning:
-                                        print(
-                                            f"{self.bold}{self.tool_role_color}{self.model}{self.end_style}: "
-                                            f"{self.tool_content_color}", end="", flush=True)
-                                    # 不打印 AI 思考过程的字体
-                                    else:
-                                        print(f"{self.bold}{self.assistant_role_color}{self.model}{self.end_style}:"
-                                              f" {self.assistant_content_color}", end="", flush=True)
-
-                                    self.stream_begin_output = False  # 获取本次信息后关闭
-
-                                    # 处理 choices
-                                    choices = content_dict.get("choices", [])
-                                    if choices:
-                                        first_choice = choices[0]
-                                        delta = first_choice.get("delta", {})
-
-                                        # 打印 AI 思考过程
-                                        if self.show_reasoning:
-                                            # 追加 AI 思考过程
-                                            reasoning_piece = next((delta.get(key) for key in AI.ai_thinking_parameters
-                                                                    if delta.get(key)), None)
-                                            # 如果有思考内容就打印
-                                            if isinstance(reasoning_piece, str):
-                                                ai_reasoning += reasoning_piece
-                                                print(reasoning_piece, end="", flush=True)
-
-                                        # 只在第一次收到 content 内容时转换
-                                        if delta["content"] and self.reasoning_output:
-                                            # 打印 AI 回复内容的字体
-                                            print(f"{self.bold}{self.assistant_role_color}{self.model}"
-                                                  f"{self.end_style}: {self.assistant_content_color}",
-                                                  end="", flush=True)
-                                            self.reasoning_output = False
-
-                                        # 追加 AI 回复内容
-                                        if "content" in delta:
-                                            content_piece = delta["content"]
-                                            if isinstance(content_piece, str):
-                                                ai_content += content_piece
-                                                print(content_piece, end="", flush=True)
-
-                            except json.JSONDecodeError:
-                                # 如果解析 JSON 出错（可能是心跳包或非 JSON 格式内容），则跳过
-                                continue
-
-                print(f"{self.end_style}\n")  # 结束颜色
-                self.stream_begin_output = True  # 下一次打印时变成首次输出
-                self.reasoning_output = True  # 下一次打印时变成首次输出
-
-                # 添加AI回复到消息历史
-                self.messages.append({"role": "assistant", "content": ai_content})
-
-            reply_messages = self.messages
-
-        # 非流式输出
-        else:
-
-            # 发送请求
-            self.response = requests.post(
-                url=self.target_url,
-                headers=self.headers,
-                json=self.request_body_dict
-            )
-
-            # 查看状态码
-            self.response_status = self.response.status_code
-
-            # 判断请求是否成功
-            if self.response_status != 200:
-                # 抛出错误
                 if raise_error:
-                    message = AI.status_code_messages.get(self.response_status, "Unknown Error")
-                    class_name = self.__class__.__name__  # 获取类名
-                    method_name = inspect.currentframe().f_code.co_name  # 获取方法名
-                    raise HTTPError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
-                                    f"request failed! status_code: {self.response_status} ({message})")
-
-                # 改为打印信息
+                    class_name = self.__class__.__name__
+                    method_name = inspect.currentframe().f_code.co_name
+                    raise HTTPError(
+                        f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                        f"request failed! status_code: {self.response_status} ({message})"
+                    )
                 else:
-                    message = AI.status_code_messages.get(self.response_status, "Unknown Error")  # 未知错误
                     print(f"{self.system_remark_color}[{self.model}]{self.end_style} "
                           f"\033[31mRequest failed!\033[0m status_code: {self.response_status} ({message})")
 
-            # 解析返回参数
-            response_dict = self.response.json()
-            self.response_id = response_dict.get("id")  # 本次请求的唯一标识符
-            self.response_model = response_dict.get("model")  # 使用的模型名称
-            self.response_object = response_dict.get("object")  # 返回对象类型，一般是 "chat.completion"
-            self.response_created = response_dict.get("created")  # 创建时间，Unix 时间戳
+                return []
 
-            choices = response_dict.get("choices", [])  # 返回的回答列表，通常只有一个
-            if choices:
-                first_choice = choices[0]
-                response_messages = first_choice.get("message", {})  # AI 返回的 messages
-
-                # 保存 AI 消息内容
-                for key in AI.ai_thinking_parameters:  # 遍历参数列表，找到第一个非空的思考字段
-                    if response_messages.get(key):
-                        self.response_reasoning = response_messages[key]
-                        break
-                self.response_content = response_messages.get("content")  # AI 生成的回答文本
-                self.response_finish_reason = first_choice.get("finish_reason")  # 结束原因，如 "stop"
-                self.response_index = first_choice.get("index")  # 选项索引
-
-            usage = response_dict.get("usage", {})  # 令牌使用情况统计
-            self.response_prompt_tokens += usage.get("prompt_tokens", 0)  # 提示词消耗的 tokens 数
-            self.response_completion_tokens += usage.get("completion_tokens", 0)  # 生成内容消耗的 tokens 数
-            self.response_total_tokens += usage.get("total_tokens", 0)  # 总共消耗的 tokens 数
-
-            # 打印回复
-            if print_response:
-                # 打印 AI 的思考内容
-                if self.show_reasoning:
-                    print(f"{self.bold}{self.tool_role_color}{self.model}{self.end_style}: "
-                          f"{self.tool_content_color}{self.response_reasoning}{self.end_style}")
-
-                # 打印 AI 的回复内容
-                print(f"{self.bold}{self.assistant_role_color}{self.model}{self.end_style}: "
-                      f"{self.assistant_content_color}{self.response_content}{self.end_style}\n")
+            self.response_content = text_content
 
             # 保存 AI 回复为 assistant 角色追加到 self.messages
             self.messages.append({"role": "assistant", "content": self.response_content})
 
-            reply_messages = self.messages
+        # 非流式输出
+        else:
+
+            try:
+                # 发送请求
+                response = self.client.models.generate_content(
+                    model="gemini-2.5-pro",
+                    contents=self.gemini_messages,
+                    config=types.GenerateContentConfig(
+                        system_instruction=self.gemini_system,
+                        **kwargs
+                    )
+                )
+
+            except errors.ClientError as e:
+                self.response_status = e.status_code
+                message = AI.status_code_messages.get(self.response_status, "Unknown Error")
+
+                if raise_error:
+                    class_name = self.__class__.__name__
+                    method_name = inspect.currentframe().f_code.co_name
+                    raise HTTPError(
+                        f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                        f"request failed! status_code: {self.response_status} ({message})"
+                    )
+                else:
+                    print(f"{self.system_remark_color}[{self.model}]{self.end_style} "
+                          f"\033[31mRequest failed!\033[0m status_code: {self.response_status} ({message})")
+
+                return []
+
+            # 生成的文本内容
+            self.response_content = response.text
+
+            # 结束打印
+            if print_response:
+                # 打印 AI 的回复内容
+                if print_response:
+                    print(f"{self.bold}{self.assistant_role_color}{self.model}{self.end_style}: "
+                          f"{self.assistant_content_color}{self.response_content}{self.end_style}\n")
+
+            # 保存 AI 回复为 assistant 角色追加到 self.messages
+            self.messages.append({"role": "assistant", "content": self.response_content})
+
+        reply_messages = self.messages
 
         return reply_messages
 
@@ -2568,7 +2491,7 @@ class Assist(AI):
         :param presence_penalty: (float)  避免重复主题 (-2.0-2.0)，正值降低重复提及同一概念的概率，适合长文本生成
         :param frequency_penalty: (float) 避免重复词汇 (-2.0-2.0)，正值降低重复用词概率，适合技术文档写作
         :param seed: (int) 随机种子，默认为 None，表示完全随机
-        :param tools: (list) 工具包，默认为无工具，[]，为防止可变实参，因而为 None
+        :param tools: (list) 工具包
         :param tool_choice: (str) 工具选取方式，"auto" 为自动选取，"none" 为决不会选取"，
                             {"type": "function", "function": {"name": "xxx"}} 为强制调用指定工具，并且只能调用它。
                             "required"(部分文档称为 {"type": "function", "function": "required"} 的形式)，

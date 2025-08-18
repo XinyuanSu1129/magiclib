@@ -713,6 +713,8 @@ chat()
 ------ Gemini ------
 toolkit
 
+__gemini_client()
+__convert_openai_to_gemini()
 chat()
 
 ------ Jimeng ------

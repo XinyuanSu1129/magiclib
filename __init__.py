@@ -303,6 +303,7 @@ MAGIC
 -> 6.3.1 Beta   25-08-14 00:25 A major overhaul of the module generator has been made, replacing OpenAI 
                 with tequests () requests. 
                 Added the function that AI can invoke tools.
+-> 6.3.1 Beta   25-08-19 19:39 A new class, Gemini, has been added.
                
                     
  ------ Needing ------
@@ -714,8 +715,10 @@ chat()
 toolkit
 
 __gemini_client()
+__get_files_from_kwargs()
 __convert_openai_to_gemini()
 chat()
+continue_chat()
 
 ------ Jimeng ------
 

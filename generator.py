@@ -17,6 +17,7 @@ import json
 import base64
 import inspect
 import requests
+import mimetypes
 from PIL import Image
 from io import BytesIO
 from google import genai
@@ -1280,7 +1281,6 @@ class AI:
         print(f"Let's start chatting! The current model is \033[31m{self.model}\033[0m.")
 
         # 对话循环
-        reply_messages = []
         while True:
 
             # 获取用户输入
@@ -1420,7 +1420,15 @@ class AI:
                                                 print(reasoning_piece, end="", flush=True)
 
                                         # 只在第一次收到 content 内容时转换
-                                        if delta["content"] and self.reasoning_output:
+                                        if delta.get("content") and self.reasoning_output:
+
+                                            # 如果 ai_reasoning 为 ''，打印 None
+                                            if not ai_reasoning:
+                                                print('None')
+                                            # 如果 ai_reasoning 不是以换行符结尾，则打印一个换行符
+                                            elif not ai_reasoning.endswith('\n'):
+                                                print('')
+
                                             # 打印 AI 回复内容的字体
                                             print(f"{self.bold}{self.assistant_role_color}{self.model}"
                                                   f"{self.end_style}: {self.assistant_content_color}",
@@ -1520,8 +1528,6 @@ class AI:
 
                                 else:
                                     raise
-
-                        reply_messages = self.messages
 
             # 非流式输出
             else:
@@ -1630,7 +1636,7 @@ class AI:
                 self.response_completion_tokens += usage.get("completion_tokens", 0)  # 生成内容消耗的 tokens 数
                 self.response_total_tokens += usage.get("total_tokens", 0)  # 总共消耗的 tokens 数
 
-                reply_messages = self.messages
+        reply_messages = self.messages
 
         return reply_messages
 
@@ -2215,7 +2221,7 @@ class Gemini:
         else:
             self.api_key = Gemini_api_key_1
 
-        if base_url is not None:
+        if base_url is not None:  # Gemini 请求用不到
             self.base_url = base_url
         else:
             self.base_url = Gemini_base_url
@@ -2235,15 +2241,25 @@ class Gemini:
         self.ai_keyword = ai_keyword
         self.instance_id = instance_id
         self.information = information
-        self.show_reasoning = show_reasoning
+        self.show_reasoning = show_reasoning  # Gemini 中无法单独查看 AI 的思考
 
-        # 其它参数 (1)
+        # 其它参数 (2)
         self.stream = stream
         if tools is None:  # 为防止可变实参，因而为 None
             self.tools = AI.toolkit
 
+        # 计费参数
+        self.response_prompt_tokens = 0
+        self.response_completion_tokens = 0
+        self.response_total_tokens = 0
+
         # __gemini_client()
         self.client = genai.Client(api_key=self.api_key)  # 初始
+
+        # __get_files_from_kwargs()
+        self.files_dict = {}
+        self.types_dict = {}
+        self.uploaded_files = {}
 
         # __convert_openai_to_gemini()
         self.gemini_messages = None
@@ -2284,12 +2300,70 @@ class Gemini:
 
         return None
 
-    def __convert_openai_to_gemini(self):
+    # 读取 **kwargs 中的信息
+    def __get_files_from_kwargs(self, **kwargs) -> None:
+        """
+        从 kwargs 中读取 file_1, file_2, … 参数，返回两个字典
+        Read file_1, file_2,... from kwargs Parameters, returning two dictionaries.
+
+        1. files_dict: {'file_1': '路径1', 'file_2': '路径2', ...}
+        2. types_dict: {'file_1': 'application/pdf', 'file_2': 'image/jpeg', ...}
+        """
+
+        files_dict = {}
+        types_dict = {}
+
+        for key, value in kwargs.items():
+            if key.startswith("file_"):
+                files_dict[key] = value
+
+                # 根据路径自动猜测 mime_type
+                mime_type, _ = mimetypes.guess_type(value)
+                if mime_type is None:
+                    mime_type = "application/octet-stream"  # 默认二进制类型
+                types_dict[key] = mime_type
+
+        # 按 file_ 序号排序
+        self.files_dict = dict(sorted(files_dict.items(), key=lambda x: int(x[0].split("_")[1])))
+        self.types_dict = dict(sorted(types_dict.items(), key=lambda x: int(x[0].split("_")[1])))
+
+        # 放入 client 中
+        for key in self.files_dict:
+            path = self.files_dict[key]
+            mime_type = self.types_dict[key]
+
+            # 判断是 URL 还是本地路径
+            if path.startswith("http://") or path.startswith("https://"):
+                response = requests.get(path)
+                file_io = BytesIO(response.content)
+            elif os.path.exists(path):
+                file_io = open(path, "rb")
+            else:
+                class_name = self.__class__.__name__
+                method_name = inspect.currentframe().f_code.co_name
+                raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                                 f"{key}the specified path is invalid:{path}")
+
+            uploaded_file = self.client.files.upload(
+                file=file_io,
+                config=dict(mime_type=mime_type)
+            )
+            self.uploaded_files[key] = uploaded_file
+
+            # 如果是本地打开的文件，需要关闭
+            if not isinstance(file_io, BytesIO):
+                file_io.close()
+
+        return None
+
+    def __convert_openai_to_gemini(self) -> list:
         """
         将类似 OpenAI SDK 的 messages（list of dicts with 'role' & 'content'）,
         转换为 Gemini SDK 的 Content 对象列表
         messages (list of dicts with 'role' & 'content') similar to those in the OpenAI SDK
         Convert to the list of Content objects of the Gemini SDK.
+
+        :return gemini_messages: (list) Gemini 结构的 messages
         """
 
         system_instruction = ""
@@ -2307,8 +2381,23 @@ class Gemini:
                 elif role == "assistant":
                     gemini_messages.append({"role": "model", "parts": [{"text": content}]})
 
+        # 如果有上传的文件，放到最后一个用户消息的 parts 中
+        if getattr(self, "uploaded_files", {}) != {}:  # 避免报错
+            # 找到最后一个用户消息
+            last_user_index = None
+            for i in reversed(range(len(gemini_messages))):
+                if gemini_messages[i]["role"] == "user":
+                    last_user_index = i
+                    break
+
+            if last_user_index is not None:
+                for key, uploaded_file in self.uploaded_files.items():
+                    gemini_messages[last_user_index]["parts"].append({"file": uploaded_file})  # type: ignore
+
         self.gemini_system = system_instruction.strip()
         self.gemini_messages = gemini_messages
+
+        return gemini_messages
 
     # 与 Gemini 大模型聊天
     def chat(self, messages: Optional[List[dict]] = None, print_response: bool = True, raise_error: bool = False, 
@@ -2331,6 +2420,9 @@ class Gemini:
         if messages is not None:
             self.messages = messages
 
+        # 分类并读取文件
+        self.__get_files_from_kwargs(**kwargs)
+
         # 更改请求 messages
         self.__convert_openai_to_gemini()
 
@@ -2345,7 +2437,7 @@ class Gemini:
 
                 # 发送请求
                 response = self.client.models.generate_content_stream(
-                    model="gemini-2.5-pro",
+                    model=self.model,
                     contents=self.gemini_messages,
                     config=types.GenerateContentConfig(
                         system_instruction=self.gemini_system,
@@ -2359,7 +2451,9 @@ class Gemini:
 
                     if print_response:
                         print(chunk.text, end="")
-                    text_content += chunk.text
+
+                    if chunk.text is not None:
+                        text_content += chunk.text
 
                 # 结束打印
                 if print_response:
@@ -2393,7 +2487,7 @@ class Gemini:
             try:
                 # 发送请求
                 response = self.client.models.generate_content(
-                    model="gemini-2.5-pro",
+                    model=self.model,
                     contents=self.gemini_messages,
                     config=types.GenerateContentConfig(
                         system_instruction=self.gemini_system,
@@ -2423,13 +2517,227 @@ class Gemini:
 
             # 结束打印
             if print_response:
-                # 打印 AI 的回复内容
-                if print_response:
-                    print(f"{self.bold}{self.assistant_role_color}{self.model}{self.end_style}: "
-                          f"{self.assistant_content_color}{self.response_content}{self.end_style}\n")
+                print(f"{self.bold}{self.assistant_role_color}{self.model}{self.end_style}: "
+                      f"{self.assistant_content_color}{self.response_content}{self.end_style}\n")
 
             # 保存 AI 回复为 assistant 角色追加到 self.messages
             self.messages.append({"role": "assistant", "content": self.response_content})
+
+            # 提取 token 数据
+            response_tokens = response.usage_metadata
+            self.response_prompt_tokens += response_tokens.prompt_token_count
+            self.response_completion_tokens += response_tokens.candidates_token_count
+            self.response_total_tokens += response_tokens.total_token_count
+
+        reply_messages = self.messages
+
+        return reply_messages
+
+    # 与 Gemini 大模型持续聊天
+    def continue_chat(self, system_content: Optional[str] = None, messages: Optional[List[dict]] = None,
+                      end_token: str = '', stream: bool = True, raise_error: bool = False, **kwargs) -> List[dict]:
+        """
+        与 Gemini AI 大模型连续聊天
+        Continuous chatting with Gemini AI large models, supporting streaming, can use the Tools in the class Tools.
+
+        注意：
+        1.  想要退出需要输入：'退出', 'exit' 或 'quit'
+        2.  end_token 默认情况下，只有在空的一行输入换行符 '\n' 或空按“回车”才会将内容输入给 AI 模型，否则只是换到下一行并等待继续输入，
+            此情况下最下面的换行符 \n 不会保留
+        3.  允许使用类 Tools 中的方法。顺序为：user-assistant-tool-assistant
+
+        Note:
+        1.  To exit, you need to enter: '退出', 'exit' or 'quit'.
+        2.  By default, the content of end_token will only be input to the AI model when a newline character
+            '\n' is entered on an empty chunk or when an empty "Enter" is pressed; otherwise, it will simply move to
+            the next chunk and wait for further input. In this case, the bottom newline character \n will
+            not be retained.
+        3.  Methods in the class Tools are allowed to be used. The sequence is: user-assistant-tool-assistant
+
+        :param system_content: (str) 'role': 'system' 中的 content 的内容，被赋值时会消除前面的所有对话记录。
+                               如果未赋值则运用初始信息，默认为初始信息
+        :param messages: (List[dict]) 完整对话消息列表，包括 system、user 等角色消息
+        :param end_token: (str) 输入结束 token，在检测到该 token 并后紧跟 '\n' 时结束输入过程并输入，默认为换行符 '' 代表换行符，
+                                此时在检测到一个空行后紧跟一个换行符代表输入结束。此参数不允许包含换行符
+        :param stream: (bool) 是否启用流输出 (逐字返回)，默认为 True
+        :param raise_error: (bool) 遇到响应问题时为抛出错误，否则打印错误。默认为 False
+
+        :return ai_content: (list) AI 返回的消息列表 messages
+        """
+
+        # 初始化
+        self.__gemini_client()
+
+        # 将 stream 记录
+        self.stream = stream
+
+        # 检查 end_token 是否包含换行符 '\n'
+        if '\n' in end_token or '\r' in end_token:
+            class_name = self.__class__.__name__  # 获取类名
+            method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                             f"end_token cannot contain chunk breaks.")
+
+        # 检查 messages 的赋值情况
+        if messages is not None:
+            self.messages = messages
+        # 检查 system_content 赋值
+        if system_content is not None:
+            self.messages = [{"role": "system",
+                              "content": system_content}]
+
+        print(f"Let's start chatting! The current model is \033[31m{self.model}\033[0m.")
+
+        # 对话循环
+        while True:
+
+            # 获取用户输入
+            user_input_list = []
+            prompt = f"{self.bold}{self.user_role_color}User{self.end_style}: "  # 绿色加粗 User:
+
+            if end_token == '':
+                # 空 token：空行换行直接结束
+                while True:
+                    chunk = input(prompt)
+                    if chunk == '':  # 空行直接结束
+                        break
+                    user_input_list.append(chunk)
+                    prompt = f"{self.bold}{self.user_role_color}----> {self.end_style}"
+            else:
+                # 非空 token: 以 token 结尾换行才结束
+                while True:
+                    chunk = input(prompt)
+                    if chunk.endswith(end_token):
+                        content_line = chunk[:-len(end_token)].rstrip()
+                        # 如果这一行只有 token（去掉后为空），保留一个空行
+                        if content_line == '':
+                            user_input_list.append('')
+                        else:
+                            user_input_list.append(content_line)
+                        break
+                    user_input_list.append(chunk)
+                    prompt = f"{self.bold}{self.user_role_color}----> {self.end_style}"
+
+            user_input = "\n".join(user_input_list)
+
+            # 退出条件
+            if user_input.lower() in ['退出', 'exit', 'quit']:
+
+                if stream:  # '流式'
+                    print(f'The conversation is over. Goodbye ^_< !\n')
+                else:  # 非'流式'
+                    print(
+                        f'\nIn this conversation, the input contains {self.user_role_color}'
+                        f'{self.response_prompt_tokens}{self.end_style} '
+                        f'characters, and the output has {self.assistant_role_color}{self.response_completion_tokens}'
+                        f'{self.end_style} characters.')
+                    print(f'The conversation is over. Goodbye ^_< !\n')
+                break
+
+            # 添加用户消息到对话历史
+            self.messages.append({"role": "user", "content": user_input})
+
+            # 更改请求 messages
+            self.__convert_openai_to_gemini()
+
+            # 流式输出
+            if stream:
+
+                try:
+                    # 打印 AI 的回复内容
+                    print(f"{self.bold}{self.assistant_role_color}{self.model}{self.end_style}: "
+                          f"{self.assistant_content_color}")
+
+                    # 发送请求
+                    response = self.client.models.generate_content_stream(
+                        model=self.model,
+                        contents=self.gemini_messages,
+                        config=types.GenerateContentConfig(
+                            system_instruction=self.gemini_system,
+                            **kwargs
+                        )
+                    )
+
+                    # 流式打印
+                    text_content = ""
+                    for chunk in response:
+
+                        print(chunk.text, end="")
+
+                        if chunk.text is not None:
+                            text_content += chunk.text
+
+                    # 结束打印
+                    print(f"{self.end_style}\n")
+
+                except errors.ClientError as e:
+                    self.response_status = e.status_code
+                    message = AI.status_code_messages.get(self.response_status, "Unknown Error")
+
+                    if raise_error:
+                        class_name = self.__class__.__name__
+                        method_name = inspect.currentframe().f_code.co_name
+                        raise HTTPError(
+                            f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                            f"request failed! status_code: {self.response_status} ({message})"
+                        )
+                    else:
+                        print(f"{self.system_remark_color}[{self.model}]{self.end_style} "
+                              f"\033[31mRequest failed!\033[0m status_code: {self.response_status} ({message})")
+
+                    return []
+
+                self.response_content = text_content
+
+                # 保存 AI 回复为 assistant 角色追加到 self.messages
+                self.messages.append({"role": "assistant", "content": self.response_content})
+
+            # 非流式输出
+            else:
+
+                try:
+                    # 发送请求
+                    response = self.client.models.generate_content(
+                        model=self.model,
+                        contents=self.gemini_messages,
+                        config=types.GenerateContentConfig(
+                            system_instruction=self.gemini_system,
+                            **kwargs
+                        )
+                    )
+
+                except errors.ClientError as e:
+                    self.response_status = e.status_code
+                    message = AI.status_code_messages.get(self.response_status, "Unknown Error")
+
+                    if raise_error:
+                        class_name = self.__class__.__name__
+                        method_name = inspect.currentframe().f_code.co_name
+                        raise HTTPError(
+                            f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                            f"request failed! status_code: {self.response_status} ({message})"
+                        )
+                    else:
+                        print(f"{self.system_remark_color}[{self.model}]{self.end_style} "
+                              f"\033[31mRequest failed!\033[0m status_code: {self.response_status} ({message})")
+
+                    return []
+
+                # 生成的文本内容
+                self.response_content = response.text
+
+                # 结束打印
+                print(f"{self.bold}{self.assistant_role_color}{self.model}{self.end_style}: "
+                      f"{self.assistant_content_color}{self.response_content}{self.end_style}\n")
+
+                # 保存 AI 回复为 assistant 角色追加到 self.messages
+                self.messages.append({"role": "assistant", "content": self.response_content})
+
+                # 提取 token 数据
+                response_tokens = response.usage_metadata
+                self.response_prompt_tokens += response_tokens.prompt_token_count
+                self.response_completion_tokens += response_tokens.candidates_token_count
+                self.response_total_tokens += response_tokens.total_token_count
 
         reply_messages = self.messages
 
@@ -3033,7 +3341,7 @@ def set_api_config(ai_instance: object, api_url_pair: str):
             # Gemini 渠道 4
             'gm_4': {"api_key": Gemini_api_key_4, "base_url": Gemini_base_url, "model": "gemini-2.5-pro"},
             # Gemini 渠道 5
-            'gm_5': {"api_key": Gemini_api_key_5, "base_url": Gemini_base_url, "model": "deepseek-ai/DeepSeek-R1"},
+            'gm_5': {"api_key": Gemini_api_key_5, "base_url": Gemini_base_url, "model": "gemini-2.5-pro"},
             # 渠道 AI
             '1': {"api_key": other_api_key, "base_url": other_base_url, "model": "gpt-oss-120b"},
         }

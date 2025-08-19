@@ -11,6 +11,7 @@ Attention:
 # 导入顺序不同有可能导致程序异常
 from . import general, grapher
 
+import re
 import os
 import time
 import json
@@ -112,6 +113,9 @@ avaliable_model = [
     'fishaudio/fish-speech-1.5'  # FishAudio
     'meta-llama/llama-4-maverick-17b-128e-instruct',  # Llama
 ]
+
+# sef.messages 保存的目录路径
+messages_save_path = '/Users/sumiaomiao/Downloads/messages_save'  # 注意修改
 
 
 """ AI 工具包 """
@@ -596,10 +600,60 @@ class AI:
     }
     """
 
-    # 创建 Tools 实例
-    tools_instance = Tools()
     # 可用工具及描述
     toolkit = [
+        {
+            "type": "function",
+            "function": {
+                "name": "save_messages_to_txt",
+                "description": f"Save the conversation history to a formatted TXT file. "
+                               f"The file will be saved in the {messages_save_path} directory."
+                               f"When saving a conversation, please summarize the current conversation "
+                               f"into 2 to 3 words (preferably in English, with underscores between words), "
+                               f"and name it accordingly. There is no need to include the extension '.txt'.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "file_name": {
+                            "type": "string",
+                            "description": "Name of the TXT file to save the conversation history."
+                        }
+                    },
+                    "required": ["file_name"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "load_messages_from_txt",
+                "description": f"Load conversation history from a formatted TXT file and append it to the current "
+                               f"conversation. The file must be located in the {messages_save_path} directory.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "file_name": {
+                            "type": "string",
+                            "description": "Name of the TXT file to load (without path)"
+                        }
+                    },
+                    "required": ["file_name"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "list_historical_conversations",
+                "description": f"List all saved historical conversation files in the {messages_save_path} directory, "
+                               f"sorted by modification time with the latest first. Each file's save time "
+                               f"(extracted from its content) is displayed alongside the filename.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {}
+                }
+            }
+        },
         {
             "type": "function",
             "function": {
@@ -784,17 +838,6 @@ class AI:
         #     }
         # },
     ]
-    # 工具与对应方法
-    tool_methods = {
-        "read_txt": tools_instance.read_txt,
-        "read_excel": tools_instance.read_excel,
-        "read_json": tools_instance.read_json,
-        "plot_line": tools_instance.plot_line,
-        "plot_scatter": tools_instance.plot_scatter,
-        "generate_image": tools_instance.generate_image,
-        "save_image": tools_instance.save_image,
-        # "generate_voice": tools_instance.generate_voice,
-    }
 
     # 常见 HTTP 状态码说明
     status_code_messages = {
@@ -942,7 +985,7 @@ class AI:
         self.assistant_remark_color = '\033[35;2m'  # 暗粉色
         self.tool_role_color = '\033[94m'  # 亮蓝色
         self.tool_content_color = '\033[34m'  # 蓝色
-        self.tool_remark_color = '\033[34;2m',  # 暗蓝色
+        self.tool_remark_color = '\033[34;2m'  # 暗蓝色
 
         self.bold = '\033[1m'  # 加粗
         self.system_remind = '\033[90m'  # 亮黑色
@@ -957,6 +1000,24 @@ class AI:
         self.start_time = None  # 记录对话开始时间
         self.stream_begin_output = True  # stream 开始返回信息
         self.reasoning_output = True  # AI 思考开始返回信息
+
+        # 创建 Tools 实例
+        self.tools_instance = Tools()
+
+        # 工具与对应方法
+        self.tool_methods = {
+            "save_messages_to_txt": self.save_messages_to_txt,
+            "load_messages_from_txt": self.load_messages_from_txt,
+            "list_historical_conversations": self.list_historical_conversations,
+            "read_txt": self.tools_instance.read_txt,
+            "read_excel": self.tools_instance.read_excel,
+            "read_json": self.tools_instance.read_json,
+            "plot_line": self.tools_instance.plot_line,
+            "plot_scatter": self.tools_instance.plot_scatter,
+            "generate_image": self.tools_instance.generate_image,
+            "save_image": self.tools_instance.save_image,
+            # "generate_voice": tools_instance.generate_voice,
+        }
 
     # 确保可以从实例变量中找到 instance_id
     def __repr__(self):
@@ -1507,6 +1568,7 @@ class AI:
                         sorted_tool_calls = [tool_calls[idx] for idx in sorted(tool_calls.keys())]
 
                         for call in sorted_tool_calls:
+
                             func_name = call["function"]["name"]
                             args_str = call["function"]["arguments"]
 
@@ -1514,9 +1576,9 @@ class AI:
                                 # 尝试解析参数
                                 args = json.loads(args_str) if args_str.strip() else {}
 
-                                if func_name in AI.tool_methods:
+                                if func_name in self.tool_methods:
                                     # 尝试调用工具
-                                    result = AI.tool_methods[func_name](**args)
+                                    result = self.tool_methods[func_name](**args)
                                 else:
                                     result = f"Unknown tool: {func_name}"
                             except json.JSONDecodeError:
@@ -1551,6 +1613,10 @@ class AI:
 
                                 else:
                                     raise
+
+                            except Exception as e:
+                                # 捕获其他所有异常并打印
+                                print(f"An unexpected error occurred: {type(e).__name__}: {e}")
 
             # 非流式输出
             else:
@@ -1621,8 +1687,8 @@ class AI:
                             args = json.loads(call["function"]["arguments"])
 
                             # 动态调用对应函数
-                            if func_name in AI.tool_methods:  # 注意用你之前定义的工具字典
-                                result = AI.tool_methods[func_name](**args)
+                            if func_name in self.tool_methods:  # 注意用你之前定义的工具字典
+                                result = self.tool_methods[func_name](**args)
                             else:
                                 result = f"Unknown tool: {func_name}"
 
@@ -1935,6 +2001,267 @@ class AI:
                     "success_count": success_count,
                     "elapsed_time_sec": round(elapsed, 2)
                 }
+
+    # 保存 self.messages 至 txt 文件
+    def save_messages_to_txt(self, file_name: str) -> str:
+        """
+        将对话历史保存为易读的 TXT 文件
+        Save the conversation history as an easy-to-read TXT file.
+
+        :param file_name: (str) self.messages 保存的名称
+
+        :return status: (str) 返回信息，让 AI 大模型明白保存是否成功
+        """
+
+        # 确保保存目录存在
+        if not os.path.exists(messages_save_path) or not os.access(messages_save_path, os.R_OK | os.W_OK | os.X_OK):
+            class_name = self.__class__.__name__  # 获取类名
+            method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                             f"the path does not exist or there is no permission to access: {messages_save_path}")
+
+        # 完整文件路径
+        file_name += '.txt'
+        file_path = os.path.join(messages_save_path, file_name)
+
+        # 查找最后一条历史对话加载完成消息的索引
+        last_load_index = -1
+        for i in range(len(self.messages) - 1, -1, -1):
+            msg = self.messages[i]
+            if msg.get("role") == "system" and \
+                    "historical conversation has been read" in msg.get("content", "").lower():
+                last_load_index = i
+                break
+
+        # 从最后一条加载消息之后开始处理
+        text_content = []
+        for msg in self.messages[last_load_index + 1:]:
+            role = msg.get("role", "").strip()
+            content = msg.get("content", "").strip()
+
+            # 跳过空消息
+            if role and content:
+                # 添加角色行
+                text_content.append(f"{role}:")
+
+                # 添加内容行（多行处理）
+                content_lines = content.splitlines()
+                for line in content_lines:
+                    text_content.append(line.strip())
+
+                # 添加空行作为分隔
+                text_content.append("")
+
+        # 添加保存时间记录
+        save_time = time.strftime("%Y-%m-%d %H:%M", time.localtime())
+        text_content.append("system:")
+        text_content.append(f"The save time for the above content is：{save_time}")
+        text_content.append("")  # 最后添加一个空行
+
+        # 写入文件
+        try:
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write("\n".join(text_content))
+                status = f"The conversation has been successfully saved to: {file_path}"
+            return status
+
+        except Exception as e:
+            status = f"Save failed: {str(e)}"
+            return status
+
+    # 读取与 AI 对话的 messages 信息
+    def load_messages_from_txt(self, file_name: str) -> str:
+        """
+        从 TXT 文件加载对话历史
+        Load conversation history from a TXT file.
+
+        :param file_name: (str) 要加载的 TXT 文件名 (不含路径)
+
+        :return status: (str) 返回信息，让 AI 大模型明白读取是否成功
+        """
+
+        # 检查保存目录权限
+        if not os.path.exists(messages_save_path) or not os.access(messages_save_path, os.R_OK):
+            class_name = self.__class__.__name__  # 获取类名
+            method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                             f"the directory does not exist or is not accessible: {messages_save_path}")
+
+        # 构建完整路径
+        file_path = os.path.join(messages_save_path, file_name)
+
+        # 检查文件存在性
+        if not os.path.exists(file_path):
+            class_name = self.__class__.__name__  # 获取类名
+            method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                             f"the file does not exist {file_path}")
+
+        allow_role = ["system", "user", "assistant"]
+        messages = []
+        current_role = None
+        current_content = []
+
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    stripped_line = line.strip()
+
+                    # 跳过空行
+                    if not stripped_line:
+                        continue
+
+                    # 检查是否是角色行 (以冒号结尾)
+                    if stripped_line.endswith(":"):
+                        # 保存前一条消息
+                        if current_role and current_content and current_role.lower() in allow_role:
+                            content_str = "\n".join(current_content).strip()
+                            messages.append({
+                                "role": current_role.strip(),
+                                "content": content_str
+                            })
+
+                        # 提取角色（去除末尾冒号）
+                        role_candidate = stripped_line.rstrip(":").strip()
+
+                        # 只保留需要的角色
+                        if role_candidate.lower() in allow_role:
+                            current_role = role_candidate
+                            current_content = []
+                        else:
+                            current_role = None  # 忽略不需要的角色
+                            current_content = []
+
+                    # 内容行 - 只有当当前角色是我们需要的时才处理
+                    elif current_role and current_role.lower() in allow_role:
+                        # 保留原始行内容，去除前后空格
+                        current_content.append(stripped_line)
+
+            # 处理文件末尾可能存在的最后一条消息
+            if current_role and current_content and current_role.lower() in allow_role:
+                content_str = "\n".join(current_content).strip()
+                messages.append({
+                    "role": current_role.strip(),
+                    "content": content_str
+                })
+
+            # 将读取的消息追加到self.messages
+            self.messages.extend(messages)
+
+            # 添加系统通知消息
+            completion_msg = {
+                "role": "system",
+                "content": "The historical conversation has been read and added to the current conversation."
+            }
+            self.messages.append(completion_msg)
+
+            status = f'The historical conversation {file_name} has been read.'
+
+            return status
+
+        except Exception as e:
+            # 错误处理
+            error_msg = {
+                "role": "system",
+                "content": f"An error occurred when reading historical conversation: {str(e)}"
+            }
+            self.messages.append(error_msg)
+
+            status = f'The historical conversation {file_name} reading failed.'
+
+            return status
+
+    # 查看当前保存的历史对话 self.messages
+    def list_historical_conversations(self) -> str:
+        """
+        列出所有保存的历史对话文件
+        List all saved historical conversation files.
+
+        :return status: (str) 返回信息，让 AI 大模型明历史 messages 是否打印成功
+        """
+
+        # 检查保存目录权限
+        if not os.path.exists(messages_save_path) or not os.access(messages_save_path, os.R_OK):
+            class_name = self.__class__.__name__  # 获取类名
+            method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                             f"the directory does not exist or is not accessible: {messages_save_path}")
+
+        try:
+            # 获取目录中所有文件
+            all_files = os.listdir(messages_save_path)
+
+            # 筛选 TXT 文件
+            txt_files = [
+                f for f in all_files
+                if f.lower().endswith('.txt') and os.path.isfile(os.path.join(messages_save_path, f))
+            ]
+
+            # 按修改时间排序（最新在前）
+            txt_files.sort(key=lambda x: os.path.getmtime(
+                os.path.join(messages_save_path, x)
+            ), reverse=True)
+
+            # 创建一个空字典，用于存储时间和文件名的映射
+            time_file_dict = {}
+
+            for filename in txt_files:
+                file_path = os.path.join(messages_save_path, filename)
+
+                try:
+                    with open(file_path, "r", encoding="utf-8") as f:
+                        lines = f.readlines()
+
+                        # 从后往前查找最后一条系统消息
+                        for i in range(len(lines) - 1, -1, -1):
+                            line = lines[i].strip()
+
+                            # 检查是否是系统消息行
+                            if line.startswith("system:") or line.startswith("system：") or line.startswith("SYSTEM:"):
+                                # 获取保存时间内容（通常是下一行）
+                                if i + 1 < len(lines):
+                                    time_line = lines[i + 1].strip()
+
+                                    # 匹配 "The save time for the above content is：2023-10-15 14:30" 或类似格式
+                                    time_match = re.search(pattern=r'(\d{4}-\d{2}-\d{2} \d{2}:\d{2})',
+                                                           string=time_line)
+                                    if time_match:
+                                        save_time = time_match.group(1)
+                                        time_file_dict[save_time] = filename
+                                        break  # 找到后就跳出内部循环，处理下一个文件
+
+                except Exception as e:
+                    print(f"An error occurred when parsing the file {filename}: {str(e)}")
+                    continue
+
+            # 检查字典是否为空
+            if not time_file_dict:
+                status = f"No valid message files found in {messages_save_path}."
+                return status
+
+            else:
+                # 获取排序后的列表（最新在前）
+                sorted_items = sorted(time_file_dict.items(), reverse=True)
+
+                # 打印标题
+                print(f"The historical messages in {self.system_content_color}{messages_save_path}"
+                      f"{self.end_style} are as follows:")
+
+                # 打印每个文件
+                for i, (save_time, file) in enumerate(sorted_items, 1):
+                    print(f"{self.system_content_color}{i}{self.end_style}."
+                          f" - {self.assistant_content_color}{file}{self.end_style}"  # <-- 已修正
+                          f" - {self.user_content_color}{save_time}{self.end_style}")
+
+            status = (f"The historical dialogue in {messages_save_path} has been displayed to the user."
+                      f"The historical dialogues are arranged in the following order: {sorted_items}")
+
+            return status
+
+        except Exception as e:
+
+            status = f"Error in obtaining the historical dialogue list:{str(e)}"
+            return status
 
 
 """ 真人模型 """

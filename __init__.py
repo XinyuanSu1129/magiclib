@@ -693,9 +693,7 @@ save_image()
 generate_voice()
 
 ------ AI ------
-tools_instance
 toolkit
-tool_methods
 status_code_messages
 ai_thinking_parameters
 
@@ -705,6 +703,9 @@ calculate_cost()
 summarize_conversation()
 reset_conversation()
 get_api_call_rate()
+save_messages_to_txt()
+load_messages_from_txt()
+list_historical_conversations()
 
 ------ Human ------
 chat()

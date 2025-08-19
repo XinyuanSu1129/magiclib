@@ -954,6 +954,7 @@ class AI:
         self.output_price_per_million_tokens = 16  # 输出价格 (百万 tokens)
 
         # 其他参数
+        self.start_time = None  # 记录对话开始时间
         self.stream_begin_output = True  # stream 开始返回信息
         self.reasoning_output = True  # AI 思考开始返回信息
 
@@ -1279,6 +1280,7 @@ class AI:
         }
 
         print(f"Let's start chatting! The current model is \033[31m{self.model}\033[0m.")
+        self.start_time = time.time()
 
         # 对话循环
         while True:
@@ -1315,15 +1317,36 @@ class AI:
             # 退出条件
             if user_input.lower() in ['退出', 'exit', 'quit']:
 
+                end_time = time.time()  # 记录结束时间
+                running_time = end_time - self.start_time  # 计算运行时长 (单位：秒)
+
+                # 根据运行时长选择不同的输出格式
+                if running_time >= 3600:  # 大于等于1小时
+                    hours = int(running_time // 3600)
+                    minutes = int((running_time % 3600) // 60)
+                    seconds = int(running_time % 60)
+                    print(
+                        f"The conversation has ended. It took {self.tool_remark_color}{hours}{self.end_style} hours, "
+                        f"{self.tool_content_color}{minutes}{self.end_style} minutes and "
+                        f"{self.tool_role_color}{seconds}{self.end_style} seconds.")
+                elif running_time >= 60:  # 大于等于1分钟但小于1小时
+                    minutes = int(running_time // 60)
+                    seconds = int(running_time % 60)
+                    print(f"The conversation has ended. It took {self.tool_content_color}{minutes}{self.end_style} "
+                          f"minutes and {self.tool_role_color}{seconds}{self.end_style} seconds.")
+                else:  # 小于1分钟
+                    print(f"The conversation has ended. It took {self.tool_role_color}{int(running_time)}"
+                          f"{self.end_style} seconds.")
+
                 if stream:  # '流式'
-                    print(f'The conversation is over. Goodbye ^_< !\n')
+                    print('Goodbye, see you next time ^_< !\n')
                 else:  # 非'流式'
                     print(
                         f'\nIn this conversation, the input contains {self.user_role_color}'
                         f'{self.response_prompt_tokens}{self.end_style} '
                         f'characters, and the output has {self.assistant_role_color}{self.response_completion_tokens}'
                         f'{self.end_style} characters.')
-                    print(f'The conversation is over. Goodbye ^_< !\n')
+                    print('Goodbye, see you next time ^_< !\n')
                 break
 
             # 添加用户消息到对话历史
@@ -2244,6 +2267,7 @@ class Gemini:
         self.show_reasoning = show_reasoning  # Gemini 中无法单独查看 AI 的思考
 
         # 其它参数 (2)
+        self.start_time = None
         self.stream = stream
         if tools is None:  # 为防止可变实参，因而为 None
             self.tools = AI.toolkit
@@ -2587,6 +2611,7 @@ class Gemini:
                               "content": system_content}]
 
         print(f"Let's start chatting! The current model is \033[31m{self.model}\033[0m.")
+        self.start_time = time.time()
 
         # 对话循环
         while True:
@@ -2623,15 +2648,36 @@ class Gemini:
             # 退出条件
             if user_input.lower() in ['退出', 'exit', 'quit']:
 
+                end_time = time.time()  # 记录结束时间
+                running_time = end_time - self.start_time  # 计算运行时长 (单位：秒)
+
+                # 根据运行时长选择不同的输出格式
+                if running_time >= 3600:  # 大于等于1小时
+                    hours = int(running_time // 3600)
+                    minutes = int((running_time % 3600) // 60)
+                    seconds = int(running_time % 60)
+                    print(
+                        f"The conversation has ended. It took {self.tool_remark_color}{hours}{self.end_style} hours, "
+                        f"{self.tool_content_color}{minutes}{self.end_style} minutes and "
+                        f"{self.tool_role_color}{seconds}{self.end_style} seconds.")
+                elif running_time >= 60:  # 大于等于1分钟但小于1小时
+                    minutes = int(running_time // 60)
+                    seconds = int(running_time % 60)
+                    print(f"The conversation has ended. It took {self.tool_content_color}{minutes}{self.end_style} "
+                          f"minutes and {self.tool_role_color}{seconds}{self.end_style} seconds.")
+                else:  # 小于1分钟
+                    print(f"The conversation has ended. It took {self.tool_role_color}{int(running_time)}"
+                          f"{self.end_style} seconds.")
+
                 if stream:  # '流式'
-                    print(f'The conversation is over. Goodbye ^_< !\n')
+                    print('Goodbye, see you next time ^_< !\n')
                 else:  # 非'流式'
                     print(
                         f'\nIn this conversation, the input contains {self.user_role_color}'
                         f'{self.response_prompt_tokens}{self.end_style} '
                         f'characters, and the output has {self.assistant_role_color}{self.response_completion_tokens}'
                         f'{self.end_style} characters.')
-                    print(f'The conversation is over. Goodbye ^_< !\n')
+                    print('Goodbye, see you next time ^_< !\n')
                 break
 
             # 添加用户消息到对话历史

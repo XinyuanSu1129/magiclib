@@ -1042,6 +1042,15 @@ class AI:
             # "generate_voice": tools_instance.generate_voice,
         }
 
+        # 敏感内容
+        self.safety_settings = [
+            {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_ONLY_HIGH"},
+            {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_ONLY_HIGH"},
+            {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+            {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
+            {"category": "HARM_CATEGORY_CIVIC_INTEGRITY", "threshold": "BLOCK_ONLY_HIGH"},
+        ]
+
     # 确保可以从实例变量中找到 instance_id
     def __repr__(self):
         return f"{self.instance_id}"
@@ -1092,7 +1101,9 @@ class AI:
             "seed": self.seed,
             # 工具参数
             "tools": self.tools,
-            "tool_choice": self.tool_choice
+            "tool_choice": self.tool_choice,
+            # # 敏感内容
+            # "extra_body": {"safetySettings": self.safety_settings}
         }
 
         # 流式输出
@@ -1388,7 +1399,9 @@ class AI:
             "seed": self.seed,
             # 工具参数
             "tools": self.tools,
-            "tool_choice": self.tool_choice
+            "tool_choice": self.tool_choice,
+            # # 敏感内容
+            # "extra_body": {"safetySettings": self.safety_settings},
         }
 
         print(f"Let's start chatting! The current model is \033[31m{self.model}\033[0m.")
@@ -2730,6 +2743,30 @@ class Gemini(AI):
         self.system_remind = '\033[90m'  # 亮黑色
         self.end_style = '\033[0m'  # 还原
 
+        # 敏感内容
+        self.safety_settings = [
+            {
+                "category": types.HarmCategory.HARM_CATEGORY_HARASSMENT,  # 骚扰
+                "threshold": types.HarmBlockThreshold.BLOCK_ONLY_HIGH,  # 仅阻止高概率有害
+            },
+            {
+                "category": types.HarmCategory.HARM_CATEGORY_HATE_SPEECH,  # 仇恨言论
+                "threshold": types.HarmBlockThreshold.BLOCK_ONLY_HIGH,  # 仅阻止高概率有害
+            },
+            {
+                "category": types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,  # 性内容
+                "threshold": types.HarmBlockThreshold.BLOCK_NONE,  # 不阻止
+            },
+            {
+                "category": types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,  # 危险内容
+                "threshold": types.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,  # 仅阻止中等及以上有害
+            },
+            {
+                "category": types.HarmCategory.HARM_CATEGORY_CIVIC_INTEGRITY,  # 选举相关
+                "threshold": types.HarmBlockThreshold.BLOCK_ONLY_HIGH,  # 仅阻止高概率有害
+            },
+        ]
+
     # 登陆 Gemini
     def __gemini_client(self) -> None:
         """
@@ -2744,19 +2781,21 @@ class Gemini(AI):
         return None
 
     # 读取 **kwargs 中的信息
-    def __get_files_from_kwargs(self, **kwargs) -> None:
+    def __get_files_from_kwargs(self, file_dic: dict) -> None:
         """
         从 kwargs 中读取 file_1, file_2, … 参数，返回两个字典
         Read file_1, file_2,... from kwargs Parameters, returning two dictionaries.
 
         1. files_dict: {'file_1': '路径1', 'file_2': '路径2', ...}
         2. types_dict: {'file_1': 'application/pdf', 'file_2': 'image/jpeg', ...}
+
+        :param file_dic: (dict) 读取文件的 dict
         """
 
         files_dict = {}
         types_dict = {}
 
-        for key, value in kwargs.items():
+        for key, value in file_dic.items():
             if key.startswith("file_"):
                 files_dict[key] = value
 
@@ -2787,10 +2826,26 @@ class Gemini(AI):
                 raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
                                  f"{key}the specified path is invalid:{path}")
 
+            # 上传文件
             uploaded_file = self.client.files.upload(
                 file=file_io,
                 config=dict(mime_type=mime_type)
             )
+
+            # 检查文件上传
+            wait_time = 2
+            while uploaded_file.state.name == "PROCESSING":
+                # 每隔2秒检查一次状态
+                time.sleep(wait_time)
+
+            # 检查文件上传是否成功
+            if uploaded_file.state.name == "FAILED":
+                class_name = self.__class__.__name__
+                method_name = inspect.currentframe().f_code.co_name
+                raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                                 f"file processing failed. Please check if {self.files_dict[key]} "
+                                 f"is damaged or if the format is supported. ")
+
             self.uploaded_files[key] = uploaded_file
 
             # 如果是本地打开的文件，需要关闭
@@ -2811,7 +2866,7 @@ class Gemini(AI):
         """
 
         system_instruction = ""
-        gemini_messages = []
+        messages_gemini = []
 
         if self.messages is not None:
             for msg in self.messages:
@@ -2821,35 +2876,25 @@ class Gemini(AI):
                 if role == "system":
                     system_instruction += content + "\n"
                 elif role == "user":
-                    gemini_messages.append({"role": "user", "parts": [{"text": content}]})
+                    messages_gemini.append({"role": "user", "parts": [{"text": content}]})
                 elif role == "assistant":
-                    gemini_messages.append({"role": "model", "parts": [{"text": content}]})
+                    messages_gemini.append({"role": "model", "parts": [{"text": content}]})
 
         # 如果有上传的文件，放到最后一个用户消息的 parts 中
         if getattr(self, "uploaded_files", {}) != {}:  # 避免报错
-            # 找到最后一个用户消息
-            last_user_index = None
-            for i in reversed(range(len(gemini_messages))):
-                if gemini_messages[i]["role"] == "user":
-                    last_user_index = i
-                    break
+            # 把 self.uploaded_files 的所有值，转成 list
+            uploaded_values = list(self.uploaded_files.values())
 
-            if last_user_index is not None:
-                for key, uploaded_file in self.uploaded_files.items():
-                    gemini_messages[last_user_index]["parts"].append({"file": uploaded_file})  # type: ignore
+            # 插入到 self.messages_gemini 的前面
+            self.messages_gemini = uploaded_values + messages_gemini
 
-        # 如果有加载的文件
-        if self.uploaded_files:
-            system_instruction = system_instruction.strip()
-            self.system_gemini = [self.uploaded_files, system_instruction]
-
-        # 没有需要加载的文件
+        # 没有需要上传的文件
         else:
-            self.system_gemini = system_instruction.strip()
+            self.messages_gemini = messages_gemini
 
-        self.messages_gemini = gemini_messages
+        self.system_gemini = system_instruction.strip()
 
-        return gemini_messages
+        return messages_gemini
 
     # 将 OpenAI 的 tookit 转换成 Gemini格式
     def __convert_openai_tools_to_gemini(self) -> None:
@@ -2930,12 +2975,6 @@ class Gemini(AI):
         :return ai_content: (list) AI 返回的消息列表 messages
         """
 
-        # 取出参数
-        for key in list(kwargs.keys()):
-            if key.startswith('file_'):
-                # pop() 会查找键，返回其值，然后从字典中移除这个键值对
-                kwargs.pop(key)
-
         # 初始化
         self.__gemini_client()
 
@@ -2943,8 +2982,15 @@ class Gemini(AI):
         if messages is not None:
             self.messages = messages
 
+        # 取出参数
+        file_dic = {}
+        for key in list(kwargs.keys()):
+            if key.startswith('file_'):
+                # pop() 会查找键，返回其值，然后从字典中移除这个键值对
+                file_dic[key] = kwargs.pop(key)
+
         # 分类并读取文件
-        self.__get_files_from_kwargs(**kwargs)
+        self.__get_files_from_kwargs(file_dic)
 
         # 更改请求 messages
         self.__convert_openai_messages_to_gemini()
@@ -2964,6 +3010,7 @@ class Gemini(AI):
                     contents=self.messages_gemini,
                     config=types.GenerateContentConfig(
                         system_instruction=self.system_gemini,
+                        safety_settings=self.safety_settings,
                         **kwargs
                     )
                 )
@@ -3012,6 +3059,7 @@ class Gemini(AI):
                     contents=self.messages_gemini,
                     config=types.GenerateContentConfig(
                         system_instruction=self.system_gemini,
+                        safety_settings=self.safety_settings,
                         **kwargs
                     )
                 )
@@ -3198,6 +3246,7 @@ class Gemini(AI):
                         contents=self.messages_gemini,
                         config=types.GenerateContentConfig(
                             system_instruction=self.system_gemini,
+                            safety_settings=self.safety_settings,
                             **kwargs
                         )
                     )
@@ -3215,7 +3264,7 @@ class Gemini(AI):
                     print(f"{self.end_style}\n")
 
                 except errors.ClientError as e:
-                    
+
                     if raise_error:
                         class_name = self.__class__.__name__
                         method_name = inspect.currentframe().f_code.co_name
@@ -3244,6 +3293,7 @@ class Gemini(AI):
                         contents=self.messages_gemini,
                         config=types.GenerateContentConfig(
                             system_instruction=self.system_gemini,
+                            safety_settings=self.safety_settings,
                             **kwargs
                         )
                     )
@@ -3875,15 +3925,15 @@ def set_api_config(ai_instance: object, api_url_pair: str):
             # DeepSeek 官方
             'ds': {"api_key": DeepSeek_api_key, "base_url": DeepSeek_base_url, "model": "deepseek-reasoner"},
             # Gemini 渠道 1
-            'gm_1': {"api_key": Gemini_api_key_1, "base_url": Gemini_base_url, "model": "gemini-2.5-pro"},
+            'gm_1': {"api_key": Gemini_api_key_1, "base_url": Gemini_base_url, "model": "gemini-2.5-flash"},
             # Gemini 渠道 2
-            'gm_2': {"api_key": Gemini_api_key_2, "base_url": Gemini_base_url, "model": "gemini-2.5-pro"},
+            'gm_2': {"api_key": Gemini_api_key_2, "base_url": Gemini_base_url, "model": "gemini-2.5-flash"},
             # Gemini 渠道 3
-            'gm_3': {"api_key": Gemini_api_key_3, "base_url": Gemini_base_url, "model": "gemini-2.5-pro"},
+            'gm_3': {"api_key": Gemini_api_key_3, "base_url": Gemini_base_url, "model": "gemini-2.5-flash"},
             # Gemini 渠道 4
-            'gm_4': {"api_key": Gemini_api_key_4, "base_url": Gemini_base_url, "model": "gemini-2.5-pro"},
+            'gm_4': {"api_key": Gemini_api_key_4, "base_url": Gemini_base_url, "model": "gemini-2.5-flash"},
             # Gemini 渠道 5
-            'gm_5': {"api_key": Gemini_api_key_5, "base_url": Gemini_base_url, "model": "gemini-2.5-pro"},
+            'gm_5': {"api_key": Gemini_api_key_5, "base_url": Gemini_base_url, "model": "gemini-2.5-flash"},
             # 渠道 AI
             '1': {"api_key": other_api_key, "base_url": other_base_url, "model": "gpt-oss-120b"},
         }

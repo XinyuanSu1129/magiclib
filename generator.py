@@ -1193,6 +1193,22 @@ class AI:
                                             last_received_time = time.time()  # 刷新更新时间
 
                                     # 只在第一次收到 content 内容时转换
+                                    if delta.get("content") and self.reasoning_output:
+
+                                        # 如果 ai_reasoning 为 ''，打印 None
+                                        if not ai_reasoning:
+                                            print('None')
+                                        # 如果 ai_reasoning 不是以换行符结尾，则打印一个换行符
+                                        elif not ai_reasoning.endswith('\n'):
+                                            print('')
+
+                                        # 打印 AI 回复内容的字体
+                                        print(f"{self.bold}{self.assistant_role_color}{self.model}"
+                                              f"{self.end_style}: {self.assistant_content_color}",
+                                              end="", flush=True)
+                                        self.reasoning_output = False
+
+                                    # 只在第一次收到 content 内容时转换
                                     if delta["content"] and self.reasoning_output:
                                         # 打印 AI 回复内容的字体
                                         print(f"{self.bold}{self.assistant_role_color}{self.model}"
@@ -1630,6 +1646,10 @@ class AI:
                                     result = f"Unknown tool: {func_name}"
                             except json.JSONDecodeError:
                                 result = f"Invalid arguments format for tool: {func_name}"
+                            except JSONDecodeError:  # JSON 输入格式错误，AI 的问题
+                                print(f'{self.system_remind}[The JSON format of the input Tool is incorrect.]'
+                                      f'{self.end_style}')
+                                result = f"The tool cannot be executed {func_name}: {str(e)}"
                             except Exception as e:
                                 result = f"The tool cannot be executed {func_name}: {str(e)}"
 
@@ -2070,18 +2090,18 @@ class AI:
         # 完整文件路径
         file_path = os.path.join(messages_save_path, file_name)
 
-        # 查找最后一条历史对话加载完成消息的索引
-        last_load_index = -1
-        for i in range(len(self.messages) - 1, -1, -1):
+        # 查找第一条历史对话加载完成消息的索引
+        first_load_index = 0
+        for i in range(len(self.messages)):
             msg = self.messages[i]
             if msg.get("role") == "system" and \
                     "historical conversation has been read" in msg.get("content", "").lower():
-                last_load_index = i
+                first_load_index = i
                 break
 
         # 从最后一条加载消息之后开始处理
         text_content = []
-        for msg in self.messages[last_load_index + 1:]:
+        for msg in self.messages[first_load_index + 1:]:
             role = msg.get("role", "").strip()
             content = msg.get("content", "").strip()
 
@@ -2818,7 +2838,15 @@ class Gemini(AI):
                 for key, uploaded_file in self.uploaded_files.items():
                     gemini_messages[last_user_index]["parts"].append({"file": uploaded_file})  # type: ignore
 
-        self.system_gemini = system_instruction.strip()
+        # 如果有加载的文件
+        if self.uploaded_files:
+            system_instruction = system_instruction.strip()
+            self.system_gemini = [self.uploaded_files, system_instruction]
+
+        # 没有需要加载的文件
+        else:
+            self.system_gemini = system_instruction.strip()
+
         self.messages_gemini = gemini_messages
 
         return gemini_messages
@@ -2901,6 +2929,12 @@ class Gemini(AI):
 
         :return ai_content: (list) AI 返回的消息列表 messages
         """
+
+        # 取出参数
+        for key in list(kwargs.keys()):
+            if key.startswith('file_'):
+                # pop() 会查找键，返回其值，然后从字典中移除这个键值对
+                kwargs.pop(key)
 
         # 初始化
         self.__gemini_client()
@@ -3014,9 +3048,12 @@ class Gemini(AI):
 
             # 提取 token 数据
             response_tokens = response.usage_metadata
-            self.response_prompt_tokens += response_tokens.prompt_token_count
-            self.response_completion_tokens += response_tokens.candidates_token_count
-            self.response_total_tokens += response_tokens.total_token_count
+            if response_tokens.prompt_token_count is not None:
+                self.response_prompt_tokens += response_tokens.prompt_token_count
+            if response_tokens.candidates_token_count is not None:
+                self.response_completion_tokens += response_tokens.candidates_token_count
+            if response_tokens.total_token_count is not None:
+                self.response_total_tokens += response_tokens.total_token_count
 
         reply_messages = self.messages
 

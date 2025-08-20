@@ -2983,19 +2983,17 @@ class Gemini(AI):
                     print(f"{self.end_style}\n")
 
             except errors.ClientError as e:
-                self.response_status = e.status_code
-                message = AI.status_code_messages.get(self.response_status, "Unknown Error")
 
                 if raise_error:
                     class_name = self.__class__.__name__
                     method_name = inspect.currentframe().f_code.co_name
                     raise HTTPError(
                         f"\033[95mIn {method_name} of {class_name}\033[0m, "
-                        f"request failed! status_code: {self.response_status} ({message})"
+                        f"{e}"
                     )
                 else:
                     print(f"{self.system_remark_color}[{self.model}]{self.end_style} "
-                          f"\033[31mRequest failed!\033[0m status_code: {self.response_status} ({message})")
+                          f"{e}")
 
                 return []
 
@@ -3019,19 +3017,17 @@ class Gemini(AI):
                 )
 
             except errors.ClientError as e:
-                self.response_status = e.status_code
-                message = AI.status_code_messages.get(self.response_status, "Unknown Error")
 
                 if raise_error:
                     class_name = self.__class__.__name__
                     method_name = inspect.currentframe().f_code.co_name
                     raise HTTPError(
                         f"\033[95mIn {method_name} of {class_name}\033[0m, "
-                        f"request failed! status_code: {self.response_status} ({message})"
+                        f"{e}"
                     )
                 else:
                     print(f"{self.system_remark_color}[{self.model}]{self.end_style} "
-                          f"\033[31mRequest failed!\033[0m status_code: {self.response_status} ({message})")
+                          f"{e}")
 
                 return []
 
@@ -3219,19 +3215,17 @@ class Gemini(AI):
                     print(f"{self.end_style}\n")
 
                 except errors.ClientError as e:
-                    self.response_status = e.status_code
-                    message = AI.status_code_messages.get(self.response_status, "Unknown Error")
-
+                    
                     if raise_error:
                         class_name = self.__class__.__name__
                         method_name = inspect.currentframe().f_code.co_name
                         raise HTTPError(
                             f"\033[95mIn {method_name} of {class_name}\033[0m, "
-                            f"request failed! status_code: {self.response_status} ({message})"
+                            f"{e}"
                         )
                     else:
                         print(f"{self.system_remark_color}[{self.model}]{self.end_style} "
-                              f"\033[31mRequest failed!\033[0m status_code: {self.response_status} ({message})")
+                              f"{e}")
 
                     return []
 

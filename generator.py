@@ -31,8 +31,10 @@ from google.genai import types
 from pydub import AudioSegment
 from google.genai import errors
 import matplotlib.pyplot as plt
+from typing import List, Dict, Any
 from requests.exceptions import HTTPError
 from typing import Union, Optional, List, Dict, Callable, Tuple
+from google.generativeai.types import FunctionDeclaration, Tool
 
 # 所用时区
 current_time_zone_location = 'Shanghai'
@@ -40,6 +42,7 @@ current_time_zone_location = 'Shanghai'
 # DeepSeek
 DeepSeek_api_key = 'sk-cc2167b962444015a28d989478add7eb'  # MiaomiaoSu from 2025-08-07 ¥20
 DeepSeek_base_url = 'https://api.deepseek.com/v1'
+DeepSeek_avaliable_model = ['deepseek-chat', 'deepseek-reasoner', 'deepseek-coder']
 
 # Gemini
 Gemini_api_key_1 = 'AIzaSyBHQLoHmAj9L9H4rrwYX16ZtHbkzXJSEjw'  # 该 5 个 API 均为 2025-08-16 至少 15 天
@@ -125,6 +128,12 @@ class Tools:
 
     The AI invokes the tools of this part when the model is permitted. This part may accept class attributes
     and proceed step by step, as well as static methods.
+
+    注意：
+    1.  在成功完成调用后需要给用户打印信息
+
+    Note:
+    1.  After the call is successfully completed, information needs to be printed for the user.
     """
 
     # 无需初始化，被调用时赋值
@@ -162,6 +171,7 @@ class Tools:
 
         self.graphter_instanced.read_txt(txt_path=txt_path)
         status = 'The data in the TXT file has been read.'
+        print(f'\033[90m[{status}]\033[0m\n')
 
         return status
 
@@ -180,6 +190,7 @@ class Tools:
 
         self.graphter_instanced.read_excel(excel_path=excel_path)
         status = 'The data in the Excel file has been read.'
+        print(f'\033[90m[{status}]\033[0m\n')
 
         return status
 
@@ -196,6 +207,7 @@ class Tools:
 
         self.graphter_instanced.read_json(json_path=json_path)
         status = 'The data in the JSON file has been read.'
+        print(f'\033[90m[{status}]\033[0m\n')
 
         return status
 
@@ -210,6 +222,7 @@ class Tools:
 
         self.graphter_instanced.plot_line()
         status = 'The line graph has been drawn.'
+        print(f'\033[90m[{status}]\033[0m\n')
 
         return status
 
@@ -224,6 +237,7 @@ class Tools:
 
         self.graphter_instanced.plot_scatter()
         status = 'The scatter plot has been drawn.'
+        print(f'\033[90m[{status}]\033[0m\n')
 
         return status
 
@@ -284,6 +298,8 @@ class Tools:
             message = AI.status_code_messages.get(response.status_code, "Unknown Error")  # 未知错误
             status = (f"\033[31;2m[{model}]\033[0m \033[31mRequest failed!\033[0m status_code: "
                       f"{response.status_code} ({message})")
+            print(f'\033[90m[{status}]\033[0m\n')
+
             return status
 
         # 创建实例属性
@@ -363,6 +379,8 @@ class Tools:
             else:  # 如果 save_path 的值为 None
                 status = 'The image has been successfully generated but not saved.'
 
+        print(f'\033[90m[{status}]\033[0m\n')
+
         return status
 
     # 保存图片
@@ -408,6 +426,7 @@ class Tools:
                 f.write(base64.b64decode(b64_data))
 
         status = f'The image has been saved in the {save_path} directory.'
+        print(f'\033[90m[{status}]\033[0m\n')
 
         return status
 
@@ -509,6 +528,8 @@ class Tools:
         else:  # 如果 save_path 的值为 None
             status = "The voice has finished playing. Continue the conversation."
 
+        print(f'\033[90m[{status}]\033[0m\n')
+
         return status
 
 
@@ -609,8 +630,9 @@ class AI:
                 "description": f"Save the conversation history to a formatted TXT file. "
                                f"The file will be saved in the {messages_save_path} directory."
                                f"When saving a conversation, please summarize the current conversation "
-                               f"into 2 to 3 words (preferably in English, with underscores between words), "
-                               f"and name it accordingly. There is no need to include the extension '.txt'.",
+                               f"into 2 to 4 words (preferably in English, with underscores between words), "
+                               f"and name it accordingly. "
+                               f"When saving files, you need to include the file extension '.txt'.",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -628,7 +650,8 @@ class AI:
             "function": {
                 "name": "load_messages_from_txt",
                 "description": f"Load conversation history from a formatted TXT file and append it to the current "
-                               f"conversation. The file must be located in the {messages_save_path} directory.",
+                               f"conversation. The file must be located in the {messages_save_path} directory."
+                               f"When loading files, you need to include the file extension '.txt'.",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -1105,6 +1128,9 @@ class AI:
                 ai_reasoning = ""
                 ai_content = ""
 
+                # 记录最后一次收到数据的时间
+                last_received_time = time.time()
+                break_time = 120
                 # iter_lines() 会按行（以换行符分隔）逐行读取服务器返回的流数据
                 for chunk in response.iter_lines():
                     if chunk:  # 过滤掉空行（有些 SSE 数据可能包含心跳或空行
@@ -1118,6 +1144,12 @@ class AI:
                             # 如果是 "[DONE]" 表示流式输出已经结束
                             if json_data.strip() == "[DONE]":
                                 break  # 跳出循环
+
+                            # 检查是否超时 (break_time 秒没有收到数据)
+                            if time.time() - last_received_time > break_time:
+                                print(f"{self.system_remind}[Timeout: No new data received within "
+                                      f"{break_time} seconds.]{self.end_style}")
+                                break
 
                             try:
                                 # 将 JSON 字符串解析为 Python 字典
@@ -1140,38 +1172,41 @@ class AI:
                                         print(f"{self.bold}{self.assistant_role_color}{self.model}{self.end_style}:"
                                               f" {self.assistant_content_color}", end="", flush=True)
 
+                                    last_received_time = time.time()  # 刷新更新时间
                                     self.stream_begin_output = False  # 获取本次信息后关闭
 
-                                    # 处理 choices
-                                    choices = content_dict.get("choices", [])
-                                    if choices:
-                                        first_choice = choices[0]
-                                        delta = first_choice.get("delta", {})
+                                # 处理 choices
+                                choices = content_dict.get("choices", [])
+                                if choices:
+                                    first_choice = choices[0]
+                                    delta = first_choice.get("delta", {})
 
-                                        # 打印 AI 思考过程
-                                        if self.show_reasoning:
-                                            # 追加 AI 思考过程
-                                            reasoning_piece = next((delta.get(key) for key in AI.ai_thinking_parameters
-                                                                    if delta.get(key)), None)
-                                            # 如果有思考内容就打印
-                                            if isinstance(reasoning_piece, str):
-                                                ai_reasoning += reasoning_piece
-                                                print(reasoning_piece, end="", flush=True)
+                                    # 打印 AI 思考过程
+                                    if self.show_reasoning:
+                                        # 追加 AI 思考过程
+                                        reasoning_piece = next((delta.get(key) for key in AI.ai_thinking_parameters
+                                                                if delta.get(key)), None)
+                                        # 如果有思考内容就打印
+                                        if isinstance(reasoning_piece, str):
+                                            ai_reasoning += reasoning_piece
+                                            print(reasoning_piece, end="", flush=True)
+                                            last_received_time = time.time()  # 刷新更新时间
 
-                                        # 只在第一次收到 content 内容时转换
-                                        if delta["content"] and self.reasoning_output:
-                                            # 打印 AI 回复内容的字体
-                                            print(f"{self.bold}{self.assistant_role_color}{self.model}"
-                                                  f"{self.end_style}: {self.assistant_content_color}",
-                                                  end="", flush=True)
-                                            self.reasoning_output = False
+                                    # 只在第一次收到 content 内容时转换
+                                    if delta["content"] and self.reasoning_output:
+                                        # 打印 AI 回复内容的字体
+                                        print(f"{self.bold}{self.assistant_role_color}{self.model}"
+                                              f"{self.end_style}: {self.assistant_content_color}",
+                                              end="", flush=True)
+                                        self.reasoning_output = False
 
-                                        # 追加 AI 回复内容
-                                        if "content" in delta:
-                                            content_piece = delta["content"]
-                                            if isinstance(content_piece, str):
-                                                ai_content += content_piece
-                                                print(content_piece, end="", flush=True)
+                                    # 追加 AI 回复内容
+                                    if "content" in delta:
+                                        content_piece = delta["content"]
+                                        if isinstance(content_piece, str):
+                                            ai_content += content_piece
+                                            print(content_piece, end="", flush=True)
+                                            last_received_time = time.time()  # 刷新更新时间
 
                             except json.JSONDecodeError:
                                 # 如果解析 JSON 出错（可能是心跳包或非 JSON 格式内容），则跳过
@@ -1450,6 +1485,9 @@ class AI:
                     ai_content = ""
                     tool_calls = {}  # 用于累积工具调用信息
 
+                    # 记录最后一次收到数据的时间
+                    last_received_time = time.time()
+                    break_time = 120
                     # iter_lines() 会按行（以换行符分隔）逐行读取服务器返回的流数据
                     for chunk in response.iter_lines():
                         if chunk:  # 过滤掉空行（有些 SSE 数据可能包含心跳或空行）
@@ -1463,6 +1501,12 @@ class AI:
                                 # 如果是 "[DONE]" 表示流式输出已经结束
                                 if json_data.strip() == "[DONE]":
                                     break  # 跳出循环
+
+                                # 检查是否超时 (break_time 秒没有收到数据)
+                                if time.time() - last_received_time > break_time:
+                                    print(f"{self.system_remind}[Timeout: No new data received within "
+                                          f"{break_time} seconds.]{self.end_style}")
+                                    break
 
                                 try:
                                     # 将 JSON 字符串解析为 Python 字典
@@ -1485,6 +1529,7 @@ class AI:
                                             print(f"{self.bold}{self.assistant_role_color}{self.model}{self.end_style}:"
                                                   f" {self.assistant_content_color}", end="", flush=True)
 
+                                        last_received_time = time.time()  # 刷新更新时间
                                         self.stream_begin_output = False  # 获取本次信息后关闭
 
                                     # 处理 choices
@@ -1502,6 +1547,7 @@ class AI:
                                             if isinstance(reasoning_piece, str):
                                                 ai_reasoning += reasoning_piece
                                                 print(reasoning_piece, end="", flush=True)
+                                                last_received_time = time.time()  # 刷新更新时间
 
                                         # 只在第一次收到 content 内容时转换
                                         if delta.get("content") and self.reasoning_output:
@@ -1525,6 +1571,7 @@ class AI:
                                             if isinstance(content_piece, str):
                                                 ai_content += content_piece
                                                 print(content_piece, end="", flush=True)
+                                                last_received_time = time.time()  # 刷新更新时间
 
                                         # 处理工具调用（累积参数）
                                         if "tool_calls" in delta:
@@ -2005,8 +2052,8 @@ class AI:
     # 保存 self.messages 至 txt 文件
     def save_messages_to_txt(self, file_name: str) -> str:
         """
-        将对话历史保存为易读的 TXT 文件
-        Save the conversation history as an easy-to-read TXT file.
+        将对话历史保存为易读的 TXT 文件，文件名需要带扩展名 '.txt'
+        Save the conversation history as an easy-to-read TXT file, and the file name needs to have the extension '.txt'.
 
         :param file_name: (str) self.messages 保存的名称
 
@@ -2021,7 +2068,6 @@ class AI:
                              f"the path does not exist or there is no permission to access: {messages_save_path}")
 
         # 完整文件路径
-        file_name += '.txt'
         file_path = os.path.join(messages_save_path, file_name)
 
         # 查找最后一条历史对话加载完成消息的索引
@@ -2063,6 +2109,8 @@ class AI:
             with open(file_path, "w", encoding="utf-8") as f:
                 f.write("\n".join(text_content))
                 status = f"The conversation has been successfully saved to: {file_path}"
+                print(f'{self.system_remind}[{status}]{self.end_style}\n')
+
             return status
 
         except Exception as e:
@@ -2072,8 +2120,8 @@ class AI:
     # 读取与 AI 对话的 messages 信息
     def load_messages_from_txt(self, file_name: str) -> str:
         """
-        从 TXT 文件加载对话历史
-        Load conversation history from a TXT file.
+        从 TXT 文件加载对话历史，文件名需要带扩展名 '.txt'
+        Load conversation history from a TXT file, and the file name needs to have the extension '.txt'.
 
         :param file_name: (str) 要加载的 TXT 文件名 (不含路径)
 
@@ -2156,6 +2204,7 @@ class AI:
             self.messages.append(completion_msg)
 
             status = f'The historical conversation {file_name} has been read.'
+            print(f'{self.system_remind}[{status}]{self.end_style}\n')
 
             return status
 
@@ -2168,6 +2217,7 @@ class AI:
             self.messages.append(error_msg)
 
             status = f'The historical conversation {file_name} reading failed.'
+            print(f'{self.system_remind}[{status}]{self.end_style}\n')
 
             return status
 
@@ -2237,6 +2287,8 @@ class AI:
             # 检查字典是否为空
             if not time_file_dict:
                 status = f"No valid message files found in {messages_save_path}."
+                print(f'{self.system_remind}[{status}]{self.end_style}\n')
+
                 return status
 
             else:
@@ -2261,6 +2313,8 @@ class AI:
         except Exception as e:
 
             status = f"Error in obtaining the historical dialogue list:{str(e)}"
+            print(f'{self.system_remind}[{status}]{self.end_style}\n')
+
             return status
 
 
@@ -2311,7 +2365,7 @@ class Human:
         self.assistant_remark_color = '\033[35;2m'  # 暗粉色
         self.tool_role_color = '\033[94m'  # 亮蓝色
         self.tool_content_color = '\033[34m'  # 蓝色
-        self.tool_remark_color = '\033[34;2m',  # 暗蓝色
+        self.tool_remark_color = '\033[34;2m'  # 暗蓝色
 
         self.bold = '\033[1m'  # 加粗
         self.system_remind = '\033[90m'  # 亮黑色
@@ -2473,7 +2527,7 @@ class DeepSeek(AI):
 
 
 """ Gemini 大模型 """
-class Gemini:
+class Gemini(AI):
     """
     Gemini 的 AI 大模型
     Gemini's AI large model
@@ -2525,9 +2579,6 @@ class Gemini:
     }
     """
 
-    # 可用工具及描述
-    gemini_toolkit = {}
-
     # Gemini AI 所需参数
     def __init__(self,
 
@@ -2564,6 +2615,9 @@ class Gemini:
         --- 文本生成网址 ---
         https://ai.google.dev/api/generate-content?
         """
+
+        # 超类初始化
+        super().__init__()  # 无需超类参数
 
         # 必要参数 (4)
         if api_key is not None:
@@ -2612,9 +2666,27 @@ class Gemini:
         self.types_dict = {}
         self.uploaded_files = {}
 
-        # __convert_openai_to_gemini()
-        self.gemini_messages = None
-        self.gemini_system = None
+        # __convert_openai_messages_to_gemini()
+        self.messages_gemini = None
+        self.system_gemini = None
+
+        # __convert_openai_tools_to_gemini()
+        self.tookit_gemini = {}
+
+        # 工具参数
+        self.tools_instance = Tools()  # 实例化工具类
+        self.tool_methods = {
+            "save_messages_to_txt": self.save_messages_to_txt,
+            "load_messages_from_txt": self.load_messages_from_txt,
+            "list_historical_conversations": self.list_historical_conversations,
+            "read_txt": self.tools_instance.read_txt,
+            "read_excel": self.tools_instance.read_excel,
+            "read_json": self.tools_instance.read_json,
+            "plot_line": self.tools_instance.plot_line,
+            "plot_scatter": self.tools_instance.plot_scatter,
+            "generate_image": self.tools_instance.generate_image,
+            "save_image": self.tools_instance.save_image,
+        }
 
         # chat()
         self.response_status = 0
@@ -2632,7 +2704,7 @@ class Gemini:
         self.assistant_remark_color = '\033[35;2m'  # 暗粉色
         self.tool_role_color = '\033[94m'  # 亮蓝色
         self.tool_content_color = '\033[34m'  # 蓝色
-        self.tool_remark_color = '\033[34;2m',  # 暗蓝色
+        self.tool_remark_color = '\033[34;2m'  # 暗蓝色
 
         self.bold = '\033[1m'  # 加粗
         self.system_remind = '\033[90m'  # 亮黑色
@@ -2707,14 +2779,15 @@ class Gemini:
 
         return None
 
-    def __convert_openai_to_gemini(self) -> list:
+    # 将 OpenAI 的 messages 转换成 Gemini 格式
+    def __convert_openai_messages_to_gemini(self) -> list:
         """
         将类似 OpenAI SDK 的 messages（list of dicts with 'role' & 'content'）,
         转换为 Gemini SDK 的 Content 对象列表
         messages (list of dicts with 'role' & 'content') similar to those in the OpenAI SDK
         Convert to the list of Content objects of the Gemini SDK.
 
-        :return gemini_messages: (list) Gemini 结构的 messages
+        :return messages_gemini: (list) Gemini 结构的 messages
         """
 
         system_instruction = ""
@@ -2745,10 +2818,75 @@ class Gemini:
                 for key, uploaded_file in self.uploaded_files.items():
                     gemini_messages[last_user_index]["parts"].append({"file": uploaded_file})  # type: ignore
 
-        self.gemini_system = system_instruction.strip()
-        self.gemini_messages = gemini_messages
+        self.system_gemini = system_instruction.strip()
+        self.messages_gemini = gemini_messages
 
         return gemini_messages
+
+    # 将 OpenAI 的 tookit 转换成 Gemini格式
+    def __convert_openai_tools_to_gemini(self) -> None:
+        """
+        将 OpenAI/DeepSeek 格式的工具列表转换为 Gemini SDK 兼容的 Tool 对象
+        Convert the list of tools in OpenAI/DeepSeek format to Gemini SDK-compatible Tool objects.
+        """
+
+        openai_toolkit = AI.toolkit
+
+        # Gemini SDK 的类型映射
+        TYPE_MAP = {
+            "string": Type.STRING,
+            "integer": Type.INTEGER,
+            "number": Type.NUMBER,
+            "boolean": Type.BOOLEAN,
+            "object": Type.OBJECT,
+            "array": Type.ARRAY,
+        }
+
+        gemini_declarations = []
+        for tool_dict in openai_toolkit:
+            if tool_dict.get("type") != "function":
+                continue
+
+            func_def = tool_dict["function"]
+
+            # 1. 解析参数 (properties)
+            properties_schema = {}
+            # 使用 .get() 确保在 'parameters' 或 'properties' 不存在时不会出错
+            param_defs = func_def.get("parameters", {}).get("properties", {})
+
+            for param_name, param_info in param_defs.items():
+                param_type_str = param_info.get("type", "string")
+
+                # 处理可选类型，如 ["string", "null"]
+                # 在 Gemini 中，可选性由 `required` 列表决定，我们只需提取基本类型
+                if isinstance(param_type_str, list):
+                    primary_type_str = next((t for t in param_type_str if t != "null"), "string")
+                else:
+                    primary_type_str = param_type_str
+
+                gemini_type = TYPE_MAP.get(primary_type_str, Type.STRING)  # 如果找不到类型，默认为 STRING
+
+                properties_schema[param_name] = Schema(
+                    type=gemini_type,
+                    description=param_info.get("description", "")
+                )
+
+            # 2. 创建 FunctionDeclaration
+            declaration = FunctionDeclaration(
+                name=func_def["name"],
+                description=func_def["description"],
+                parameters=Schema(
+                    type=Type.OBJECT,
+                    properties=properties_schema,
+                    required=func_def.get("parameters", {}).get("required", [])
+                )
+            )
+            gemini_declarations.append(declaration)
+
+        # 3. 将所有声明包装成一个 Tool 对象
+        self.tookit_gemini = Tool(function_declarations=gemini_declarations)
+
+        return None
 
     # 与 Gemini 大模型聊天
     def chat(self, messages: Optional[List[dict]] = None, print_response: bool = True, raise_error: bool = False, 
@@ -2775,7 +2913,7 @@ class Gemini:
         self.__get_files_from_kwargs(**kwargs)
 
         # 更改请求 messages
-        self.__convert_openai_to_gemini()
+        self.__convert_openai_messages_to_gemini()
 
         # 流式输出
         if self.stream:
@@ -2789,9 +2927,9 @@ class Gemini:
                 # 发送请求
                 response = self.client.models.generate_content_stream(
                     model=self.model,
-                    contents=self.gemini_messages,
+                    contents=self.messages_gemini,
                     config=types.GenerateContentConfig(
-                        system_instruction=self.gemini_system,
+                        system_instruction=self.system_gemini,
                         **kwargs
                     )
                 )
@@ -2839,9 +2977,9 @@ class Gemini:
                 # 发送请求
                 response = self.client.models.generate_content(
                     model=self.model,
-                    contents=self.gemini_messages,
+                    contents=self.messages_gemini,
                     config=types.GenerateContentConfig(
-                        system_instruction=self.gemini_system,
+                        system_instruction=self.system_gemini,
                         **kwargs
                     )
                 )
@@ -3011,7 +3149,7 @@ class Gemini:
             self.messages.append({"role": "user", "content": user_input})
 
             # 更改请求 messages
-            self.__convert_openai_to_gemini()
+            self.__convert_openai_messages_to_gemini()
 
             # 流式输出
             if stream:
@@ -3024,9 +3162,9 @@ class Gemini:
                     # 发送请求
                     response = self.client.models.generate_content_stream(
                         model=self.model,
-                        contents=self.gemini_messages,
+                        contents=self.messages_gemini,
                         config=types.GenerateContentConfig(
-                            system_instruction=self.gemini_system,
+                            system_instruction=self.system_gemini,
                             **kwargs
                         )
                     )
@@ -3072,9 +3210,9 @@ class Gemini:
                     # 发送请求
                     response = self.client.models.generate_content(
                         model=self.model,
-                        contents=self.gemini_messages,
+                        contents=self.messages_gemini,
                         config=types.GenerateContentConfig(
-                            system_instruction=self.gemini_system,
+                            system_instruction=self.system_gemini,
                             **kwargs
                         )
                     )

@@ -713,11 +713,10 @@ chat()
 ------ DeepSeek ------
 
 ------ Gemini ------
-toolkit
-
 __gemini_client()
 __get_files_from_kwargs()
-__convert_openai_to_gemini()
+__convert_openai_messages_to_gemini()
+__convert_openai_tools_to_gemini()
 chat()
 continue_chat()
 

@@ -130,10 +130,12 @@ class Tools:
     and proceed step by step, as well as static methods.
 
     注意：
-    1.  在成功完成调用后需要给用户打印信息
+    1.  工具中打印的提示信息 (非正式) 均为灰色
+    2.  在成功完成调用后需要给用户打印信息
 
     Note:
-    1.  After the call is successfully completed, information needs to be printed for the user.
+    1.  The prompt messages printed in the tool (informal) are all gray.
+    2.  After the call is successfully completed, information needs to be printed for the user.
     """
 
     # 无需初始化，被调用时赋值
@@ -242,7 +244,8 @@ class Tools:
         return status
 
     # 生成图片  用到 AI 大模型
-    def generate_image(self, prompt: str, save_path: Optional[str] = None, model: str = 'black-forest-labs/FLUX.1-dev',
+    def generate_image(self, prompt: str, save_path: Optional[str] = None,
+                       model: str = 'stabilityai/stable-diffusion-3-5-large',
                        size: str = '1024x1024', n: int = 1, seed: int = None) -> str:
         """
         根据用户要求生成图片
@@ -250,7 +253,7 @@ class Tools:
 
         :param prompt: (str) 生成图片的英文提示词，为必需输入项。注意：在输入前必需将 prompt 转换成英文！
         :param save_path: (str) 保存的目录路径，若输入则按照路径保存
-        :param model: (str) 生成图片的模型，默认为 Black Forest Lab 的 black-forest-labs/FLUX.1-dev
+        :param model: (str) 生成图片的模型，默认为 Black Forest Lab 的 stabilityai/stable-diffusion-3-5-large
         :param size: (str) 图片的大小，最大 '2048x2048'，默认为 '1024x1024'
         :param n: (int) 生成图片的数量，默认为 1。注意：目前只能为 1
         :param seed: (int) 随机种子，默认为无种子
@@ -296,8 +299,7 @@ class Tools:
         # 判断请求是否成功
         if response.status_code != 200:
             message = AI.status_code_messages.get(response.status_code, "Unknown Error")  # 未知错误
-            status = (f"\033[31;2m[{model}]\033[0m \033[31mRequest failed!\033[0m status_code: "
-                      f"{response.status_code} ({message})")
+            status = f"[{model}] Request failed! status_code: {response.status_code} ({message})"
             print(f'\033[90m[{status}]\033[0m\n')
 
             return status
@@ -485,8 +487,9 @@ class Tools:
         # 判断请求是否成功
         if response.status_code != 200:
             message = AI.status_code_messages.get(response.status_code, "Unknown Error")  # 未知错误
-            status = (f"\033[31;2m[{model}]\033[0m \033[31mRequest failed!\033[0m status_code: "
-                      f"{response.status_code} ({message})")
+            status = f"[{model}] Request failed! status_code: {response.status_code} ({message})"
+            print(f'\033[90m[{status}]\033[0m\n')
+
             return status
 
         # 假设 response.content 是从 /v1/audio/speech 得到的 MP3 二进制
@@ -775,7 +778,7 @@ class AI:
                         "model": {
                             "type": "string",
                             "description": "The image generation model to use. Default is "
-                                           "'black-forest-labs/FLUX.1-dev'."
+                                           "'stabilityai/stable-diffusion-3-5-large'."
                         },
                         "size": {
                             "type": "string",
@@ -1207,16 +1210,17 @@ class AI:
                                     if delta.get("content") and self.reasoning_output:
 
                                         # 如果 ai_reasoning 为 ''，打印 None
-                                        if not ai_reasoning:
+                                        if not ai_reasoning and self.show_reasoning:
                                             print('None')
                                         # 如果 ai_reasoning 不是以换行符结尾，则打印一个换行符
-                                        elif not ai_reasoning.endswith('\n'):
+                                        elif not ai_reasoning.endswith('\n') and self.show_reasoning:
                                             print('')
 
                                         # 打印 AI 回复内容的字体
-                                        print(f"{self.bold}{self.assistant_role_color}{self.model}"
-                                              f"{self.end_style}: {self.assistant_content_color}",
-                                              end="", flush=True)
+                                        if self.show_reasoning:
+                                            print(f"{self.bold}{self.assistant_role_color}{self.model}"
+                                                  f"{self.end_style}: {self.assistant_content_color}",
+                                                  end="", flush=True)
                                         self.reasoning_output = False
 
                                     # 只在第一次收到 content 内容时转换
@@ -1582,16 +1586,17 @@ class AI:
                                         if delta.get("content") and self.reasoning_output:
 
                                             # 如果 ai_reasoning 为 ''，打印 None
-                                            if not ai_reasoning:
+                                            if not ai_reasoning and self.show_reasoning:
                                                 print('None')
                                             # 如果 ai_reasoning 不是以换行符结尾，则打印一个换行符
-                                            elif not ai_reasoning.endswith('\n'):
+                                            elif not ai_reasoning.endswith('\n') and self.show_reasoning:
                                                 print('')
 
                                             # 打印 AI 回复内容的字体
-                                            print(f"{self.bold}{self.assistant_role_color}{self.model}"
-                                                  f"{self.end_style}: {self.assistant_content_color}",
-                                                  end="", flush=True)
+                                            if self.show_reasoning:
+                                                print(f"{self.bold}{self.assistant_role_color}{self.model}"
+                                                      f"{self.end_style}: {self.assistant_content_color}",
+                                                      end="", flush=True)
                                             self.reasoning_output = False
 
                                         # 追加 AI 回复内容

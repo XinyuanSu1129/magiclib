@@ -2108,18 +2108,27 @@ class AI:
         # 完整文件路径
         file_path = os.path.join(messages_save_path, file_name)
 
-        # 查找第一条历史对话加载完成消息的索引
+        # 查找第一条包含历史对话加载消息的索引
         first_load_index = -1
+
+        # 保存时删除首个 "The following is the content of the loaded {} historical dialogue" 之前的内容
         for i, msg in enumerate(self.messages):
+            content = msg.get("content", "").lower()
             if (msg.get("role") == "system" and
-                    "historical conversation has been read" in msg.get("content", "").lower()):
+                    "the following is the content of the loaded" in content and
+                    "historical dialogue" in content):
                 first_load_index = i
-                break
+                break  # 找到第一条就停止搜索
 
         # 如果没有找到加载消息，则从开头处理所有消息
-        start_index = first_load_index + 1 if first_load_index >= 0 else 0
+        if first_load_index == -1:
+            print("No historical conversation load message found, processing all messages from the beginning")
+            start_index = 0
+        else:
+            print(f"Found historical conversation load message at index: {first_load_index}")
+            start_index = first_load_index + 1  # 从加载消息之后开始处理
 
-        # 从加载消息之后开始处理
+        # 处理消息内容
         text_content = []
         for msg in self.messages[start_index:]:
             role = msg.get("role", "").strip()
@@ -2192,6 +2201,13 @@ class AI:
         messages = []
         current_role = None
         current_content = []
+
+        # 添加系统通知消息
+        completion_msg = {
+            "role": "system",
+            "content": f"The following is the content of the loaded {file_name} historical dialogue."
+        }
+        self.messages.append(completion_msg)
 
         try:
             with open(file_path, "r", encoding="utf-8") as f:

@@ -1,5 +1,5 @@
 
-__version__ = '6.3.1 Beta'
+__version__ = '6.3.1'
 
 __all__ = ['general', 'grapher', 'projector', 'performer', 'potter', 'author', 'generator', 'inspector']
 
@@ -304,6 +304,7 @@ MAGIC
                 with tequests () requests. 
                 Added the function that AI can invoke tools.
 -> 6.3.1 Beta   25-08-19 19:39 A new class, Gemini, has been added.
+-> 6.3.1        25-08-25 18:34
                
                     
  ------ Needing ------

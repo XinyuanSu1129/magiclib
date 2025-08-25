@@ -2109,38 +2109,43 @@ class AI:
         file_path = os.path.join(messages_save_path, file_name)
 
         # 查找第一条历史对话加载完成消息的索引
-        first_load_index = 0
-        for i in range(len(self.messages)):
-            msg = self.messages[i]
-            if msg.get("role") == "system" and \
-                    "historical conversation has been read" in msg.get("content", "").lower():
+        first_load_index = -1
+        for i, msg in enumerate(self.messages):
+            if (msg.get("role") == "system" and
+                    "historical conversation has been read" in msg.get("content", "").lower()):
                 first_load_index = i
                 break
 
-        # 从最后一条加载消息之后开始处理
+        # 如果没有找到加载消息，则从开头处理所有消息
+        start_index = first_load_index + 1 if first_load_index >= 0 else 0
+
+        # 从加载消息之后开始处理
         text_content = []
-        for msg in self.messages[first_load_index + 1:]:
+        for msg in self.messages[start_index:]:
             role = msg.get("role", "").strip()
             content = msg.get("content", "").strip()
 
             # 跳过空消息
-            if role and content:
-                # 添加角色行
-                text_content.append(f"{role}:")
+            if not role or not content:
+                continue
 
-                # 添加内容行（多行处理）
-                content_lines = content.splitlines()
-                for line in content_lines:
-                    text_content.append(line.strip())
+            # 添加角色行
+            text_content.append(f"{role}:")
 
-                # 添加空行作为分隔
-                text_content.append("")
+            # 添加内容行（多行处理）
+            content_lines = content.splitlines()
+            for line in content_lines:
+                text_content.append(line.strip())
+
+            # 添加空行作为分隔
+            text_content.append("")
 
         # 添加保存时间记录
-        save_time = time.strftime("%Y-%m-%d %H:%M", time.localtime())
-        text_content.append("system:")
-        text_content.append(f"The save time for the above content is：{save_time}")
-        text_content.append("")  # 最后添加一个空行
+        if text_content:  # 只有在有内容时才添加时间戳
+            save_time = time.strftime("%Y-%m-%d %H:%M", time.localtime())
+            text_content.append("system:")
+            text_content.append(f"The save time for the above content is: {save_time}")
+            text_content.append("")  # 最后添加一个空行
 
         # 写入文件
         try:

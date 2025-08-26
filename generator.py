@@ -2255,13 +2255,6 @@ class AI:
             # 将读取的消息追加到self.messages
             self.messages.extend(messages)
 
-            # 添加系统通知消息
-            completion_msg = {
-                "role": "system",
-                "content": "The historical conversation has been read and added to the current conversation."
-            }
-            self.messages.append(completion_msg)
-
             status = f'The historical conversation {file_name} has been read.'
             print(f'{self.system_remind}[{status}]{self.end_style}\n')
 
@@ -2363,6 +2356,7 @@ class AI:
                     print(f"{self.system_content_color}{i}{self.end_style}."
                           f" - {self.assistant_content_color}{file}{self.end_style}"  # <-- 已修正
                           f" - {self.user_content_color}{save_time}{self.end_style}")
+                print('')
 
             status = (f"The historical dialogue in {messages_save_path} has been displayed to the user."
                       f"The historical dialogues are arranged in the following order: {sorted_items}")

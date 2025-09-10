@@ -977,6 +977,8 @@ class AI:
         self.seed = seed
         if tools is None:  # 为防止可变实参，因而为 None
             self.tools = AI.toolkit
+        else:
+            self.tools = tools
         self.tool_choice = tool_choice
 
         # 输入参数 (3)
@@ -2705,6 +2707,8 @@ class Gemini(AI):
         self.stream = stream
         if tools is None:  # 为防止可变实参，因而为 None
             self.tools = AI.toolkit
+        else:
+            self.tools = tools
 
         # 计费参数
         self.response_prompt_tokens = 0

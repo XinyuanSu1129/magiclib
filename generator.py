@@ -1816,6 +1816,60 @@ class AI:
 
         return reply_messages
 
+    # 展示当前 messages 的内容
+    def show_messages(self, messages: Optional[List[dict]] = None) -> None:
+        """
+        打印 messages 中的内容，如果被赋值则打印，如果未被赋值则打印 self.messages
+        Print the content in messages. If it is assigned a value, print it; if not, print self.messages。
+
+        :param messages: (List[dict]) 完整对话消息列表，包括 system、user 等角色消息
+
+        :return: None
+        """
+
+        # 检查赋值
+        if messages is None:
+            messages = self.messages.copy()  # 拷贝一份，避免修改外部列表
+        else:
+            messages = messages
+
+        # 检查 messages 是否输入
+        if messages is None:
+            class_name = self.__class__.__name__  # 获取类名
+            method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+            raise TypeError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                            f"messages cannot be None.")
+
+        if len(messages) == 0:
+            class_name = self.__class__.__name__  # 获取类名
+            method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                             f"messages cannot be an empty list.")
+
+        # 打印所有消息内容 (role 和 content），根据角色加颜色
+        print("\n\033[3mAll messages\033[0m:")
+        for i, msg in enumerate(messages, 1):
+            role = msg['role']
+            content = msg['content']
+            if role == 'user':
+                print(f"{i}. {self.bold}{self.user_role_color}User{self.end_style}: "
+                      f"{self.user_content_color}{content}{self.end_style}")
+            elif role == 'assistant':
+                print(f"{i}. {self.bold}{self.assistant_role_color}Assistant{self.end_style}: "
+                      f"{self.assistant_content_color}{content}{self.end_style}")
+            elif role == 'system':
+                print(f"{i}. {self.bold}{self.system_role_color}System{self.end_style}: "
+                      f"{self.system_content_color}{content}{self.end_style}")
+            elif role == 'tool':
+                result_str = json.loads(content)["result"]
+                print(f"{i}. {self.bold}{self.tool_role_color}Tool{self.end_style}: "
+                      f"{self.tool_content_color}{result_str}{self.end_style}")
+            else:
+                # 其他角色正常打印，无色彩
+                print(f"{i}. {role}: {content}")
+
+        return None
+
     # 计算使用的费用
     def calculate_cost(self) -> None:
         """

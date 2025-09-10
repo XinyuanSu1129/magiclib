@@ -305,6 +305,7 @@ MAGIC
                 Added the function that AI can invoke tools.
 -> 6.3.1 Beta   25-08-19 19:39 A new class, Gemini, has been added.
 -> 6.3.1 Beta   25-09-10 14:24 Fixed the bug where the tool tool failed to assign a value during assignment. 
+                Add a new method show_messages() to class AI.
                
                     
  ------ Needing ------
@@ -700,6 +701,7 @@ ai_thinking_parameters
 
 chat()
 continue_chat()
+show_messages()
 calculate_cost()
 summarize_conversation()
 reset_conversation()

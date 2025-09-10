@@ -306,6 +306,8 @@ MAGIC
 -> 6.3.1 Beta   25-08-19 19:39 A new class, Gemini, has been added.
 -> 6.3.1 Beta   25-09-10 14:24 Fixed the bug where the tool tool failed to assign a value during assignment. 
                 Add a new method show_messages() to class AI.
+                Allow chat() to call the tool, but it will not be returned to the AI for secondary processing, 
+                and the result of the tool call will be saved to messages in the form of system.
                
                     
  ------ Needing ------

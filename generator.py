@@ -1064,8 +1064,11 @@ class AI:
     def chat(self, messages: Optional[List[dict]] = None, print_response: bool = True, raise_error: bool = False)\
             -> List[dict]:
         """
-        与 AI 大模型聊天，单次交互，传入完整 messages，返回 AI 回复并保存
-        Chat with the AI large model, with only one interaction, return one AI response and save it.
+        与 AI 大模型聊天，单次交互，传入完整 messages，返回 AI 回复并保存。允许调用工具，调用返回时以 system 返回给 AI 工具调用结果，
+        且不会自动二次调用 AI 处理工具调用后的结果
+        Chat with the AI large model in a single interaction, pass in the complete messages, return the AI reply
+        and save it. Allow the tool to be called. When the call returns, return the result of the AI tool
+        call as system. And it will not automatically re-call the result after the AI processing tool is invoked.
 
         :param messages: (List[dict]) 完整对话消息列表，包括 system、user 等角色消息
         :param print_response: (bool) 是否打印返回的 content，默认为 True
@@ -1143,6 +1146,7 @@ class AI:
 
                 ai_reasoning = ""
                 ai_content = ""
+                tool_calls = {}  # 用于累积工具调用信息
 
                 # 记录最后一次收到数据的时间
                 last_received_time = time.time()
@@ -1241,6 +1245,31 @@ class AI:
                                             print(content_piece, end="", flush=True)
                                             last_received_time = time.time()  # 刷新更新时间
 
+                                            # 处理工具调用（累积参数）
+                                            if "tool_calls" in delta:
+                                                for call in delta["tool_calls"]:
+                                                    index = call["index"]
+
+                                                    # 初始化工具调用记录
+                                                    if index not in tool_calls:
+                                                        tool_calls[index] = {
+                                                            "id": "",
+                                                            "function": {"name": "", "arguments": ""}
+                                                        }
+
+                                                    # 更新工具调用ID
+                                                    if call.get("id"):
+                                                        tool_calls[index]["id"] = call["id"]
+
+                                                    # 更新函数名称
+                                                    if "function" in call and call["function"].get("name"):
+                                                        tool_calls[index]["function"]["name"] = call["function"]["name"]
+
+                                                    # 累积参数
+                                                    if "function" in call and call["function"].get("arguments"):
+                                                        tool_calls[index]["function"]["arguments"] += call["function"][
+                                                            "arguments"]
+
                             except json.JSONDecodeError:
                                 # 如果解析 JSON 出错（可能是心跳包或非 JSON 格式内容），则跳过
                                 continue
@@ -1249,10 +1278,42 @@ class AI:
                 self.stream_begin_output = True  # 下一次打印时变成首次输出
                 self.reasoning_output = True  # 下一次打印时变成首次输出
 
-                # 添加AI回复到消息历史
+                # 添加 AI 回复到消息历史
                 self.messages.append({"role": "assistant", "content": ai_content})
 
-            reply_messages = self.messages
+                # 处理累积的工具调用 (在流结束后)
+                if tool_calls:
+                    # 按索引排序工具调用
+                    sorted_tool_calls = [tool_calls[idx] for idx in sorted(tool_calls.keys())]
+
+                    for call in sorted_tool_calls:
+
+                        func_name = call["function"]["name"]
+                        args_str = call["function"]["arguments"]
+
+                        try:
+                            # 尝试解析参数
+                            args = json.loads(args_str) if args_str.strip() else {}
+
+                            if func_name in self.tool_methods:
+                                # 尝试调用工具
+                                result = self.tool_methods[func_name](**args)
+                            else:
+                                result = f"Unknown tool: {func_name}"
+                        except json.JSONDecodeError:
+                            result = f"Invalid arguments format for tool: {func_name}"
+                        except JSONDecodeError:  # JSON 输入格式错误，AI 的问题
+                            print(f'{self.system_remind}[The JSON format of the input Tool is incorrect.]'
+                                  f'{self.end_style}')
+                            result = f"The tool cannot be executed {func_name}: {str(e)}"
+                        except Exception as e:
+                            result = f"The tool cannot be executed {func_name}: {str(e)}"
+
+                        # 发送工具结果回模型
+                        self.messages.append({  # 让该 messages 参与下一次 user 对话，防止直接 system 的报错
+                            "role": "system",
+                            "content": result
+                        })
 
         # 非流式输出
         else:
@@ -1291,6 +1352,7 @@ class AI:
             self.response_created = response_dict.get("created")  # 创建时间，Unix 时间戳
 
             choices = response_dict.get("choices", [])  # 返回的回答列表，通常只有一个
+            response_messages = {}
             if choices:
                 first_choice = choices[0]
                 response_messages = first_choice.get("message", {})  # AI 返回的 messages
@@ -1309,6 +1371,9 @@ class AI:
             self.response_completion_tokens += usage.get("completion_tokens", 0)  # 生成内容消耗的 tokens 数
             self.response_total_tokens += usage.get("total_tokens", 0)  # 总共消耗的 tokens 数
 
+            # 保存 AI 回复为 assistant 角色追加到 self.messages
+            self.messages.append({"role": "assistant", "content": self.response_content})
+
             # 打印回复
             if print_response:
                 # 打印 AI 的思考内容
@@ -1320,10 +1385,26 @@ class AI:
                 print(f"{self.bold}{self.assistant_role_color}{self.model}{self.end_style}: "
                       f"{self.assistant_content_color}{self.response_content}{self.end_style}\n")
 
-            # 保存 AI 回复为 assistant 角色追加到 self.messages
-            self.messages.append({"role": "assistant", "content": self.response_content})
+            #  处理 tool_calls
+            if "tool_calls" in response_messages:
 
-            reply_messages = self.messages
+                for call in response_messages["tool_calls"]:
+                    func_name = call["function"]["name"]
+                    args = json.loads(call["function"]["arguments"])
+
+                    # 动态调用对应函数
+                    if func_name in self.tool_methods:  # 注意用你之前定义的工具字典
+                        result = self.tool_methods[func_name](**args)
+                    else:
+                        result = f"Unknown tool: {func_name}"
+
+                    # 把结果发回给模型
+                    self.messages.append({  # 让该 messages 参与下一次 user 对话，防止直接 system 的报错
+                        "role": "system",
+                        "content": result
+                    })
+
+        reply_messages = self.messages
 
         return reply_messages
 

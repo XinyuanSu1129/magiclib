@@ -985,6 +985,8 @@ class AI:
         if tool_methods is None:
             self.tool_methods = tool_methods
         else:
+            # 创建 Tools 实例
+            self.tools_instance = Tools()
             self.tool_methods = {
                 "save_messages_to_txt": self.save_messages_to_txt,
                 "load_messages_from_txt": self.load_messages_from_txt,
@@ -1047,9 +1049,6 @@ class AI:
         self.start_time = None  # 记录对话开始时间
         self.stream_begin_output = True  # stream 开始返回信息
         self.reasoning_output = True  # AI 思考开始返回信息
-
-        # 创建 Tools 实例
-        self.tools_instance = Tools()
 
         # 敏感内容
         self.safety_settings = [
@@ -2784,8 +2783,8 @@ class Gemini(AI):
                  ai_keyword: Optional[str] = None, instance_id: Optional[str] = None,
                  information: Optional[str] = None, show_reasoning: bool = False,
 
-                 # 其它参数 (2)
-                 stream: bool = False, tools: Optional[list] = None):
+                 # 其它参数 (3)
+                 stream: bool = False, tools: Optional[list] = None, tool_methods: Optional[dict] = None):
         """
         推理 AI 大模型公有参数
         Public parameters of the inference AI large model.
@@ -2802,9 +2801,10 @@ class Gemini(AI):
         :param information: (str) 当前 AI 被实例化后的信息，自定义输入，用于区分多个 AI 模型
         :param show_reasoning: (bool) 是否打印推理过程，如果有推理的话。默认为 False
 
-        # 其它参数 (2)
+        # 其它参数 (3)
         :param stream: (list) 是否启用流输出 (逐字返回)，默认为 False
-        :param tools: (list) 工具包
+        :param tools: (list) 工具信息条，用于描述工具
+        :param tool_methods: (dict) 工具包，放有具体工具
 
         --- 文本生成网址 ---
         https://ai.google.dev/api/generate-content?
@@ -2842,12 +2842,32 @@ class Gemini(AI):
         self.show_reasoning = show_reasoning  # Gemini 中无法单独查看 AI 的思考
 
         # 其它参数 (3)
-        self.start_time = None
         self.stream = stream
         if tools is None:  # 为防止可变实参，因而为 None
             self.tools = AI.toolkit
         else:
             self.tools = tools
+        if tool_methods is None:
+            self.tool_methods = tool_methods
+        else:
+            # 创建 Tools 实例
+            self.tools_instance = Tools()
+            self.tool_methods = {
+                "save_messages_to_txt": self.save_messages_to_txt,
+                "load_messages_from_txt": self.load_messages_from_txt,
+                "list_historical_conversations": self.list_historical_conversations,
+                "read_txt": self.tools_instance.read_txt,
+                "read_excel": self.tools_instance.read_excel,
+                "read_json": self.tools_instance.read_json,
+                "plot_line": self.tools_instance.plot_line,
+                "plot_scatter": self.tools_instance.plot_scatter,
+                "generate_image": self.tools_instance.generate_image,
+                "save_image": self.tools_instance.save_image,
+                # "generate_voice": tools_instance.generate_voice,
+            }
+
+        # 时间参数
+        self.start_time = None
 
         # 计费参数
         self.response_prompt_tokens = 0
@@ -2868,21 +2888,6 @@ class Gemini(AI):
 
         # __convert_openai_tools_to_gemini()
         self.tookit_gemini = {}
-
-        # 工具参数
-        self.tools_instance = Tools()  # 实例化工具类
-        self.tool_methods = {
-            "save_messages_to_txt": self.save_messages_to_txt,
-            "load_messages_from_txt": self.load_messages_from_txt,
-            "list_historical_conversations": self.list_historical_conversations,
-            "read_txt": self.tools_instance.read_txt,
-            "read_excel": self.tools_instance.read_excel,
-            "read_json": self.tools_instance.read_json,
-            "plot_line": self.tools_instance.plot_line,
-            "plot_scatter": self.tools_instance.plot_scatter,
-            "generate_image": self.tools_instance.generate_image,
-            "save_image": self.tools_instance.save_image,
-        }
 
         # chat()
         self.response_status = 0

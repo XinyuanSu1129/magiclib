@@ -308,6 +308,7 @@ MAGIC
                 Add a new method show_messages() to class AI.
                 Allow chat() to call the tool, but it will not be returned to the AI for secondary processing, 
                 and the result of the tool call will be saved to messages in the form of system.
+                The invocation of tools has been optimized, and now custom tools are supported.
                
                     
  ------ Needing ------

@@ -903,7 +903,9 @@ class AI:
                  # 附加参数 (11)
                  max_tokens: int = 8192, temperature: float = 0.7, top_p: float = 1.0, n: int = 1, stream: bool = False,
                  stop: Union[str, list, None] = None, presence_penalty: float = 0.0, frequency_penalty: float = 0.0,
-                 seed: Optional[int] = None, tools: Optional[list] = None, tool_choice: str = "auto"):
+                 seed: Optional[int] = None, tools: Optional[list] = None, tool_methods: Optional[dict] = None,
+                 tool_choice: str = "auto"
+                 ):
         """
         推理 AI 大模型公有参数
         Public parameters of the inference AI large model.
@@ -920,7 +922,7 @@ class AI:
         :param information: (str) 当前 AI 被实例化后的信息，自定义输入，用于区分多个 AI 模型
         :param show_reasoning: (bool) 是否打印推理过程，如果有推理的话。默认为 False
 
-        # 附加参数 (11)
+        # 附加参数 (12)
         :param max_tokens: (int) 生成的最大 token 数 (输入 + 输出)
         :param temperature: (float) 控制输出的随机性 (0.0-2.0)，数值越低越确定，越高越有创意
         :param top_p: (float) 核采样概率 (0.0-1.0)，仅保留概率累计在前 top_p 的词汇，与 temperature 二选一
@@ -930,7 +932,8 @@ class AI:
         :param presence_penalty: (float)  避免重复主题 (-2.0-2.0)，正值降低重复提及同一概念的概率，适合长文本生成
         :param frequency_penalty: (float) 避免重复词汇 (-2.0-2.0)，正值降低重复用词概率，适合技术文档写作
         :param seed: (int) 随机种子，默认为 None，表示完全随机
-        :param tools: (list) 工具包
+        :param tools: (list) 工具信息条，用于描述工具
+        :param tool_methods: (dict) 工具包，放有具体工具
         :param tool_choice: (str) 工具选取方式，"auto" 为自动选取，"none" 为决不会选取"，
                             {"type": "function", "function": {"name": "xxx"}} 为强制调用指定工具，并且只能调用它。
                             "required"(部分文档称为 {"type": "function", "function": "required"} 的形式)，
@@ -979,6 +982,22 @@ class AI:
             self.tools = AI.toolkit
         else:
             self.tools = tools
+        if tool_methods is None:
+            self.tool_methods = tool_methods
+        else:
+            self.tool_methods = {
+                "save_messages_to_txt": self.save_messages_to_txt,
+                "load_messages_from_txt": self.load_messages_from_txt,
+                "list_historical_conversations": self.list_historical_conversations,
+                "read_txt": self.tools_instance.read_txt,
+                "read_excel": self.tools_instance.read_excel,
+                "read_json": self.tools_instance.read_json,
+                "plot_line": self.tools_instance.plot_line,
+                "plot_scatter": self.tools_instance.plot_scatter,
+                "generate_image": self.tools_instance.generate_image,
+                "save_image": self.tools_instance.save_image,
+                # "generate_voice": tools_instance.generate_voice,
+            }
         self.tool_choice = tool_choice
 
         # 输入参数 (3)
@@ -1031,21 +1050,6 @@ class AI:
 
         # 创建 Tools 实例
         self.tools_instance = Tools()
-
-        # 工具与对应方法
-        self.tool_methods = {
-            "save_messages_to_txt": self.save_messages_to_txt,
-            "load_messages_from_txt": self.load_messages_from_txt,
-            "list_historical_conversations": self.list_historical_conversations,
-            "read_txt": self.tools_instance.read_txt,
-            "read_excel": self.tools_instance.read_excel,
-            "read_json": self.tools_instance.read_json,
-            "plot_line": self.tools_instance.plot_line,
-            "plot_scatter": self.tools_instance.plot_scatter,
-            "generate_image": self.tools_instance.generate_image,
-            "save_image": self.tools_instance.save_image,
-            # "generate_voice": tools_instance.generate_voice,
-        }
 
         # 敏感内容
         self.safety_settings = [
@@ -2837,7 +2841,7 @@ class Gemini(AI):
         self.information = information
         self.show_reasoning = show_reasoning  # Gemini 中无法单独查看 AI 的思考
 
-        # 其它参数 (2)
+        # 其它参数 (3)
         self.start_time = None
         self.stream = stream
         if tools is None:  # 为防止可变实参，因而为 None
@@ -3523,7 +3527,8 @@ class Assist(AI):
                  # 附加参数 (11)
                  max_tokens: int = 8192, temperature: float = 0.7, top_p: float = 1.0, n: int = 1, stream: bool = False,
                  stop: Union[str, list, None] = None, presence_penalty: float = 0.0, frequency_penalty: float = 0.0,
-                 seed: Optional[int] = None, tools: Optional[list] = None, tool_choice: str = "auto"):
+                 seed: Optional[int] = None, tools: Optional[list] = None, tool_methods: Optional[dict] = None,
+                 tool_choice: str = "auto"):
         """
         推理 AI 大模型公有参数
         Public parameters of the inference AI large model.
@@ -3550,7 +3555,8 @@ class Assist(AI):
         :param presence_penalty: (float)  避免重复主题 (-2.0-2.0)，正值降低重复提及同一概念的概率，适合长文本生成
         :param frequency_penalty: (float) 避免重复词汇 (-2.0-2.0)，正值降低重复用词概率，适合技术文档写作
         :param seed: (int) 随机种子，默认为 None，表示完全随机
-        :param tools: (list) 工具包
+        :param tools: (list) 工具信息条，用于描述工具
+        :param tool_methods: (dict) 工具包，放有具体工具
         :param tool_choice: (str) 工具选取方式，"auto" 为自动选取，"none" 为决不会选取"，
                             {"type": "function", "function": {"name": "xxx"}} 为强制调用指定工具，并且只能调用它。
                             "required"(部分文档称为 {"type": "function", "function": "required"} 的形式)，
@@ -3568,7 +3574,7 @@ class Assist(AI):
             # 附加参数 (11)
             max_tokens=max_tokens, temperature=temperature, top_p=top_p, n=n, stream=stream, stop=stop,
             presence_penalty=presence_penalty, frequency_penalty=frequency_penalty, seed=seed, tools=tools,
-            tool_choice=tool_choice
+            tool_methods=tool_methods, tool_choice=tool_choice
         )
 
     # 利用 DeepSeek 模型修改手稿

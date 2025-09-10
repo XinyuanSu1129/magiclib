@@ -8,7 +8,6 @@ Attention:
 """
 
 
-# 导入顺序不同有可能导致程序异常
 from . import general, grapher, author
 
 import re
@@ -18,7 +17,9 @@ import json
 import base64
 import inspect
 import requests
+import platform
 import mimetypes
+import subprocess
 from PIL import Image
 from io import BytesIO
 from google import genai
@@ -258,8 +259,8 @@ class Tools:
         :return status: (str) 返回信息，让 AI 大模型明白已将内容发送给打印机
         """
 
-        self.author_instanced.print_pdf(file_list=pdf_path)
-        status = 'The input file path has been sent to the printer.'
+        self.author_instanced.print_pdf(file_list=pdf_path, show_result=False)
+        status = 'The specified PDF has been successfully printed.'
         print(f'\033[90m[{status}]\033[0m\n')
 
         return status
@@ -1017,11 +1018,11 @@ class AI:
         self.presence_penalty = presence_penalty
         self.frequency_penalty = frequency_penalty
         self.seed = seed
-        if tools is None:  # 为防止可变实参，因而为 None
-            self.tools = AI.toolkit
-        else:
+        if tools is not None:
             self.tools = tools
-        if tool_methods is None:
+        else:
+            self.tools = AI.toolkit
+        if tool_methods is not None:
             self.tool_methods = tool_methods
         else:
             # 创建 Tools 实例
@@ -1793,7 +1794,7 @@ class AI:
                             except Exception as e:
                                 result = f"The tool cannot be executed {func_name}: {str(e)}"
 
-                            # 发送工具结果回模型
+                                # 发送工具结果回模型
                             self.messages.append({
                                 "role": "tool",
                                 "tool_call_id": call["id"],
@@ -2879,11 +2880,11 @@ class Gemini(AI):
 
         # 其它参数 (3)
         self.stream = stream
-        if tools is None:  # 为防止可变实参，因而为 None
-            self.tools = AI.toolkit
-        else:
+        if tools is not None:
             self.tools = tools
-        if tool_methods is None:
+        else:
+            self.tools = AI.toolkit
+        if tool_methods is not None:
             self.tool_methods = tool_methods
         else:
             # 创建 Tools 实例

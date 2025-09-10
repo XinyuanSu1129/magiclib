@@ -6,7 +6,6 @@ Attention:
 """
 
 
-# 导入顺序不同有可能导致程序异常
 from . import projector
 
 import sys

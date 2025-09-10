@@ -8,7 +8,6 @@ Attention:
 """
 
 
-# 导入顺序不同有可能导致程序异常
 import re
 import os
 import copy

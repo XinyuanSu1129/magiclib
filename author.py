@@ -6,26 +6,25 @@ Attention:
 2.  This module is a standalone module and does not depend on other parts of the Magic library
 """
 
-# 导入顺序不同有可能导致程序异常
-''' from . import general'''
 
-import sys
-import shutil
+import io
 import os
 import re
+import sys
 import uuid
+import PyPDF2
+import shutil
 import inspect
 import difflib
-import PyPDF2
+import platform
 import subprocess
+import contextlib
 from tqdm import tqdm
 from PIL import Image
 from docx import Document
 from docx.shared import Pt, Cm
-from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_PARAGRAPH_ALIGNMENT
 from typing import Union, Tuple, Optional, List, Dict, Text
-import io
-import contextlib
+from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_PARAGRAPH_ALIGNMENT
 
 Style = {
     "main_title": {
@@ -803,7 +802,8 @@ class PDF:
                 if system_name == "Darwin":  # macOS
                     subprocess.run(
                         args=["lp", pdf_path],
-                        check=True
+                        check=True,
+                        stdout=subprocess.DEVNULL  # 屏蔽标准输出
                     )
 
                 elif system_name == "Windows":

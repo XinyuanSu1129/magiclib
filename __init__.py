@@ -23,127 +23,129 @@ MAGIC
 
  --------------------------------------------------- general -----------------------------------------------------------
 
- -Function-      函数插件区： 完成小功能
- -Optimizer-     数据重组区 (Function)： 对数据进行处理和优化
- -Manager-       文件管理区 (Optimizer)： 对文件进行操作和绘图
- -Module-        模组控制区 (Optimizer)： 对 DataFrame 进行操作，在中心函数前后布置
- -Magic-         中心函数区 (Manager, Module)： 数据处理的中心部分
+ -Function-        函数插件区： 完成小功能
+ -Optimizer-       数据重组区 (Function)： 对数据进行处理和优化
+ -Manager-         文件管理区 (Optimizer)： 对文件进行操作和绘图
+ -Module-          模组控制区 (Optimizer)： 对 DataFrame 进行操作，在中心函数前后布置
+ -Magic-           中心函数区 (Manager, Module)： 数据处理的中心部分
 
  --------------------------------------------------- grapher -----------------------------------------------------------
 
- -Statistics-    统计学类 (Manager)： 用于统计学分析和绘图
- -Plotter-       绘图类 (Manager)：用于绘制各种图像
- -Fitter-        拟合类 (Manager)：用于拟合数据，绘制拟合后的图像
+ -Statistics-      统计学类 (Manager)： 用于统计学分析和绘图
+ -Plotter-         绘图类 (Manager)：用于绘制各种图像
+ -Fitter-          拟合类 (Manager)：用于拟合数据，绘制拟合后的图像
 
  -------------------------------------------------- projector ----------------------------------------------------------
 
- -Keyword-       标准函数组 (ABC)： 对特定作业进行的特定函数组合的准备，为抽象类
- -Tensile-       拉伸曲线类 (Keyword)： 绘制拉伸曲线 (应力-应变)
- -Compression-   压缩曲线类 (Keyword)： 绘制压缩曲线 (应力-应变)
- -Torsion-       扭转曲线类 (Keyword)： 绘制扭转曲线 (应力-应变)
- -XRD-           XRD 类 (Keyword)： 绘制 XRD 曲线
- -Raman-         Raman 类 (Keyword)： 绘制 Raman 曲线
- -DIL-           热膨胀类 (Keyword)： 绘制热膨胀曲线
- -XPS-           XPS 类 (Keyword)： 绘制 XPS 曲线
+ -Keyword-         标准函数组 (ABC)： 对特定作业进行的特定函数组合的准备，为抽象类
+ -Tensile-         拉伸曲线类 (Keyword)： 绘制拉伸曲线 (应力-应变)
+ -Compression-     压缩曲线类 (Keyword)： 绘制压缩曲线 (应力-应变)
+ -Torsion-         扭转曲线类 (Keyword)： 绘制扭转曲线 (应力-应变)
+ -XRD-             XRD 类 (Keyword)： 绘制 XRD 曲线
+ -Raman-           Raman 类 (Keyword)： 绘制 Raman 曲线
+ -DIL-             热膨胀类 (Keyword)： 绘制热膨胀曲线
+ -XPS-             XPS 类 (Keyword)： 绘制 XPS 曲线
  
  --------------------------------------------------- performer ---------------------------------------------------------
  
- -Main_Window-   主窗口 (QWidget)： 软件的主窗口
- -XRD_Window-    XRD 窗口 (QMainWindow)： 进行 XRD 计算的小窗口
- -Raman_Window-  Raman 窗口 (QMainWindow)： 进行 Raman 计算的小窗口
- -XRF_Window-    XRF 窗口 (QMainWindow)： 进行 XRF 计算的小窗口
- -SubWindow-     附加小窗口 (QMainWindow)： 附加的小窗口，可进行其它功能设置
+ -Main_Window-     主窗口 (QWidget)： 软件的主窗口
+ -XRD_Window-      XRD 窗口 (QMainWindow)： 进行 XRD 计算的小窗口
+ -Raman_Window-    Raman 窗口 (QMainWindow)： 进行 Raman 计算的小窗口
+ -XRF_Window-      XRF 窗口 (QMainWindow)： 进行 XRF 计算的小窗口
+ -SubWindow-       附加小窗口 (QMainWindow)： 附加的小窗口，可进行其它功能设置
  
  ----------------------------------------------------- potter ----------------------------------------------------------
  
- -PotteryBase-   基因库操作区：用于写入、读取和比较陶器数据
- -Pottery-       基因库读取区：用于简单，明快地查找和读取数据和浏览图片
+ -PotteryBase-     基因库操作区：用于写入、读取和比较陶器数据
+ -Pottery-         基因库读取区：用于简单，明快地查找和读取数据和浏览图片
  
  ----------------------------------------------------- author ----------------------------------------------------------
  
- -Report-        文本编辑区：用于检查、修改和比较文本内容
- -Word-          Word 文档修改区：用于检查、修改和编辑 Word 文档中的内容
- -PDF-           PDF 修改区：用于对 PDF 文件进行拼接、抽取、转换及压缩的功能
+ -TextEditing-     文本编辑区：用于检查、修改和比较文本内容
+ -Word-            Word 文档修改区：用于检查、修改和编辑 Word 文档中的内容
+ -PDF-             PDF 修改区：用于对 PDF 文件进行拼接、抽取、转换及压缩的功能
+ -ArticleFetcher-  数据采集区：获取文章、研究热点和前沿技术
 
  --------------------------------------------------- generator ---------------------------------------------------------
  
- -Tools-         AI 工具区：用于存放 AI 可以调用的工具
- -AI-            AI 参数公有区：用于管理公有参数与 OpenAI 实例化
- -Human-         用户交互区：用于单或多用户与 AI 交互
- -DeepSeek-      DeepSeek 区：利用 DeepSeek 进行对话与分析操作
- -Gemini-        Gemini 区：利用 Gemini 进行对话与分析操作，还可以处理图像、音频与视频数据
- -Jimeng-        即梦 AI 区：利用 即梦 AI 创造图片与视频
- -Assist-        AI 生产力区：AI 大模型协助用户进行生产力工作
- -Muse-          AI 灵感区：AI 大模型与用户休闲交互，娱乐
+ -Tools-           AI 工具区：用于存放 AI 可以调用的工具
+ -AI-              AI 参数公有区：用于管理公有参数与 OpenAI 实例化
+ -Human-           用户交互区：用于单或多用户与 AI 交互
+ -DeepSeek-        DeepSeek 区：利用 DeepSeek 进行对话与分析操作
+ -Gemini-          Gemini 区：利用 Gemini 进行对话与分析操作，还可以处理图像、音频与视频数据
+ -Jimeng-          即梦 AI 区：利用 即梦 AI 创造图片与视频
+ -Assist-          AI 生产力区：AI 大模型协助用户进行生产力工作
+ -Muse-            AI 灵感区：AI 大模型与用户休闲交互，娱乐
  
  --------------------------------------------------- inspector ---------------------------------------------------------
 
- -Tool-          工具类： 用于直接调用的属性和方法
- -Observer-      观察类： 用于观测可用数据
- -Monitor-       检查类： 用于检查代码
+ -Tool-            工具类： 用于直接调用的属性和方法
+ -Observer-        观察类： 用于观测可用数据
+ -Monitor-         检查类： 用于检查代码
 
 ========================================================================================================================
 
  --------------------------------------------------- general -----------------------------------------------------------
 
- -Function-      Function Plugin Area: Completes small functions
- -Optimizer-     Data Reorganization Area (Function): Processes and optimizes data
- -Manager-       File Management Area (Optimizer): Operates on files and plots
- -Module-        Module Control Area (Optimizer): Operates on DataFrame, arranges around the central function
- -Magic-         Central Function Area (Manager, Module): The central part of data processing
+ -Function-        Function Plugin Area: Completes small functions
+ -Optimizer-       Data Reorganization Area (Function): Processes and optimizes data
+ -Manager-         File Management Area (Optimizer): Operates on files and plots
+ -Module-          Module Control Area (Optimizer): Operates on DataFrame, arranges around the central function
+ -Magic-           Central Function Area (Manager, Module): The central part of data processing
 
  --------------------------------------------------- grapher -----------------------------------------------------------
 
- -Statistics-    Statistics Class (Manager): For statistical analysis and plotting
- -Plotter-       Plotting Class (Manager): For drawing various images
- -Fitter-        Fitting Class (Manager): For fitting data and plotting the fitted images
+ -Statistics-      Statistics Class (Manager): For statistical analysis and plotting
+ -Plotter-         Plotting Class (Manager): For drawing various images
+ -Fitter-          Fitting Class (Manager): For fitting data and plotting the fitted images
 
  -------------------------------------------------- projector ----------------------------------------------------------
 
- -Keyword-       Standard Function Group (ABC): Preparation for specific function combinations for specific tasks
- -Tensile-       Tensile Curve Class (Keyword): Draws tensile curves (stress-strain)
- -Compression-   Compression Curve Class (Keyword): Draws compression curves (stress-strain)
- -Torsion-       Torsion Curve Class (Keyword): Draws torsion curves (stress-strain)
- -XRD-           XRD Class (Keyword): Draws XRD curves
- -Raman-         Raman Class (Keyword): Draws Raman curves
- -DIL-           Thermal Expansion Class (Keyword): Draws thermal expansion curves
- -XPS-           XPS Class (Keyword): Draws XPS curves
+ -Keyword-         Standard Function Group (ABC): Preparation for specific function combinations for specific tasks
+ -Tensile-         Tensile Curve Class (Keyword): Draws tensile curves (stress-strain)
+ -Compression-     Compression Curve Class (Keyword): Draws compression curves (stress-strain)
+ -Torsion-         Torsion Curve Class (Keyword): Draws torsion curves (stress-strain)
+ -XRD-             XRD Class (Keyword): Draws XRD curves
+ -Raman-           Raman Class (Keyword): Draws Raman curves
+ -DIL-             Thermal Expansion Class (Keyword): Draws thermal expansion curves
+ -XPS-             XPS Class (Keyword): Draws XPS curves
 
  --------------------------------------------------- performer ---------------------------------------------------------
 
- -Main_Window-   Main Window (QWidget): The main window of the software
- -XRD_Window-    XRD Window (QMainWindow): A small window for performing XRD calculations
- -Raman_Window-  Raman Window (QMainWindow): A small window for performing Raman calculations
- -XRF_Window-    XRF Window (QMainWindow): A small window for performing XRF calculations
- -SubWindow-     Additional Small Window (QMainWindow): An additional small window for setting other functions
+ -Main_Window-     Main Window (QWidget): The main window of the software
+ -XRD_Window-      XRD Window (QMainWindow): A small window for performing XRD calculations
+ -Raman_Window-    Raman Window (QMainWindow): A small window for performing Raman calculations
+ -XRF_Window-      XRF Window (QMainWindow): A small window for performing XRF calculations
+ -SubWindow-       Additional Small Window (QMainWindow): An additional small window for setting other functions
  
  ----------------------------------------------------- potter ----------------------------------------------------------
 
- -PotteryBase-   Gene Bank operation area: used to write, read and compare pottery data
- -Pottery-       Gene Library Reading area: for easy, crisp finding and reading data and viewing images
+ -PotteryBase-     Gene Bank operation area: used to write, read and compare pottery data
+ -Pottery-         Gene Library Reading area: for easy, crisp finding and reading data and viewing images
  
  ----------------------------------------------------- author ----------------------------------------------------------
 
- -Report-        Text Editing: Used to examine, modify, and compare text content
- -Word-          Word area: Used for checking, modifying and editing the content in Word documents
- -PDF-           PDF area：The function for splicing, extracting, converting and compressing PDF files
+ -TextEditing-     Text Editing: Used to examine, modify, and compare text content
+ -Word-            Word area: Used for checking, modifying and editing the content in Word documents
+ -PDF-             PDF area：The function for splicing, extracting, converting and compressing PDF files
+ -ArticleFetcher-  Data Acquisition Area: It is used to obtain articles, research hotspots and cutting-edge technologies
  
  --------------------------------------------------- generator ---------------------------------------------------------
   
- -Tools-         AI Tool area: It is used to store tools that AI can invoke
- -AI-            AI Parameter Public Zone: Used for managing public parameters and OpenAI instantiations
- -Human-         User Interaction Area: Used for single or multiple users to interact with AI
- -DeepSeek-      DeepSeek area: Utilize DeepSeek for dialogue and analysis operations
- -Gemini-        Gemini Zone: Utilize Gemini for dialogue and analysis operations, and also handle audio and video data
- -Jimeng-        Dream AI Zone: Create pictures and videos with Dream AI
- -Assist-        AI Productivity Zone: AI large models assist users in productivity work
- -Muse-          AI Inspiration Zone: AI large models interact with users in a casual and entertaining way
+ -Tools-           AI Tool area: It is used to store tools that AI can invoke
+ -AI-              AI Parameter Public Zone: Used for managing public parameters and OpenAI instantiations
+ -Human-           User Interaction Area: Used for single or multiple users to interact with AI
+ -DeepSeek-        DeepSeek area: Utilize DeepSeek for dialogue and analysis operations
+ -Gemini-          Gemini Zone: Utilize Gemini for dialogue and analysis operations, and also handle audio or video data
+ -Jimeng-          Dream AI Zone: Create pictures and videos with Dream AI
+ -Assist-          AI Productivity Zone: AI large models assist users in productivity work
+ -Muse-            AI Inspiration Zone: AI large models interact with users in a casual and entertaining way
 
  --------------------------------------------------- inspector ---------------------------------------------------------
 
- -Tool-          Utility Class: Attributes and methods used for direct calls
- -Observer-      Observation Class: For observing available data
- -Monitor-       Inspection Class: For checking code
+ -Tool-            Utility Class: Attributes and methods used for direct calls
+ -Observer-        Observation Class: For observing available data
+ -Monitor-         Inspection Class: For checking code
 
 ========================================================================================================================
 """
@@ -654,7 +656,7 @@ run()
 
 Style
 
------- Report ------
+------ TextEditing ------
 count_words()
 compare_text()
 normalize_spaces()
@@ -667,6 +669,10 @@ format_word_document()
 ------ PDF ------
 merge_files_to_pdf()
 extract_pages()
+print_pdf()
+
+------ ArticleFetcher ------
+
 
 
 / / / / / * generator * / / / / /
@@ -693,6 +699,7 @@ read_excel()
 read_json()
 plot_line()
 plot_scatter()
+print_pdf()
 generate_image()
 save_image()
 generate_voice()

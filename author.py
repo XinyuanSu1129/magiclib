@@ -95,7 +95,7 @@ Style = {
 
 
 """ 检查或修改文本内容 """
-class Report:
+class TextEditing:
     """
     主要用于英文文本内容。用于检查文本 (支持段落) 的内容，也可以用于修改指定内容
     Used to check the content of text (supporting paragraphs), and can also be used to modify specified content.
@@ -502,7 +502,6 @@ class PDF:
     """
     对 PDF 文件进行拼接、抽取、转换及压缩的功能
     The functions of splicing, extracting, converting and compressing PDF files.
-
     """
 
     # 初始化
@@ -659,7 +658,7 @@ class PDF:
         return None
 
     # 从多个 PDF 文件中提取所有页面或指定页面并分别保存为新的 PDF 文件
-    def extract_pages(self, file_list: Optional[List] = None, save_path: str = None,
+    def extract_pages(self, file_list: Union[None, str, List[str]] = None, save_path: str = None,
                       page_numbers: Union[None, List[int], Tuple[int], range] = None) -> None:
         """
         从多个 PDF 文件中提取其所有页面，或指定页码，并将每个原始文件的页面分别保存为新的 PDF 文件
@@ -767,3 +766,74 @@ class PDF:
                     print(f"    {i}. \033[31m{name}\033[0m")
 
         return None
+
+    # 从默认打印机上打印文章
+    def print_pdf(self, file_list: Union[None, str, List[str]] = None, show_result: bool = True) -> None:
+        """
+        从默认打印机上打印目标 PDF 文件
+        Print the target PDF file from the default printer
+
+        :param file_list: (list / str) 要打印的 PDF 文件路径列表。如果不传，则使用初始化时设置的 read_path
+        :param show_result: (bool) 是否打印结果，无论是否成功都会受影响，默认为 True
+        """
+
+        # 如果未传入 file_list 或 save_path，则使用初始化时传入的值
+        if file_list is None:
+            file_list = self.read_path
+        # 如果传入的是字符串路径，自动转为列表
+        if isinstance(file_list, str):
+            file_list = [file_list]
+
+        system_name = platform.system()
+
+        for pdf_path in file_list:
+            # 检查文件是否存在
+            if not os.path.exists(pdf_path):
+                if show_result:
+                    print(f"File does not exist, skipped: \033[31m{pdf_path}\033[0m")
+                continue
+
+            # 确认是否为 PDF 文件
+            if not pdf_path.lower().endswith(".pdf"):
+                if show_result:
+                    print(f"Not a PDF file, skipped: \033[31m{pdf_path}\033[0m")
+                continue
+
+            try:
+                if system_name == "Darwin":  # macOS
+                    subprocess.run(
+                        args=["lp", pdf_path],
+                        check=True
+                    )
+
+                elif system_name == "Windows":
+                    # Windows 系统调用默认打印程序
+                    os.startfile(pdf_path, "print")  # 必须是位置参数
+
+                elif system_name == "Linux":
+                    subprocess.run(
+                        args=["lp", pdf_path],
+                        check=True
+                    )
+
+                else:
+                    if show_result:
+                        print(f"Unsupported operating system: {system_name}")
+                    continue
+
+                if show_result:
+                    print(f"Sent to printer: \033[34m{pdf_path}\033[0m")
+
+            except Exception as e:
+                print(f"Failed to print: {pdf_path}, Error: {e}")
+
+
+""" 获取文章 / 资讯 """
+class ArticleFetcher:
+    """
+    利用爬虫手段获取文章 / 成果 / 资讯
+    Obtain articles/achievements/information by using web crawlers.
+    """
+
+    def __init__(self):
+        pass

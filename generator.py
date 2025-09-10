@@ -9,7 +9,7 @@ Attention:
 
 
 # 导入顺序不同有可能导致程序异常
-from . import general, grapher
+from . import general, grapher, author
 
 import re
 import os
@@ -144,6 +144,9 @@ class Tools:
         # 实例化类 grapher.Plotter
         self.graphter_instanced = grapher.Plotter()
 
+        # 实例化类 author.PDF
+        self.author_instanced = author.PDF()
+
         # generate_image()
         self.image_data_list = []  # 图片的 list，base64格式
         self.image_list = []  # save_image()
@@ -214,7 +217,7 @@ class Tools:
         return status
 
     # 绘制线形图
-    def plot_line(self):
+    def plot_line(self) -> str:
         """
         根据读取到的数据绘制线形图
         Draw a line graph based on the read data.
@@ -229,7 +232,7 @@ class Tools:
         return status
 
     # 绘制散点形图
-    def plot_scatter(self):
+    def plot_scatter(self) -> str:
         """
         根据读取到的数据绘制散点图
         Draw a scatter graph based on the read data.
@@ -239,6 +242,24 @@ class Tools:
 
         self.graphter_instanced.plot_scatter()
         status = 'The scatter plot has been drawn.'
+        print(f'\033[90m[{status}]\033[0m\n')
+
+        return status
+
+    # 打印 PDF 文件
+    def print_pdf(self, pdf_path: str) -> str:
+        """
+        打印 PDF 文件，输入的可以是文件路径，也可以是目录路径，但只会打印有效的 PDF 文件
+        When printing PDF files, the input can be either the file path or the directory path,
+        but only valid PDF files will be printed.
+
+        :param pdf_path: (list / str)  要打印的 PDF 文件路径列表
+
+        :return status: (str) 返回信息，让 AI 大模型明白已将内容发送给打印机
+        """
+
+        self.author_instanced.print_pdf(file_list=pdf_path)
+        status = 'The input file path has been sent to the printer.'
         print(f'\033[90m[{status}]\033[0m\n')
 
         return status
@@ -759,6 +780,24 @@ class AI:
         {
             "type": "function",
             "function": {
+                "name": "print_pdf",
+                "description": "Print the PDF based on the PDF file path or directory path entered by the user. "
+                               "Print when the user needs it.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "pdf_path": {
+                            "type": "string",
+                            "description": "The path of the PDF file or the directory path."
+                        }
+                    },
+                    "required": ["pdf_path"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
                 "name": "generate_image",
                 "description": "Generate images based on the prompts provided by the user. You can appropriately "
                                "supplement the details of the pictures, but the content needs to be converted into "
@@ -996,6 +1035,7 @@ class AI:
                 "read_json": self.tools_instance.read_json,
                 "plot_line": self.tools_instance.plot_line,
                 "plot_scatter": self.tools_instance.plot_scatter,
+                "print_pdf": self.tools_instance.print_pdf,
                 "generate_image": self.tools_instance.generate_image,
                 "save_image": self.tools_instance.save_image,
                 # "generate_voice": tools_instance.generate_voice,
@@ -1303,9 +1343,7 @@ class AI:
                                 result = self.tool_methods[func_name](**args)
                             else:
                                 result = f"Unknown tool: {func_name}"
-                        except json.JSONDecodeError:
-                            result = f"Invalid arguments format for tool: {func_name}"
-                        except JSONDecodeError:  # JSON 输入格式错误，AI 的问题
+                        except json.JSONDecodeError:  # JSON 输入格式错误，AI 的问题
                             print(f'{self.system_remind}[The JSON format of the input Tool is incorrect.]'
                                   f'{self.end_style}')
                             result = f"The tool cannot be executed {func_name}: {str(e)}"
@@ -1748,9 +1786,7 @@ class AI:
                                     result = self.tool_methods[func_name](**args)
                                 else:
                                     result = f"Unknown tool: {func_name}"
-                            except json.JSONDecodeError:
-                                result = f"Invalid arguments format for tool: {func_name}"
-                            except JSONDecodeError:  # JSON 输入格式错误，AI 的问题
+                            except json.JSONDecodeError:  # JSON 输入格式错误，AI 的问题
                                 print(f'{self.system_remind}[The JSON format of the input Tool is incorrect.]'
                                       f'{self.end_style}')
                                 result = f"The tool cannot be executed {func_name}: {str(e)}"

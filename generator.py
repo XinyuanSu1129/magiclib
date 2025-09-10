@@ -1226,7 +1226,7 @@ class AI:
                                         self.reasoning_output = False
 
                                     # 只在第一次收到 content 内容时转换
-                                    if delta["content"] and self.reasoning_output:
+                                    if delta.get("content") and self.reasoning_output:
                                         # 打印 AI 回复内容的字体
                                         print(f"{self.bold}{self.assistant_role_color}{self.model}"
                                               f"{self.end_style}: {self.assistant_content_color}",
@@ -2104,7 +2104,7 @@ class AI:
                 if response.status_code == 200:
                     success_count += 1
                     if show_progress:
-                        Time_difference = time.time() - start_time  # 记录当前时间
+                        Time_difference = time.time() - start_time  # 记录时间差
                         print(f'The number of successful tests: '
                               f'[{self.system_remark_color}{success_count:^3}{self.end_style}],'
                               f'{Time_difference: 5.2f}')

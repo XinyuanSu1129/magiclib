@@ -313,6 +313,7 @@ MAGIC
                 The invocation of tools has been optimized, and now custom tools are supported.
                 A new class ArticleFetcher has been added to the module author.
                 Add a new method seek_doi() to class ArticleFetcher.
+                Add a new method seek_doi() to class Tools.
                
                     
  ------ Needing ------
@@ -702,6 +703,7 @@ read_excel()
 read_json()
 plot_line()
 plot_scatter()
+seek_doi()
 print_pdf()
 generate_image()
 save_image()

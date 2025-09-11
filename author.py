@@ -955,10 +955,15 @@ class ArticleFetcher:
             query_str = "&".join(query_parts)
 
             # 找到期刊名
+            found = False
             for journal, ids in self.archaeology_journals.items():
                 if issn == ids.get("eISSN") or issn == ids.get("pISSN"):
+                    found = True
                     if show_result:
                         print(f"\033[33mArticles in {journal}:\033[0m")
+
+            if not found and show_result:
+                print(f"\033[31mjournal found for ISSN {issn}:\033[0m")
 
             # 构建 URL
             base_url = f"https://api.crossref.org/journals/{issn}/works?rows={number}&sort=published&order=desc"

@@ -143,10 +143,13 @@ class Tools:
     def __init__(self):
 
         # 实例化类 grapher.Plotter
-        self.graphter_instanced = grapher.Plotter()
+        self.plotter_instanced = grapher.Plotter()
 
         # 实例化类 author.PDF
-        self.author_instanced = author.PDF()
+        self.pdf_instanced = author.PDF()
+
+        # 实例化类 author.ArticleFetcher
+        self.articlefetcher_instanced = author.ArticleFetcher()
 
         # generate_image()
         self.image_data_list = []  # 图片的 list，base64格式
@@ -175,7 +178,7 @@ class Tools:
         :return status: (str) 返回信息，让 AI 大模型明白数据已经读取
         """
 
-        self.graphter_instanced.read_txt(txt_path=txt_path)
+        self.plotter_instanced.read_txt(txt_path=txt_path)
         status = 'The data in the TXT file has been read.'
         print(f'\033[90m[{status}]\033[0m\n')
 
@@ -194,7 +197,7 @@ class Tools:
         :return status: (str) 返回信息，让 AI 大模型明白数据已经读取
         """
 
-        self.graphter_instanced.read_excel(excel_path=excel_path)
+        self.plotter_instanced.read_excel(excel_path=excel_path)
         status = 'The data in the Excel file has been read.'
         print(f'\033[90m[{status}]\033[0m\n')
 
@@ -211,7 +214,7 @@ class Tools:
         :return status: (str) 返回信息，让 AI 大模型明白数据已经读取
         """
 
-        self.graphter_instanced.read_json(json_path=json_path)
+        self.plotter_instanced.read_json(json_path=json_path)
         status = 'The data in the JSON file has been read.'
         print(f'\033[90m[{status}]\033[0m\n')
 
@@ -226,7 +229,7 @@ class Tools:
         :return status: (str) 返回信息，让 AI 大模型明白线形图已绘制
         """
 
-        self.graphter_instanced.plot_line()
+        self.plotter_instanced.plot_line()
         status = 'The line graph has been drawn.'
         print(f'\033[90m[{status}]\033[0m\n')
 
@@ -241,9 +244,29 @@ class Tools:
         :return status: (str) 返回信息，让 AI 大模型明白散点图已绘制
         """
 
-        self.graphter_instanced.plot_scatter()
+        self.plotter_instanced.plot_scatter()
         status = 'The scatter plot has been drawn.'
         print(f'\033[90m[{status}]\033[0m\n')
+
+        return status
+
+    # 搜索文章
+    def seek_doi(self, issn_list: list = None, number: int = 500, query: Optional[str] = None):
+        """
+        获取目标期刊下的文章的 DOI，可以加过滤器
+        To obtain the DOI of the articles in the target journal, a filter can be added.
+
+        :param issn_list: (list) 需要搜索的期刊
+        :param number: (int) 每个期刊搜索文章的数量
+        :param query: (str) 相关内容，将在全局搜索
+
+        :return status: (str) 返回信息，让 AI 大模型明白文章已检索
+        """
+
+        doi_list = self.articlefetcher_instanced.seek_doi(issn_list=issn_list, number=number,
+                                                          query=query, show_result=True)
+        print(f'\033[90m[The article has been retrieved.]\033[0m\n')
+        status = f'The DOI of these articles is {doi_list} and has been displayed to the user.'
 
         return status
 
@@ -259,7 +282,7 @@ class Tools:
         :return status: (str) 返回信息，让 AI 大模型明白已将内容发送给打印机
         """
 
-        self.author_instanced.print_pdf(file_list=pdf_path, show_result=False)
+        self.pdf_instanced.print_pdf(file_list=pdf_path, show_result=False)
         status = 'The specified PDF has been successfully printed.'
         print(f'\033[90m[{status}]\033[0m\n')
 
@@ -781,6 +804,33 @@ class AI:
         {
             "type": "function",
             "function": {
+                "name": "seek_doi",
+                "description": "Search for articles based on the ISSN of the journal.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "issn_list": {
+                            "type": "list",
+                            "description": 'The ISSN list of a journal, if there is only one journal '
+                                           'such as ["1095-9238"].'
+                        },
+                        "number": {
+                            "type": "integer",
+                            "description": "The number of search articles."
+                        },
+                        "query": {
+                            "type": "string",
+                            "description": "The content that requires conditional search is needed "
+                                           "when filtering articles."
+                        }
+                    },
+                    "required": []
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
                 "name": "print_pdf",
                 "description": "Print the PDF based on the PDF file path or directory path entered by the user. "
                                "Print when the user needs it.",
@@ -1036,6 +1086,7 @@ class AI:
                 "read_json": self.tools_instance.read_json,
                 "plot_line": self.tools_instance.plot_line,
                 "plot_scatter": self.tools_instance.plot_scatter,
+                "seek_doi": self.tools_instance.seek_doi,
                 "print_pdf": self.tools_instance.print_pdf,
                 "generate_image": self.tools_instance.generate_image,
                 "save_image": self.tools_instance.save_image,

@@ -312,6 +312,7 @@ MAGIC
                 and the result of the tool call will be saved to messages in the form of system.
                 The invocation of tools has been optimized, and now custom tools are supported.
                 A new class ArticleFetcher has been added to the module author.
+                Add a new method seek_doi() to class ArticleFetcher.
                
                     
  ------ Needing ------
@@ -673,6 +674,7 @@ extract_pages()
 print_pdf()
 
 ------ ArticleFetcher ------
+seek_doi()
 
 
 

@@ -11,14 +11,17 @@ import io
 import os
 import re
 import sys
+import time
 import uuid
 import PyPDF2
 import shutil
 import inspect
 import difflib
 import platform
+import requests
 import subprocess
 import contextlib
+import urllib.parse
 from tqdm import tqdm
 from PIL import Image
 from docx import Document
@@ -835,5 +838,167 @@ class ArticleFetcher:
     Obtain articles/achievements/information by using web crawlers.
     """
 
-    def __init__(self):
-        pass
+    archaeology_journals = {
+        "Journal of Archaeological Science": {
+            "eISSN": "1095-9238",  #
+            "pISSN": "0305-4403"
+        },
+        "Journal of Archaeological Science: Reports": {
+            "eISSN": "2352-409X",
+            "pISSN": "2352-4103"  #
+        },
+        "Heritage Science": {
+            "eISSN": "2050-7445",
+            "pISSN": None
+        },
+        "Journal of Cultural Heritage": {
+            "eISSN": "1778-3674",  #
+            "pISSN": "1296-2074"
+        },
+        "Acta Archaeologica Sinica": {
+            "eISSN": "0453-2902",  #
+            "pISSN": None
+        },
+        "The Archaeological Journal": {
+            "eISSN": "0066-5983",
+            "pISSN": None
+        },
+        "International Journal of Heritage Studies": {
+            "eISSN": "1470-3576",  #
+            "pISSN": None
+        },
+        "Il Capitale Culturale: Studies on the Value of Cultural Heritage": {
+            "eISSN": "2039-2362",  #
+            "pISSN": None
+        }
+    }
+
+    # 初始化
+    def __init__(self, save_path: Optional[str] = None):
+        """
+        :param save_path: (str) 下载的保存路径
+        """
+
+        # 参数
+        self.save_path = save_path
+
+        # seek_doi()
+        self.issn_list = []
+        self.doi_list = []
+
+    # 获取目标期刊下的文章 DOI
+    def seek_doi(self, issn_list: list = None, number: int = 500, query: Optional[str] = None, show_result: bool = True,
+                 **kwargs) -> List[str]:
+        """
+        获取目标期刊下的文章的 DOI，可以加过滤器
+        To obtain the DOI of the articles in the target journal, a filter can be added.
+
+        :param issn_list: (list) 需要搜索的期刊
+        :param number: (int) 每个期刊搜索文章的数量
+        :param query: (str) 相关内容，将在全局搜索
+        :param show_result: (bool) 是否打印结果，默认为 True
+
+        :return doi_list: (list) 存放 doi 的 list
+
+        --- **kwargs ---
+
+        filter                    | example                   | 说明
+        --------------------------|---------------------------|--------------------------
+        from-pub-date             | from-pub-date:2020-01-01  | 起始发表日期
+        until-pub-date            | until-pub-date:2022-12-31 | 截止发表日期
+        type                      | type:journal-article      | 文献类型
+        author                    | author:Smith              | 作者姓名
+        container-title           | container-title:Nature    | 期刊名称
+        affiliation               | affiliation:Stanford      | 作者机构
+        license.url               | license.url:*             | 是否有开放获取许可证
+        has-full-text             | has-full-text:true        | 是否有全文链接
+        is-referenced-by-count    | is-referenced-by-count:>10| 被引用次数
+
+        Parameter         | 功能说明
+        ------------------|-----------------------------------------
+        query             | 全文搜索关键词，可在标题、作者、摘要、机构等字段模糊匹配
+        query_title       | 标题关键词搜索，仅在文章标题中匹配
+        query_author      | 作者姓名搜索，可模糊匹配作者字段
+        query_affiliation | 作者机构搜索，可模糊匹配机构字段
+        """
+
+        if issn_list is None:
+            issn_list = ["1095-9238"]  # JAS
+        self.issn_list = issn_list
+
+        start_time = time.time()
+        all_dois = []
+
+        for issn in issn_list:
+            # 构建 filter 和 query 字符串
+            filter_parts = []
+            query_parts = []
+
+            for key, value in kwargs.items():
+                if value is None:
+                    continue
+                crossref_key = key.replace("_", "-")
+                if isinstance(value, bool):
+                    value = str(value).lower()
+
+                if crossref_key.startswith("query-"):
+                    query_param = crossref_key.replace("-", ".")
+                    # 对 query 参数值进行 URL 编码
+                    encoded_value = urllib.parse.quote(str(value))
+                    query_parts.append(f"{query_param}={encoded_value}")
+                else:
+                    # 对 filter 中的值进行 URL 编码
+                    encoded_value = urllib.parse.quote(str(value))
+                    filter_parts.append(f"{crossref_key}:{encoded_value}")
+
+            filter_str = ",".join(filter_parts)
+            query_str = "&".join(query_parts)
+
+            # 找到期刊名
+            for journal, ids in self.archaeology_journals.items():
+                if issn == ids.get("eISSN") or issn == ids.get("pISSN"):
+                    if show_result:
+                        print(f"\033[33mArticles in {journal}:\033[0m")
+
+            # 构建 URL
+            base_url = f"https://api.crossref.org/journals/{issn}/works?rows={number}&sort=published&order=desc"
+            if filter_str:
+                base_url += f"&filter={filter_str}"
+            if query:
+                # 对 query 主体也进行编码
+                encoded_query = urllib.parse.quote(str(query))
+                base_url += f"&query={encoded_query}"
+            if query_str:
+                base_url += f"&{query_str}"
+
+            #  请求 API
+            response = requests.get(base_url)
+            if response.status_code == 200:
+                data = response.json()
+                articles = data['message']['items']
+
+                for i, article in enumerate(articles):
+                    title = article.get('title', ['No Title'])[0]
+                    doi = article.get('DOI', 'No DOI')
+                    all_dois.append(doi)
+
+                    published_date_parts = \
+                        article.get('published-print', article.get('published-online', {})).get('date-parts',
+                                                                                                [[None]])[0]
+                    published_date = "-".join(str(part) for part in published_date_parts if part is not None)
+
+                    if show_result:
+                        print(f"\033[36m{i + 1}.\033[0m \033[95m{title}\033[0m")
+                        print(f"    DOI: https://doi.org/{doi}")
+                        print(f"    Published: {published_date}\n")
+            else:
+                if show_result:
+                    print(f"\033[31mRequest failed\033[0m for ISSN \033[35m{issn}\033[0m:", response.status_code)
+                    print('')
+
+        end_time = time.time()
+        if show_result:
+            print(f'Time-consuming: \033[36m{end_time - start_time}\033[0m')
+
+        self.doi_list = all_dois
+        return all_dois

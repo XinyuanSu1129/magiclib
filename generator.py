@@ -251,7 +251,8 @@ class Tools:
         return status
 
     # 搜索文章
-    def seek_doi(self, issn_list: list = None, number: int = 500, query: Optional[str] = None):
+    def seek_doi(self, issn_list: list = None, number: int = 500, query: Optional[str] = None,
+                 from_pub_date: Optional[str] = None, until_pub_date: Optional[str] = None):
         """
         获取目标期刊下的文章的 DOI，可以加过滤器
         To obtain the DOI of the articles in the target journal, a filter can be added.
@@ -259,12 +260,20 @@ class Tools:
         :param issn_list: (list) 需要搜索的期刊
         :param number: (int) 每个期刊搜索文章的数量
         :param query: (str) 相关内容，将在全局搜索
+        :param query: (str) 相关内容，将在全局搜索
+        :param from_pub_date: (str) 搜索的其实日期 "2020-01-01"
+        :param until_pub_date: (str) 搜索的结束日期 "2022-12-31"
 
         :return status: (str) 返回信息，让 AI 大模型明白文章已检索
         """
 
-        doi_list = self.articlefetcher_instanced.seek_doi(issn_list=issn_list, number=number,
-                                                          query=query, show_result=True)
+        doi_list = self.articlefetcher_instanced.seek_doi(issn_list=issn_list,
+                                                          number=number,
+                                                          query=query,
+                                                          show_result=True,
+                                                          from_pub_date=from_pub_date,
+                                                          until_pub_date=until_pub_date,
+                                                          )
         print(f'\033[90m[The article has been retrieved.]\033[0m\n')
         status = f'The DOI of these articles is {doi_list} and has been displayed to the user.'
 
@@ -810,19 +819,32 @@ class AI:
                     "type": "object",
                     "properties": {
                         "issn_list": {
-                            "type": "list",
-                            "description": 'The ISSN list of a journal, if there is only one journal '
-                                           'such as ["1095-9238"].'
+                            "type": ["list", "null"],
+                            "description": 'The ISSN list of a journal, if there is only one journal such as '
+                                           '["1095-9238"], by default ["1095-9238"] represents JAS journals.',
+                            "default": ["1095-9238"],
                         },
                         "number": {
                             "type": "integer",
-                            "description": "The number of search articles."
+                            "description": "The number of search articles.",
+                            "default": 100
                         },
                         "query": {
-                            "type": "string",
+                            "type": ["string", "null"],
                             "description": "The content that requires conditional search is needed "
-                                           "when filtering articles."
-                        }
+                                           "when filtering articles.",
+                            "default": "null"
+                        },
+                        "from_pub_date": {
+                            "type": ["string", "null"],
+                            "description": 'The actual date of the search, such as "2020-01-01".',
+                            "default": "null"
+                        },
+                        "until_pub_date": {
+                            "type": ["string", "null"],
+                            "description": 'The end date of the search, such as "2022-12-31".',
+                            "default": "null"
+                        },
                     },
                     "required": []
                 }

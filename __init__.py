@@ -1,5 +1,5 @@
 
-__version__ = '6.3.1'
+__version__ = '6.3.2'
 
 __all__ = ['general', 'grapher', 'projector', 'performer', 'potter', 'author', 'generator', 'learny', 'inspector']
 
@@ -337,6 +337,8 @@ MAGIC
 -> 6.3.1        25-09-25 22:10 The descriptions of all modules have been modified.
                 A new module, learny, and its classes, Preprocessor, MLBase, and MLOperate, have been added.
                 Add a new class Jemeng to model generator.
+-> 6.3.2        25-09-26 22:40 The entire magiclib has been updated, modifying the logic of comments and some code, 
+                as well as importing libraries.
                 
        
  ------ Attention ------

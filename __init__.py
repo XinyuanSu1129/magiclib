@@ -698,6 +698,7 @@ Style
 count_words()
 compare_text()
 normalize_spaces()
+replace_text()
 
 ------ Word ------
 Style

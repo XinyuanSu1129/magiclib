@@ -320,6 +320,38 @@ class TextEditing:
 
         return text_without_spaces
 
+    # 替换文本
+    def replace_text(self, patterns_list: List[str], replacement: str = "", show_print: bool = True) -> str:
+        """
+        在 self.text 中将所有 patterns 列表里的子串替换成指定内容
+
+        :param patterns_list: (list) 需要替换掉内容的 list
+        :param replacement: (str) 需要替换成的内容
+        :param show_print: (bool) 是否打印结果，默认为 True
+
+        :return output_text: (str)  包含所有需要打印内容的字符串
+        """
+
+        # 检查赋值
+        if self.text is not None:
+            input_text = self.text
+        else:
+            class_name = self.__class__.__name__  # 获取类名
+            method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                             f"The variable text should be assigned a value and be a string.")
+
+        for p in patterns_list:
+            input_text = re.sub(p, replacement, input_text)
+
+        output_text = input_text
+
+        # 打印结果
+        if show_print:
+            print(output_text)
+
+        return output_text
+
 
 """ 对 word 文档进行修改 """
 class Word:

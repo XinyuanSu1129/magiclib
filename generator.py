@@ -3134,7 +3134,7 @@ class Human:
         self.messages = None
 
         # 输出信息
-        self.response = None
+        self.response_content = None
 
         # 颜色设置
         self.system_role_color = '\033[91m'  # 亮红色
@@ -3159,12 +3159,14 @@ class Human:
         return f"{self.instance_id}"
 
     # 以真人的身份与 AI 大模型对话
-    def chat(self, messages: Optional[List[dict]] = None, **kwargs) -> List[dict]:
+    def chat(self, messages: Optional[List[dict]] = None, return_all_messages: bool = True, **kwargs) \
+            -> List[dict] or str:
         """
         用户收到信息，返回信息，仅一次，不会循环
         The user receives the message and returns it only once, without any loops.
 
         :param messages: (List[dict]) 用户收到的信息，用户收到信息中 'system' 将突出显示，'user' 将为主要内容
+        :param return_all_messages: (bool) 返回内容为单次消息 response_content or 整个 messages list，默认为 True
 
         --- **kwargs ---
 
@@ -3172,7 +3174,7 @@ class Human:
         - end_token: (str) 此参数不允许包含换行符。end_token 默认情况下，只有在空的一行输入换行符 '\n' 或空按“回车”才会将
                                 内容输入，否则只是换到下一行并等待继续输入，此情况下最下面的换行符 \n 不会保留
 
-        :return reply_messages: (List[dict]) 用户回复后的消息列表，包含新追加的消息
+        :return result_content: (str / list) AI 返回的单次消息 response_content or 整个 messages list
         """
 
         # 参数
@@ -3291,11 +3293,14 @@ class Human:
         self.messages.append({'role': role_to_append, 'content': human_reply})
 
         # 保存回复内容
-        self.response = human_reply
+        self.response_content = human_reply
 
-        reply_messages = self.messages
+        if return_all_messages:  # 返回所有 messages
+            result_content = self.messages
+        else:
+            result_content = self.response_content  # 返回单次 response_content
 
-        return reply_messages
+        return result_content
 
 
 """ DeepSeek 大模型 """

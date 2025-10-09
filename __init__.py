@@ -339,7 +339,7 @@ MAGIC
                 Add a new class Jemeng to model generator.
 -> 6.3.2        25-09-26 22:40 The entire magiclib has been updated, modifying the logic of comments and some code, 
                 as well as importing libraries.
-                
+                The chat() method in the Human class has been adjusted.
        
  ------ Attention ------
 For general:

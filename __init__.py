@@ -76,12 +76,13 @@ MAGIC
  -Jimeng-          即梦 AI 区：利用 即梦 AI 创造图片与视频
  -Assist-          AI 生产力区：AI 大模型协助用户进行生产力工作
  -Muse-            AI 灵感区：AI 大模型与用户休闲交互，娱乐
+ -ChatBoat-        多 AI 对话区：多个 AI 大模型对话，可进行娱乐与生产力工作
  
  ---------------------------------------------------- learny -----------------------------------------------------------
  
  -Preprocessor-    数据预处理区： 用于对需要机器学习的数据进行预处理
  -MLBase-          机器学习模型区： 用于存放各种机器学习的模型
- -MLOperate-       机器学习操作区： 用于训练、预测、反馈机器学习的结果
+ -ML_C_Operate-    分类机器学习操作区： 用于分类模型的训练、预测、反馈机器学习的结果
  
  --------------------------------------------------- inspector ---------------------------------------------------------
 
@@ -146,12 +147,13 @@ MAGIC
  -Jimeng-          Dream AI Zone: Create pictures and videos with Dream AI
  -Assist-          AI Productivity Zone: AI large models assist users in productivity work
  -Muse-            AI Inspiration Zone: AI large models interact with users in a casual and entertaining way
+ -ChatBoat-        Multi-AI Dialogue Area: Multiple large AI models have conversations
 
  ---------------------------------------------------- learny -----------------------------------------------------------
  
  -Preprocessor-    Data Preprocessing area: It is used for preprocessing data that requires machine learning
  -MLBase-          Machine Learning Model Area: It is used to store various machine learning models
- -MLOperate-       Machine Learning Operation Area: Used for training, predicting, and feeding back the results
+ -ML_C_Operate-    Classification Machine Learning Operation Area: Used for classification training, predicting, ect
  
  --------------------------------------------------- inspector ---------------------------------------------------------
 
@@ -335,11 +337,16 @@ MAGIC
                 and the parameter return_all_messages has been added to the chat() of both.
                 Add a new method stream_yield_chat() to class AI.
 -> 6.3.1        25-09-25 22:10 The descriptions of all modules have been modified.
-                A new module, learny, and its classes, Preprocessor, MLBase, and MLOperate, have been added.
+                A new module, learny, and its classes, Preprocessor, MLBase, and ML_C_Operate, have been added.
                 Add a new class Jemeng to model generator.
 -> 6.3.2        25-09-26 22:40 The entire magiclib has been updated, modifying the logic of comments and some code, 
                 as well as importing libraries.
                 The chat() method in the Human class has been adjusted.
+-> 6.3.3        25-10-10 15:40 In the module generator, a Chatbo-like feature has been added, which enables simultaneous 
+                conversations with multiple ais.
+                In the module learny, the manipulation of the model is divided into ML_C_Operate 
+                and ML_R_Operate (not added yet).
+                
        
  ------ Attention ------
 For general:
@@ -796,7 +803,14 @@ revise_manuscript()
 ------ Muse ------
 setup_environment()
 setup_environment_models()
-setup_environment_list()
+setup_environment_dict()
+
+------ ChatBoat ------
+__inint_chating()
+turns_to_speak()
+__convert_history_to_user_content()
+__player_output_process()
+run()
 
 
 / / / / / * learny * / / / / /
@@ -827,7 +841,7 @@ train_dt_r()
 train_gb_r()
 train_mlp_r()
 
------- MLOperate ------
+------ ML_C_Operate ------
 init_data_dic()
 save_model()
 load_model()

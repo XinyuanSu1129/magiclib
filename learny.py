@@ -1000,7 +1000,7 @@ class MLBase:
 
 
 """ 机器学习模型操作 """
-class MLOperate(general.Manager, Preprocessor, MLBase):
+class ML_C_Operate(general.Manager, Preprocessor, MLBase):
     """
     对 MLBase 中的模型进行操作
 

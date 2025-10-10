@@ -28,6 +28,7 @@ import hashlib
 import inspect
 import requests
 import platform
+import itertools
 import mimetypes
 import subprocess
 import numpy as np
@@ -4792,8 +4793,7 @@ class Muse:
         # 玩家配置
         self.player_configuration = {}  # setup_environment()
         self.player_configuration_model = {}  # setup_environment_models()
-        self.player_configuration_list = {}  # setup_environment_list()
-        self.ai_models = []  # setup_environment_list()
+        self.player_configuration_dict = {}  # setup_environment_dict()
 
         # 真人玩家参数
         self.man_number = man_number
@@ -4890,7 +4890,10 @@ class Muse:
         for ai_type in ai_model_map.keys():
             count = kwargs.get(f"{ai_type}_ai_number", 0) or 0
             if count < 0:
-                raise ValueError(f"{ai_type}_ai_number cannot be less than 0.")
+                class_name = self.__class__.__name__
+                method_name = inspect.currentframe().f_code.co_name
+                raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                                 f"{ai_type}_ai_number cannot be less than 0.")
             ai_counts[ai_type] = count
 
         # 校验 ai_number
@@ -5020,7 +5023,7 @@ class Muse:
         return instances
 
     # 通过输入 ai_models 的 list 来配置 AI 的环境
-    def setup_environment_list(self, man_number: int, ai_models: list, show_result: bool = False) -> dict:
+    def setup_environment_dict(self, man_number: int, ai_models: list, show_result: bool = False) -> dict:
         """
         环境配置：通过 list 指定 AI 模型
         Environment configuration: Use a list to specify AI models
@@ -5073,8 +5076,264 @@ class Muse:
                 f"\nTotal: {man_number + len(ai_models)}  Human: {man_number}  AI: {len(ai_models)}"
             )
 
-        self.player_configuration_list = instances
+        self.player_configuration_dict = instances
         return instances
+
+
+""" 多名 AI 对话区 """
+class ChatBoat(Muse):
+
+    # 初始化
+    def __init__(self, man_number: int = 0, ai_number: int = 0, player: list or dict = None, name_list: list = None,
+                 info_list: list = None, key_prompt: str = None):
+        """
+        ChatBoat 的初始化
+
+        :param player: (list / dict) 玩家 list 或 dict，key 为名，value 为 实例
+        :param name_list: (list) 名称 list，长度需与 player 一致
+        :param info_list: (list) 每个玩家的特点，长度需与 player 一致
+        :param key_prompt: (str) 关键 prompt，所有玩家共有
+        """
+
+        super().__init__(man_number=man_number, ai_number=ai_number)
+
+        self.player_list = None
+        if player is not None:
+            if isinstance(player, dict):
+                self.player_list = list(player.values())
+            elif isinstance(player, list):
+                self.player_list = player.copy()
+            else:
+                class_name = self.__class__.__name__
+                method_name = inspect.currentframe().f_code.co_name
+                raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                                 f"The player must be of dict or list type.")
+
+        if name_list is not None:
+            self.name_list = name_list
+        else:
+            class_name = self.__class__.__name__
+            method_name = inspect.currentframe().f_code.co_name
+            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                             f"name_list cannot be None.")
+        self.player_number = 0
+        if info_list is not None:
+            self.info_list = info_list
+        else:
+            self.info_list = [""] * self.player_number  # 生成长度为 number 的空字符串列表
+
+        if key_prompt is not None:
+            self.key_prompt = key_prompt
+        else:
+            self.key_prompt = """发言时直接写内容即可，无需带名字与冒号
+<system>(系统内容)</system> --> 系统内容，玩家无需用该提示词
+<kiss>{玩家名}</kiss> --> 表示你亲吻了{玩家名}
+<hug>{玩家名}</hub> --> 表示你拥抱了{玩家名}
+"""
+
+        # 重要属性
+        self.player_dic = {}  # 所有玩家的信息
+        self.history_list = []  # 玩家的对话记录，不包含 'system' 信息
+        self.scene = None  # 场景
+        self.scene_description = None  # 场景描述
+        self.end_chat = False  # bool 结束对话
+
+    # 初始化对话
+    def __inint_chating(self):
+        """
+        聊天初始化，会优先使用传入的 player，否则用类 Muse 中构建的 player dict
+        """
+
+        if self.player_list is None:
+            if self.player_configuration:
+                self.player_list = list(self.player_configuration.values())
+            elif self.player_configuration_model:
+                self.player_list = list(self.player_configuration_model.values())
+            elif self.player_configuration_dict:
+                self.player_list = list(self.player_configuration_dict.values())
+            else:
+                class_name = self.__class__.__name__
+                method_name = inspect.currentframe().f_code.co_name
+                raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                                 f"the value player cannot be None.")
+
+        for model in self.player_list:
+            model.tools = []
+
+        self.player_number = len(self.player_list)
+
+        # 检查长度
+        if self.info_list:
+            if not (len(self.player_list) == len(self.name_list) == len(self.info_list)):
+                class_name = self.__class__.__name__
+                method_name = inspect.currentframe().f_code.co_name
+                raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                                 f"the lengths of player_list, name_list and info_list must be the same.")
+        else:
+            # 如果 info_list 是空列表 []，自动补为 [None] * len(name_list)
+            if isinstance(self.info_list, list) and len(self.info_list) == 0:
+                self.info_list = [None] * len(self.name_list)
+
+            # 再检查 player_list 和 name_list
+            if not (len(self.player_list) == len(self.name_list)):
+                class_name = self.__class__.__name__
+                method_name = inspect.currentframe().f_code.co_name
+                raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                                 f"the lengths of player_list and name_list must be the same.")
+
+        prompt_list = []
+        for name, prompt in zip(self.name_list, self.info_list):
+            system_prompt = f"""--- Chat Boat ---
+<system>欢迎来到 Chat Boat！你将扮演 {name}，并与其他 {self.player_number - 1} 名角色进行互动。
+其他几名角色名分别为：{"，".join([n for n in self.name_list if n != name])}。
+你们将依次对话。接下来是本轮对话的重要提示词{"，以及你的角色详细信息" if prompt else ""}。</system>
+------------------------------------------------------------
+{self.key_prompt}{"------------------------------------------------------------"
+    if prompt else ""}{"\n" + prompt if prompt else ""}"""
+            prompt_list.append(system_prompt)
+
+        players_dic = {}
+        for model, name, info, system_content in zip(self.player_list, self.name_list, self.info_list, prompt_list):
+            players_dic[name] = {
+                "name": name,
+                "model": model,
+                "prompt": info,
+                "history_content": [{
+                    "role": "system",
+                    "content": system_content
+                }]
+            }
+
+        self.player_dic = players_dic
+
+        return None
+
+    # 轮流发言
+    def turns_to_speak(self):
+        """
+        轮流发言
+        """
+
+        for name in itertools.cycle(self.name_list):  # 无限循环
+
+            model = self.player_dic[name]["model"]
+            history_content = self.player_dic[name]["history_content"]
+
+            if self.history_list:
+                user_content_dic = self.__convert_history_to_user_content(name)
+
+            else:  # 首次对话
+                user_content_dic = {"role": "user",
+                                    "content": "你是第一个发言的，开始一个有趣的话题吧！"}  # 此内容不会出现在 history_list 中
+
+            # 输入内容准备
+            history_content.append(user_content_dic)
+
+            assistant_str = model.chat(
+                messages=history_content,
+                show_response=True,  #
+                raise_error=True,  #
+                return_all_messages=False  #
+            )
+            self.player_dic[name]["history_content"].append({"role": "assistant", "content": assistant_str})
+            self.__player_output_process(model, assistant_str)
+
+            # 输出内容整理
+            self.history_list.append({name: assistant_str})
+
+            # 结束对话
+            if self.end_chat:
+                break
+
+    # 内容格式转化
+    def __convert_history_to_user_content(self, name: str):
+        """
+        将玩家历史列表转换为 user_content_dic 结构，仅处理最后一次 name 发言之后的内容。
+
+        self.history_list = [
+            {"name1": "content1"},
+            {"name2": "content2"},
+            {"name1": "content3"},
+            {"name2": "content4"},
+        ]
+
+        例如 name='name1'，则仅处理 "name1" 最后一次出现之后的部分：
+        {"name2": "content4"}
+
+        输出格式：
+        {
+            "role": "user",
+            "content": "name2: content4"
+        }
+
+        :param name: (str) 玩家名
+        """
+        # 找到最后一次 name 出现的索引
+        last_index = -1
+        for i, record in enumerate(self.history_list):
+            if name in record:
+                last_index = i
+
+        # 若没找到该 name，则默认从头开始
+        target_records = self.history_list if last_index == -1 else self.history_list[last_index + 1:]
+
+        # 拼接内容
+        content_lines = []
+        for record in target_records:
+            for n, text in record.items():
+                content_lines.append(f"{n}: {text}")
+
+        content_str = "\n".join(content_lines)
+
+        user_content_dic = {
+            "role": "user",
+            "content": content_str
+        }
+
+        return user_content_dic
+
+    # 玩家输出判断
+    def __player_output_process(self, model, assistant_str: str):
+        """
+        玩家输出内容的判断，如果是 AI 则跳过此选项。
+        如果是人类玩家，则会根据内容调用函数
+
+        :param model: (str) 玩家实例
+        :param assistant_str: (str) 玩家返回的内容
+        """
+
+        command_pattern_list = [
+            r"<quit>",  # 结束对话
+            r"^<to>.*",  # 换地点
+        ]
+
+        if not isinstance(model, generator.Human):
+            return None
+
+        else:
+            matched_pattern = None
+            # matched_content = None
+
+            for pattern in command_pattern_list:
+                match = re.match(pattern, assistant_str)
+                if match:
+                    matched_pattern = pattern  # 匹配的正则
+                    # matched_content = match.group(0)  # 匹配的内容
+                    break
+
+            if matched_pattern == "<quit>":
+                self.end_chat = True
+
+            elif matched_pattern == "^<to>.*":
+                pass
+
+    def run(self):
+        """
+        运行
+        """
+
+        self.__inint_chating()
+        self.turns_to_speak()
 
 
 """ 应用 Duck Typing 来调用实例中的 API 与 URL """

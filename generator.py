@@ -5122,8 +5122,8 @@ class ChatBoat(Muse):
         if key_prompt is not None:
             self.key_prompt = key_prompt
         else:
-            self.key_prompt = """When speaking, just write the content directly. There is no need to include 
-your name or colon
+            self.key_prompt = """When speaking, just write the content directly. 
+There is no need to include your name or colon.
 <system>(system Content)</system> --> System content. Players do not need to use this prompt word
 <important>(content)</important> --> indicates that the part you mentioned is very important
 <praise>{name}</praise> --> indicates that you praise this character {player name}
@@ -5184,8 +5184,8 @@ your name or colon
             system_prompt = f"""--- Chat Boat ---
 <system>You will play the role of {name} and take turns speaking with {self.player_number-1} other character(s).
 The names of the other several characters are respectively: {"，".join([n for n in self.name_list if n != name])}.
-You will have a conversation in turn. Next are the important prompt words of this round of dialogue {(", "
-"as well as the detailed information of your character ")if prompt else ""}. </system>
+You will have a conversation in turn. Next are the important prompt words of this round of dialogue{
+            ",\nas well as the detailed information of your character " if prompt else ""}. </system>
 ------------------------------------------------------------
 {self.key_prompt}{"------------------------------------------------------------"
     if prompt else ""}{"\n" + prompt if prompt else ""}"""

@@ -5023,58 +5023,55 @@ class Muse:
         return instances
 
     # 通过输入 ai_models 的 list 来配置 AI 的环境
-    def setup_environment_dict(self, man_number: int, ai_models: list, show_result: bool = False) -> dict:
+    def setup_environment_dict(self, model_list: list, show_result: bool = False) -> dict:
         """
-        环境配置：通过 list 指定 AI 模型
-        Environment configuration: Use a list to specify AI models
+        环境配置：通过 list 指定 AI 与人类模型
+        Environment configuration: Use a list to specify both AI and Human players
 
-        :param man_number: (int) 真人玩家数量
-        :param ai_models: (list[str]) AI 模型名称的列表，如 ['gpt-oss-120b', 'GPT-5', 'gpt-oss-120b']
+        :param model_list: (list[str]) 模型名称的列表，如 ['gpt-oss-120b', 'Human_1', 'GPT-5', 'gpt-oss-120b']
+                           如想代表人类，则名中需要有 'Human'
         :param show_result: (bool) 是否打印分配结果
 
         :return: (dict) {player_id: 实例对象}
         """
 
-        if man_number < 0:
+        if not isinstance(model_list, list):
             class_name = self.__class__.__name__
             method_name = inspect.currentframe().f_code.co_name
             raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
-                             f"man_number must be greater than or equal to 0.")
-
-        if not isinstance(ai_models, list):
-            class_name = self.__class__.__name__
-            method_name = inspect.currentframe().f_code.co_name
-            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
-                             f"ai_models must be a list of strings representing AI model names.")
+                             f"model_list must be a list of strings representing player model names.")
 
         instances = {}
-
-        # 实例化 Human
-        for i in range(man_number):
-            human_key = f"human_{i + 1}"
-            instances[human_key] = Human(instance_id=human_key)
-
-        # 实例化 AI
         ai_counts = {}
-        for model_name in ai_models:
+        human_count = 0
+
+        for idx, model_name in enumerate(model_list):
             if not isinstance(model_name, str) or not model_name.strip():
                 class_name = self.__class__.__name__
                 method_name = inspect.currentframe().f_code.co_name
                 raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
-                                 f"ai_models must only contain non-empty strings.")
+                                 f"model_list must only contain non-empty strings.")
 
-            ai_counts[model_name] = ai_counts.get(model_name, 0) + 1
-            instance_id = f"{model_name}_{ai_counts[model_name]}"
-            instances[instance_id] = AI(instance_id=instance_id, model=model_name)
+            # 判断是否为人类
+            if "human" in model_name.lower():
+                human_count += 1
+                instance_id = f"human_{human_count}"
+                instances[instance_id] = Human(instance_id=instance_id)
+            else:
+                ai_counts[model_name] = ai_counts.get(model_name, 0) + 1
+                instance_id = f"{model_name}_{ai_counts[model_name]}"
+                instances[instance_id] = AI(instance_id=instance_id, model=model_name)
 
         # 可选调试输出
         if show_result:
-            print("AI allocation result (list mode):")
-            for model_name, count in ai_counts.items():
-                print(f"{model_name}: {count}")
-            print(
-                f"\nTotal: {man_number + len(ai_models)}  Human: {man_number}  AI: {len(ai_models)}"
-            )
+            print("Environment allocation result (mixed list mode):")
+            if human_count > 0:
+                print(f"Human: {human_count}")
+            if ai_counts:
+                for model_name, count in ai_counts.items():
+                    print(f"{model_name}: {count}")
+            print(f"\nTotal: {human_count + sum(ai_counts.values())} "
+                  f"Human: {human_count}  AI: {sum(ai_counts.values())}")
 
         self.player_configuration_dict = instances
         return instances
@@ -5125,10 +5122,11 @@ class ChatBoat(Muse):
         if key_prompt is not None:
             self.key_prompt = key_prompt
         else:
-            self.key_prompt = """发言时直接写内容即可，无需带名字与冒号
-<system>(系统内容)</system> --> 系统内容，玩家无需用该提示词
-<kiss>{玩家名}</kiss> --> 表示你亲吻了{玩家名}
-<hug>{玩家名}</hub> --> 表示你拥抱了{玩家名}
+            self.key_prompt = """When speaking, just write the content directly. There is no need to include 
+your name or colon
+<system>(system Content)</system> --> System content. Players do not need to use this prompt word
+<important>(content)</important> --> indicates that the part you mentioned is very important
+<praise>{name}</praise> --> indicates that you praise this character {player name}
 """
 
         # 重要属性
@@ -5184,9 +5182,10 @@ class ChatBoat(Muse):
         prompt_list = []
         for name, prompt in zip(self.name_list, self.info_list):
             system_prompt = f"""--- Chat Boat ---
-<system>欢迎来到 Chat Boat！你将扮演 {name}，并与其他 {self.player_number - 1} 名角色进行互动。
-其他几名角色名分别为：{"，".join([n for n in self.name_list if n != name])}。
-你们将依次对话。接下来是本轮对话的重要提示词{"，以及你的角色详细信息" if prompt else ""}。</system>
+<system>You will play the role of {name} and take turns speaking with {self.player_number-1} other character(s).
+The names of the other several characters are respectively: {"，".join([n for n in self.name_list if n != name])}.
+You will have a conversation in turn. Next are the important prompt words of this round of dialogue {(", "
+"as well as the detailed information of your character ")if prompt else ""}. </system>
 ------------------------------------------------------------
 {self.key_prompt}{"------------------------------------------------------------"
     if prompt else ""}{"\n" + prompt if prompt else ""}"""
@@ -5224,7 +5223,7 @@ class ChatBoat(Muse):
 
             else:  # 首次对话
                 user_content_dic = {"role": "user",
-                                    "content": "你是第一个发言的，开始一个有趣的话题吧！"}  # 此内容不会出现在 history_list 中
+                                    "content": "You are the first to speak. Let's start!"}  # 不会出现在 history_list 中
 
             # 输入内容准备
             history_content.append(user_content_dic)
@@ -5307,7 +5306,7 @@ class ChatBoat(Muse):
             r"^<to>.*",  # 换地点
         ]
 
-        if not isinstance(model, generator.Human):
+        if not isinstance(model, Human):
             return None
 
         else:

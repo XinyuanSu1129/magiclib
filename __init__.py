@@ -1,5 +1,5 @@
 
-__version__ = '6.3.2'
+__version__ = '6.3.4'
 
 __all__ = ['general', 'grapher', 'projector', 'performer', 'potter', 'author', 'generator', 'learny', 'inspector']
 
@@ -346,6 +346,8 @@ MAGIC
                 conversations with multiple ais.
                 In the module learny, the manipulation of the model is divided into ML_C_Operate 
                 and ML_R_Operate (not added yet).
+-> 6.3.4        25-10-16 11:47 The Human class has been optimized, and the setup_environment_dict() method 
+                in the Muse class has been improved. Now you can directly add a user within it.
                 
        
  ------ Attention ------

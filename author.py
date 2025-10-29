@@ -815,13 +815,15 @@ class PDF:
         return None
 
     # 读取 PDF 的内容
-    def read_pdf(self, pdf_path: Optional[str] = None, min_word_count: int = 0, recursive: bool = False) -> dict:
+    def read_pdf(self, pdf_path: Optional[str] = None, min_word_count: int = 0, clean_line: bool = False,
+                 recursive: bool = False) -> dict:
         """
         从 PDF 文件或目录中提取正文文本，自动处理多栏排版
         Extract the main text from a PDF file or directory, automatically handling multi-column layouts.
 
         :param pdf_path: (str) PDF 文件路径或目录路径
         :param min_word_count: (int) 用于过滤短文本块，默认为 0
+        :param clean_line: (bool) 是否清理换行符 '\n'，会去掉单个换行符，但也会使段落之间无换行，默认为 False
         :param recursive: (bool) 是否递归，即遍历目录下所有 PDF 文件，默认为 False
 
         :return pdf_text_dict: (dict) 读取的 PDF 文件的内容 {filename: extracted text}
@@ -896,7 +898,19 @@ class PDF:
 
                         page_texts.append("\n".join(columns_text))
 
-                pdf_text_dict[os.path.basename(pdf_file)] = "\n".join(page_texts)
+                # 拼合整份 PDF 的文本
+                raw_text = "\n".join(page_texts)
+
+                if clean_line:
+                    # 连续三个及以上的 \n → 两个换行
+                    clean_text = re.sub(pattern=r'\n{3,}', repl='\n\n', string=raw_text)
+                    # 单个或非连续的 \n → 空格
+                    clean_text = re.sub(pattern=r'(?<!\n)\n(?!\n)', repl=' ', string=clean_text)
+                else:
+                    clean_text = raw_text
+
+                # 放入字典
+                pdf_text_dict[os.path.basename(pdf_file)] = clean_text
 
             except Exception as e:
                 print(f"\nError occurred when extracting {pdf_file}: {e}")

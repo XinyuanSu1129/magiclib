@@ -839,6 +839,67 @@ class Function:
 
         return rgb_value, hex_value
 
+    # 替换一张图片中的目标颜色
+    @staticmethod
+    def replace_similar_color(read_path: str, save_path: str,
+                              seek_color: Union[Tuple[int, int, int], str] = (255, 255, 255),
+                              target_color: Union[Tuple[int, int, int, int], str] = (255, 255, 255, 0),
+                              tolerance: int = 0) -> None:
+        """
+        在图像中查找接近指定颜色的像素，并替换为目标颜色。
+        seek_color 和 target_color 可使用 RGB 元组或十六进制字符串 (#RRGGBB 或 #RRGGBBAA)。
+
+        :param read_path: (str) 输入图片路径
+        :param save_path: (str) 输出图片保存路径
+        :param seek_color: (tuple|str) 要替换的颜色，可使用 RGB 元组或十六进制字符串，默认白色 (255, 255, 255)
+        :param target_color: (tuple|str) 目标颜色，可使用 RGBA 元组或十六进制字符串，默认透明 (255, 255, 255, 0)
+        :param tolerance: (int) 包容值，越大越宽松，默认 0
+        """
+
+        # seek_color
+        if isinstance(seek_color, str):
+            hex_color = seek_color.strip().lstrip("#")
+            if len(hex_color) == 6:
+                seek_color = tuple(int(hex_color[i:i + 2], 16) for i in (0, 2, 4))
+            elif len(hex_color) == 8:
+                seek_color = tuple(int(hex_color[i:i + 2], 16) for i in (0, 2, 4))
+            else:
+                raise ValueError("seek_color 十六进制颜色必须是 #RRGGBB 或 #RRGGBBAA 格式")
+
+        # target_color
+        if isinstance(target_color, str):
+            hex_color = target_color.strip().lstrip("#")
+            if len(hex_color) == 6:
+                target_color = tuple(int(hex_color[i:i + 2], 16) for i in (0, 2, 4)) + (255,)
+            elif len(hex_color) == 8:
+                target_color = tuple(int(hex_color[i:i + 2], 16) for i in (0, 2, 4, 6))
+            else:
+                raise ValueError("target_color 十六进制颜色必须是 #RRGGBB 或 #RRGGBBAA 格式")
+
+        img = Image.open(read_path).convert("RGBA")
+        data = img.getdata()
+        new_data = []
+
+        sr, sg, sb = seek_color[:3]
+
+        for r, g, b, a in data:
+            if (abs(r - sr) <= tolerance and
+                    abs(g - sg) <= tolerance and
+                    abs(b - sb) <= tolerance):
+                new_data.append(target_color)
+            else:
+                new_data.append((r, g, b, a))
+
+        img.putdata(new_data)  # type: ignore
+
+        if save_path.lower().endswith((".jpg", ".jpeg")):
+            img = img.convert("RGB")
+
+        img.save(save_path)
+        print(f"The image has been saved as \033[36m{save_path}\033[0m")
+
+        return None
+
     # 复制文件到目标文件夹 (不包括文件夹)
     @staticmethod
     def copy_files(source_path: str, target_path: str, search_all: bool = False, ignore_list: list = None) -> None:

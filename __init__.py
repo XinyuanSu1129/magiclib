@@ -348,6 +348,8 @@ MAGIC
                 and ML_R_Operate (not added yet).
 -> 6.3.4        25-10-16 11:47 The Human class has been optimized, and the setup_environment_dict() method 
                 in the Muse class has been improved. Now you can directly add a user within it.
+                Add method replace_similar_color() to class Function.
+                Update method read_pdf() of class PDF.
                 
        
  ------ Attention ------
@@ -437,6 +439,7 @@ get_files()
 sort_file_list()
 sort_data()
 find_most_color_pixel()
+replace_similar_color()
 copy_files()
 
 ------ Optimizer ------

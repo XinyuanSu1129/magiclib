@@ -170,7 +170,18 @@ class Tools:
     """
 
     # 无需初始化，被调用时赋值
-    def __init__(self):
+    def __init__(self, api_key: Optional[str] = None, base_url: Optional[str] = None):
+
+        # API & BASE_URL
+        if api_key is not None:
+            self.api_key = api_key
+        else:
+            self.api_key = api_key_1
+
+        if base_url is not None:
+            self.base_url = base_url
+        else:
+            self.base_url = base_url_1
 
         # 实例化类 grapher.Plotter
         self.plotter_instanced = grapher.Plotter()
@@ -365,8 +376,8 @@ class Tools:
         """
 
         # =============== 注意更新 ===============
-        generate_image_api_key = api_key_1
-        generate_image_base_url = base_url_1
+        generate_image_api_key = self.api_key
+        generate_image_base_url = self.base_url
         generate_image_model = model
         # =============== 注意更新 ===============
 
@@ -556,8 +567,8 @@ class Tools:
         """
 
         # =============== 注意更新 ===============
-        generate_voice_api_key = api_key_1
-        generate_voice_base_url = base_url_1
+        generate_voice_api_key = self.api_key
+        generate_voice_base_url = self.base_url
         generate_voice_model = model
         # =============== 注意更新 ===============
 
@@ -678,8 +689,8 @@ class Tools:
         """
 
         # =============== 注意更新 ===============
-        generate_voice_api_key = api_key_1
-        generate_voice_base_url = base_url_1
+        generate_voice_api_key = self.api_key
+        generate_voice_base_url = self.base_url
         embedding_model = model
         # =============== 注意更新 ===============
 

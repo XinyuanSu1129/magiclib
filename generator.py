@@ -59,8 +59,7 @@ from google.generativeai.types import FunctionDeclaration, Tool
 current_time_zone_location = 'Shanghai'
 
 # Avaliable large AI models
-api_key_1 = 'sk-OY816juDL2SSFRxd1LCyJUdvtOxsfWAzfMMQr5tLG4TmS3Mv'  # expiration date 2025-11-16
-api_key_2 = 'sk-6BHzr6iwXuhojiGAmeJumgejirrhRtizEiE4ItxSBwh3W1yO'  # 40$
+api_key_1 = 'API_KEY_1'
 base_url_1 = 'https://lmhub.fatui.xyz/v1'
 success_requests_per_minute = 20  # 在此范围内属于正常现象
 avaliable_model = [
@@ -132,12 +131,12 @@ model_note = """
 """
 
 # DeepSeek
-DeepSeek_api_key = 'sk-cc2167b962444015a28d989478add7eb'  # MiaomiaoSu from 2025-08-07 ¥20
+DeepSeek_api_key = 'DEEPSEEK_API_KEY'  # MiaomiaoSu from 2025-08-07 ¥20
 DeepSeek_base_url = 'https://api.deepseek.com/v1'
 DeepSeek_avaliable_model = ['deepseek-chat', 'deepseek-reasoner', 'deepseek-coder']
 
 # Gemini
-Gemini_api_key_1 = 'AIzaSyBub6Dw-9hd9sjpiyCeOxLkd39ZGP-LJog'
+Gemini_api_key_1 = 'GEMINI_API_KEY'
 Gemini_base_url = 'https://generativelanguage.googleapis.com'
 
 # Jimeng_video

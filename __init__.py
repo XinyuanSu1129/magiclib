@@ -73,7 +73,8 @@ MAGIC
  -Human-           用户交互区：用于单或多用户与 AI 交互
  -DeepSeek-        DeepSeek 区：利用 DeepSeek 进行对话与分析操作
  -Gemini-          Gemini 区：利用 Gemini 进行对话与分析操作，还可以处理图像、音频与视频数据
- -Jimeng-          即梦 AI 区：利用 即梦 AI 创造图片与视频
+ -Jimeng_video-    即梦 AI 视频生成区：利用 即梦 AI 生成视频
+ -Jimeng_image-    即梦 AI 图片生成区：利用 即梦 AI 生成图片
  -Assist-          AI 生产力区：AI 大模型协助用户进行生产力工作
  -Muse-            AI 灵感区：AI 大模型与用户休闲交互，娱乐
  -ChatBoat-        多 AI 对话区：多个 AI 大模型对话，可进行娱乐与生产力工作
@@ -144,7 +145,8 @@ MAGIC
  -Human-           User Interaction Area: Used for single or multiple users to interact with AI
  -DeepSeek-        DeepSeek area: Utilize DeepSeek for dialogue and analysis operations
  -Gemini-          Gemini Zone: Utilize Gemini for dialogue and analysis operations, and also handle audio or video data
- -Jimeng-          Dream AI Zone: Create pictures and videos with Dream AI
+ -Jimeng_video-    Jimeng video AI Zone: Create videos with Jimeng AI
+ -Jimeng_image-    Jimeng Image AI Zone: Create Image with Jimeng AI
  -Assist-          AI Productivity Zone: AI large models assist users in productivity work
  -Muse-            AI Inspiration Zone: AI large models interact with users in a casual and entertaining way
  -ChatBoat-        Multi-AI Dialogue Area: Multiple large AI models have conversations
@@ -338,7 +340,7 @@ MAGIC
                 Add a new method stream_yield_chat() to class AI.
 -> 6.3.1        25-09-25 22:10 The descriptions of all modules have been modified.
                 A new module, learny, and its classes, Preprocessor, MLBase, and ML_C_Operate, have been added.
-                Add a new class Jemeng to model generator.
+                Add a new class Jemeng_vedio to model generator.
 -> 6.3.2        25-09-26 22:40 The entire magiclib has been updated, modifying the logic of comments and some code, 
                 as well as importing libraries.
                 The chat() method in the Human class has been adjusted.
@@ -350,6 +352,8 @@ MAGIC
                 in the Muse class has been improved. Now you can directly add a user within it.
                 Add method replace_similar_color() to class Function.
                 Update method read_pdf() of class PDF.
+-> 6.3.5        25-12-09 11:47 The generator class has been updated.
+                Add a new class Jimeng_image  to model generator.
                 
        
  ------ Attention ------
@@ -792,7 +796,7 @@ __convert_openai_tools_to_gemini()
 chat()
 continue_chat()
 
------- Jimeng ------
+------ Jimeng_video ------
 __generate_signature()
 __send_signed_request()
 submit_task()
@@ -801,6 +805,18 @@ __download_video()
 __display_waiting()
 __poll_task_result()
 run_video_generation()
+
+------ Jimeng_image ------
+__detect_mode()
+__generate_image_name()
+__generate_signature()
+__send_signed_request()
+__images_to_base64_list()
+submit_task()
+__get_task_result()
+__poll_task_result()
+__save_base64_image()
+run_image_generation()
 
 ------ Assist ------
 revise_manuscript()

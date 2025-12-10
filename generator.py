@@ -26,6 +26,7 @@ import hmac
 import base64
 import hashlib
 import inspect
+import tempfile
 import requests
 import platform
 import itertools
@@ -36,12 +37,15 @@ import urllib.parse
 from PIL import Image
 from io import BytesIO
 from google import genai
+from pathlib import Path
 import simpleaudio as sa
 from pandas import DataFrame
 from zoneinfo import ZoneInfo
 from abc import abstractmethod
 from google.genai import types
 from pydub import AudioSegment
+from pydub.playback import play
+from playsound import playsound
 from google.genai import errors
 import matplotlib.pyplot as plt
 from typing import List, Dict, Any
@@ -55,7 +59,7 @@ from google.generativeai.types import FunctionDeclaration, Tool
 current_time_zone_location = 'Shanghai'
 
 # Avaliable large AI models
-api_key_1 = 'sk-flk6RxbjuWqApkKaU0DUJDP3FsG6QBI2hjHkwRRyU6briHqZ'  # expiration date 2025-11-16
+api_key_1 = 'sk-OY816juDL2SSFRxd1LCyJUdvtOxsfWAzfMMQr5tLG4TmS3Mv'  # expiration date 2025-11-16
 api_key_2 = 'sk-6BHzr6iwXuhojiGAmeJumgejirrhRtizEiE4ItxSBwh3W1yO'  # 40$
 base_url_1 = 'https://lmhub.fatui.xyz/v1'
 success_requests_per_minute = 20  # 在此范围内属于正常现象
@@ -85,6 +89,7 @@ avaliable_model = [
     'yi-large-preview',  # 零一万物
 
     # Generate image
+    'Qwen/Qwen-Image',  # 通义千问
     'black-forest-labs/FLUX.1-pro',  # Black Forest Lab  目前无法使用
     'black-forest-labs/FLUX.1-dev',  # Black Forest Lab
     'black-forest-labs/FLUX.1-schnell',  # Black Forest Lab
@@ -135,8 +140,8 @@ DeepSeek_avaliable_model = ['deepseek-chat', 'deepseek-reasoner', 'deepseek-code
 Gemini_api_key_1 = 'AIzaSyBub6Dw-9hd9sjpiyCeOxLkd39ZGP-LJog'
 Gemini_base_url = 'https://generativelanguage.googleapis.com'
 
-# Jimeng
-Jimeng_api_key = 'JIMENG-API-KEY'  # 带有 Jimeng 密钥无法上传至 github，使用时注意修改
+# Jimeng_video
+Jimeng_api_key = 'JIMENG-API-KEY'  # 带有 Jimeng_video 密钥无法上传至 github，使用时注意修改
 Jimeng_api_secret = 'JIMENG-API-SECRET'
 
 # sef.messages 保存的目录路径
@@ -344,7 +349,7 @@ class Tools:
 
     # 生成图片  用到 AI 大模型
     def generate_image(self, prompt: str, save_path: Optional[str] = None,
-                       model: str = 'stabilityai/stable-diffusion-3-5-large',
+                       model: str = 'Qwen/Qwen-Image',
                        size: str = '1024x1024', n: int = 1, seed: int = None) -> str:
         """
         根据用户要求生成图片
@@ -352,7 +357,7 @@ class Tools:
 
         :param prompt: (str) 生成图片的英文提示词，为必需输入项。注意：在输入前必需将 prompt 转换成英文！
         :param save_path: (str) 保存的目录路径，若输入则按照路径保存
-        :param model: (str) 生成图片的模型，默认为 Black Forest Lab 的 stabilityai/stable-diffusion-3-5-large
+        :param model: (str) 生成图片的模型，默认为 Black Forest Lab 的 Qwen/Qwen-Image
         :param size: (str) 图片的大小，最大 '2048x2048'，默认为 '1024x1024'
         :param n: (int) 生成图片的数量，默认为 1。注意：目前只能为 1
         :param seed: (int) 随机种子，默认为无种子
@@ -536,20 +541,17 @@ class Tools:
         return status
 
     # 文本转音频 用到 AI 大模型
-    def text_to_speech(self, text: str, save_path: Optional[str] = None, model: str = 'fishaudio/fish-speech-1.5',
-                       voice: Optional[str] = None, temperature: float = 1, speech_rate: float = 1, pitch: float = 1)\
-            -> str:
+    def text_to_speech(self, text: str, save_path: Optional[str] = None, model: str = 'FunAudioLLM/CosyVoice2-0.5B',
+                       voice: Optional[str] = 'FunAudioLLM/CosyVoice2-0.5B:diana', play_obj: bool = False) -> str:
         """
         将输入的文本转化为语音
         Convert the input text into speech.
 
         :param text: (str) 需要转化为语音的文本
         :param save_path: (str) 保存的目录路径，若输入则按照路径保存
-        :param model: (str) 所用 AI 大模型，默认为 fishaudio/fish-speech-1.5
-        :param voice: (str) 语音风格，可选 'alloy', 'echo', 'shimmer'
-        :param temperature: (float) 随机性，0-1，越低随机性越低，默认为 0.7
-        :param speech_rate: (float) 语速，默认 1.0
-        :param pitch: (float) 语调，默认 1.0
+        :param model: (str) 所用 AI 大模型，默认为 FunAudioLLM/CosyVoice2-0.5B
+        :param voice: (str) 语音风格，默认为 'FunAudioLLM/CosyVoice2-0.5B:diana'
+        :param play_obj: (bool) 是否直接播放，默认为 False
 
         :return status: (str) 声音生成的信息
         """
@@ -562,14 +564,11 @@ class Tools:
 
         # 检查输入
         if save_path is None:  # 保存路径是否被提供
-            if self.save_path is None:
-                status = 'No save path is provided.'
-                return status
-            else:
+            if self.save_path is not None:
                 save_path = self.save_path
 
-        if save_path is not None and not os.path.isdir(save_path):  # 检查是否为目录路径
-            status = 'The path of save_path needs to be a directory path.'
+        if (not play_obj) and (save_path is None or not os.path.isdir(save_path)):
+            status = 'At least one of the parameters save_path and play_obj must be True.'
             return status
 
         # 构建 URL
@@ -586,12 +585,13 @@ class Tools:
         # 构建请求体
         request_body = {
             "model": generate_voice_model,
-            "voice": voice,
-            "input": text,
-            "format": "mp3",
-            "temperature": temperature,
-            "speech_rate": speech_rate,
-            "pitch": pitch
+            "voice": voice,  # 指定音色 / 说话人
+            "input": text,  # 文本内容
+            "format": "mp3",  # 保存格式
+            "sample_rate": 44100,  # 采样率
+            "stream": False,  # 是否启用流式输出
+            "speed": 1,  # 播放速度倍率
+            "gain": 0  # 音量增益
         }
 
         # 发送请求
@@ -613,13 +613,26 @@ class Tools:
         audio = AudioSegment.from_file(BytesIO(audio_bytes), format="mp3")
 
         # 播放
-        play_obj = sa.play_buffer(
-            audio.raw_data,
-            num_channels=audio.channels,
-            bytes_per_sample=audio.sample_width,
-            sample_rate=audio.frame_rate
-        )
-        play_obj.wait_done()  # 等待播放结束
+        if play_obj:
+            system = platform.system()
+
+            if system == "Windows":  # Windows 使用 simpleaudio
+                play_obj = sa.play_buffer(
+                    audio.raw_data,
+                    num_channels=audio.channels,
+                    bytes_per_sample=audio.sample_width,
+                    sample_rate=audio.frame_rate
+                )
+                play_obj.wait_done()
+
+            elif system == "Darwin":  # macOS 使用 pydub.play
+                # 写入临时 WAV 文件（playsound 支持 WAV/MP3）
+                with tempfile.NamedTemporaryFile(suffix=".mp3", delete=True) as f:
+                    audio.export(f.name, format="mp3")
+                    playsound(f.name)  # 阻塞播放，播放结束才返回
+
+            else:  # 其他系统也用 pydub.play
+                play(audio)
 
         # 保存音频
         if save_path is not None:  # 如果 save_path 不为 None，则保存
@@ -1086,7 +1099,7 @@ class AI:
                         "model": {
                             "type": "string",
                             "description": "The image generation model to use. Default is "
-                                           "'stabilityai/stable-diffusion-3-5-large'."
+                                           "'Qwen/Qwen-Image'."
                         },
                         "size": {
                             "type": "string",
@@ -1127,50 +1140,43 @@ class AI:
                 }
             }
         },
-        # {
-        #     "type": "function",
-        #     "function": {
-        #         "name": "text_to_speech",
-        #         "description": "Convert text to speech and you can choose to save it.",
-        #         "parameters": {
-        #             "type": "object",
-        #             "properties": {
-        #                 "text": {
-        #                     "type": "string",
-        #                     "description": "The text content to be converted into speech."
-        #                 },
-        #                 "save_path": {
-        #                     "type": "string",
-        #                     "description": "Optional directory path to save the generated voice file. "
-        #                                    "If not provided, the voice will only be played."
-        #                 },
-        #                 "model": {
-        #                     "type": "string",
-        #                     "description": "The AI voice model to use, default is 'fishaudio/fish-speech-1.5'."
-        #                 },
-        #                 "voice": {
-        #                     "type": "string",
-        #                     "description": "Voice style for speech synthesis, options include 'alloy', 'echo', "
-        #                                    "'shimmer'. Default is 'alloy'."
-        #                 },
-        #                 "temperature": {
-        #                     "type": "number",
-        #                     "description": "Randomness of voice generation, 0-1. Lower values produce more "
-        #                                    "deterministic results. Default is 1."
-        #                 },
-        #                 "speech_rate": {
-        #                     "type": "number",
-        #                     "description": "Speech rate, default is 1.0."
-        #                 },
-        #                 "pitch": {
-        #                     "type": "number",
-        #                     "description": "Pitch of the generated voice, default is 1.0."
-        #                 }
-        #             },
-        #             "required": ["text"]
-        #         }
-        #     }
-        # },
+        {
+            "type": "function",
+            "function": {
+                "name": "text_to_speech",
+                "description": "To convert text to speech, you can choose to play it directly or save it as an mp3 "
+                               "file. When users need voice output, call this tool and input this text appropriately "
+                               "as the situation requires.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "text": {
+                            "type": "string",
+                            "description": "The text content to be converted into speech."
+                        },
+                        "save_path": {
+                            "type": "string",
+                            "description": "Optional directory path to save the generated voice file. "
+                                           "If not provided, the voice will only be played."
+                        },
+                        "model": {
+                            "type": "string",
+                            "description": "The AI voice model to use, default is 'FunAudioLLM/CosyVoice2-0.5B'."
+                        },
+                        "voice": {
+                            "type": "string",
+                            "description": "Voice style for speech synthesis, default is "
+                                           "'FunAudioLLM/CosyVoice2-0.5B:diana'."
+                        },
+                        "play_obj": {
+                            "type": "bool",
+                            "description": "Whether to play directly is set to True by default."
+                        },
+                    },
+                    "required": ["text"]
+                }
+            }
+        },
         {
             "type": "function",
             "function": {
@@ -1295,7 +1301,7 @@ class AI:
         if model is not None:
             self.model = model
         else:
-            self.model = 'deepseek-ai/DeepSeek-R1'
+            self.model = 'gpt-oss-120b'
 
         if messages is not None:
             self.messages = messages
@@ -1343,7 +1349,7 @@ class AI:
                 "print_pdf": self.tools_instance.print_pdf,
                 "generate_image": self.tools_instance.generate_image,
                 "save_image": self.tools_instance.save_image,
-                # "text_to_speech": tools_instance.text_to_speech,
+                "text_to_speech": self.tools_instance.text_to_speech,
                 # "speech_to_text": self.tools_instance.speech_to_text,
                 "embedding": self.tools_instance.embedding,
                 # "rerank": self.tools_instance.rerank,
@@ -4105,22 +4111,22 @@ class Gemini(AI):
         return messages
 
 
-""" 即梦 AI 图 & 视频模型 """
-class Jimeng:
+""" 即梦 AI 视频生成模型 """
+class Jimeng_video:
     """
-    Jimeng 视频生成
+    Jimeng_video 视频生成
     """
 
     def __init__(self, access_key: Optional[str] = None, secret_key: Optional[str] = None,
                  prompt: Optional[str] = None, save_path: Optional[str] = None):
         """
         初始化Jimeng视频生成器
+        Initialize the Jimeng video generator.
 
-        参数:
-            access_key: 访问密钥ID
-            secret_key: 秘密访问密钥
-            prompt: 视频描述文本，必需输入
-            save_path: 视频保存目录，必需输入
+        :param access_key: (str): 访问密钥 ID
+        :param secret_key: (str): 秘密访问密钥
+        :param prompt: (str): 视频描述文本，必需输入
+        :param save_path: (str): 视频保存目录，必需输入
         """
 
         # 参数初始化
@@ -4146,7 +4152,8 @@ class Jimeng:
             raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, the save_path cannot be None.")
 
         self.task_id = None
-        self.video_url = None
+        self.video_output_url = None
+        self.video_save_full_path = self.__generate_video_name()  # 视频的保存路径 (全路径)
 
         # 服务配置常量
         self.method = 'POST'
@@ -4171,6 +4178,28 @@ class Jimeng:
         if not all([self.access_key, self.secret_key, self.prompt, self.save_path]):
             print(self.fail + 'Error: Missing required input parameters' + self.endc)
             sys.exit(1)
+
+    # 生成文件名
+    def __generate_video_name(self) -> str:
+        """
+        自动生成文件名
+
+        :return image_save_full_path: (str) 生成的文件名
+        """
+
+        # 自动生成不重复的文件名
+        counter = 1
+        while True:
+            filename = f"Video_{counter}.mp4"
+            file_path = os.path.join(self.save_path, filename)
+
+            if not os.path.exists(file_path):
+                break  # 找到不存在的文件名
+            counter += 1
+
+        self.video_save_full_path = file_path
+
+        return file_path
 
     # 生成签名
     def __generate_signature(self, current_date: Optional[str] = None, date_stamp: Optional[str] = None,
@@ -4331,23 +4360,24 @@ class Jimeng:
     # 下载视频
     def __download_video(self) -> bool:
         """
-        下载视频文件
-
-        :return: (bool) 下载成功返回 True，失败返回 False。
+        下载视频文件到本地。
+        文件命名为 video_1.mp4，如果存在则自动递增为 video_2.mp4、video_3.mp4...
         """
 
         try:
-            print(self.okcyan + f"Downloading video: {self.video_url}" + self.endc)
-            filename = f"video_{self.task_id}.mp4"
-            file_path = os.path.join(self.save_path, filename)
+            # 确保保存路径存在
+            os.makedirs(self.save_path, exist_ok=True)
 
-            response = requests.get(self.video_url, stream=True)
+            if not hasattr(self, 'video_output_url') or not self.video_output_url:
+                print(self.fail + "Error: No video URL to download." + self.endc)
+                return False
 
+            # 下载视频
+            response = requests.get(self.video_output_url, stream=True)
             if response.status_code == 200:
-                with open(file_path, 'wb') as f:
+                with open(self.video_save_full_path, 'wb') as f:
                     for chunk in response.iter_content(chunk_size=8192):
                         f.write(chunk)
-                print(self.okgreen + f"Success: Video saved to '{file_path}'" + self.endc)
                 return True
             else:
                 print(self.fail + f"Error: Download failed with status code {response.status_code}" + self.endc)
@@ -4357,109 +4387,93 @@ class Jimeng:
             print(self.fail + f"Error: Exception occurred during video download - {e}" + self.endc)
             return False
 
-    # 动态进度
-    @staticmethod
-    def __display_waiting(seconds: int, attempt: int, max_attempts: int) -> None:
+    def __poll_task_result(self, max_seconds: int = 200) -> Optional[str]:
         """
-        显示动态等待进度条，用于任务轮询或延时提示。
+        每秒轮询视频生成任务，实时显示已查询秒数。
+        任务完成立即返回；达到最大秒数仍未完成则退出。
 
-        :param seconds: (int) 当前等待的秒数。
-        :param attempt: (int) 当前尝试次数。
-        :param max_attempts: (int) 最大尝试次数。
-
-        :return: (None) 方法不返回任何值，仅在控制台显示进度。
+        :param max_seconds: 最大等待秒数(默认 200 秒)
+        :return: 视频 URL，失败返回 None
         """
 
-        for sec in range(1, seconds + 1):
-            sys.stdout.write(f"\rattempt #{attempt}/{max_attempts} - has waited for {sec} seconds...")
+        print(self.okcyan + "\nStart polling the video generation task..." + self.endc)
+        start_time = time.time()
+
+        for waited in range(1, max_seconds + 1):
+            # 动态显示已等待时间
+            sys.stdout.write(f"\rHas waited for {waited} seconds...")
             sys.stdout.flush()
             time.sleep(1)
-        sys.stdout.write("\r" + " " * 50 + "\r")
-        sys.stdout.flush()
 
-        return None
-
-    # 查询结果
-    def __poll_task_result(self, max_attempts: int = 20, wait_seconds: int = 60) -> Optional[str]:
-        """
-        轮询任务结果，直到任务完成或达到最大尝试次数。
-        成功时下载视频文件并返回视频 URL。
-
-        :param max_attempts: (int) 最大轮询次数，默认 20。
-        :param wait_seconds: (int) 每次轮询等待时间（秒），默认 60。
-
-        :return: (Optional[str]) 成功返回生成视频的 URL，失败或未生成返回 None。
-        """
-        start_time = time.time()
-        print(self.okcyan + "\nStart polling the task status..." + self.endc)
-
-        for attempt in range(1, max_attempts + 1):
-            attempt_start = time.time()
-
-            # 显示等待进度
-            self.__display_waiting(wait_seconds, attempt, max_attempts)
-
-            actual_wait = time.time() - attempt_start
-            total_time = time.time() - start_time
-
-            print(f"attempt #{attempt}/{max_attempts} to complete")
-            print(f"This waiting: {actual_wait:.1f} seconds; total time: {total_time:.1f} seconds")
-
-            # 获取任务结果
+            # 查询任务结果
             response = self.__get_task_result()
 
             if response.status_code != 200:
-                print(self.warning + f"Warning: Query failed. Status code: {response.status_code}" + self.endc)
-                continue
+                print(self.warning +
+                      f"\nWarning: Query failed with HTTP {response.status_code}. "
+                      f"API code: {response.json().get('code')}" +
+                      self.endc)
+                continue  # 出现临时错误就继续轮询
 
             try:
                 result = response.json()
-                if result.get('code') != 10000:
-                    error_msg = result.get('message', 'Unknown error')
-                    print(self.warning + f"API Warning: {error_msg}" + self.endc)
-                    continue
-
-                task_data = result['data']
-                status = task_data.get('status')
-                print(f"Task status: {status}")
-
-                if status == "done":
-                    self.video_url = task_data.get('video_url')
-
-                    if not self.video_url:
-                        try:
-                            resp_data = json.loads(task_data.get('resp_data', '{}'))
-                            urls = resp_data.get('urls', [])
-                            if urls:
-                                self.video_url = urls[0]
-                        except Exception as e:
-                            print(self.warning + f"Warning: Parsing resp_data failed - {e}" + self.endc)
-
-                    if self.video_url:
-                        print("\n" + "=" * 60)
-                        print(self.header + self.bold + "The video was generated successfully!" + self.endc)
-                        print(f"Video URL: {self.okcyan}{self.video_url}{self.endc}")
-                        print(f"Task ID: {self.task_id}")
-                        print(f"Request ID: {result.get('request_id', 'N/A')}")
-                        print("=" * 60 + "\n")
-
-                        if self.__download_video():
-                            print(self.okgreen + "Video processing completed!" + self.endc)
-                        return self.video_url
-                    else:
-                        print(self.fail + "Error: No valid video URL was found" + self.endc)
-
-                elif status == "failed":
-                    error_info = task_data.get('error', "Unknown error")
-                    print(self.fail + f"Error: Task failed - {error_info}" + self.endc)
-                    break
-                else:
-                    print(f"Information: Task processing in progress. Current status: {status}")
-
             except Exception as e:
-                print(self.fail + f"Error: The parsing response failed - {e}" + self.endc)
-                print(f"Original response: {response.text[:500]}...")
+                print(self.fail + f"\nError: Failed to parse response JSON - {e}" + self.endc)
+                continue
 
+            if result.get("code") != 10000:
+                print(self.warning + f"\nAPI Error: {result.get('message', 'Unknown error')}" + self.endc)
+                continue
+
+            task_data = result.get("data", {})
+            status = task_data.get("status")
+
+            if status == "done":
+                sys.stdout.write("\r" + " " * 50 + "\r")
+                sys.stdout.flush()
+                print(self.okgreen + "Received task result!" + self.endc)
+
+                # 先尝试获取视频 URL
+                video_url = task_data.get("video_url")
+                self.video_output_url = video_url
+                if not video_url:
+                    try:
+                        resp_data = json.loads(task_data.get("resp_data", "{}"))
+                        urls = resp_data.get("urls", [])
+                        if urls:
+                            video_url = urls[0]
+                    except Exception as e:
+                        print(self.warning + f"Parsing resp_data failed - {e}" + self.endc)
+
+                if video_url:
+                    total_time = time.time() - start_time
+                    print("\n" + "=" * 60)
+                    print(self.header + self.bold + "The video was generated successfully!" + self.endc)
+                    print(f"Time used: {self.okcyan}{total_time:.2f} seconds{self.endc}")
+
+                    # 自动下载视频
+                    if self.__download_video():
+                        print(f"Saved to: {self.okcyan}{self.video_save_full_path}{self.endc}")
+                    else:
+                        print(f"Saved to: {self.okcyan}Download failed.{self.endc}")
+                    print("=" * 60 + "\n")
+
+                    self.video_output_url = video_url
+                    return video_url
+                else:
+                    print(self.fail + "\nError: No valid video URL returned." + self.endc)
+                    return None
+
+            elif status == "failed":
+                error_info = task_data.get("error", "Unknown error")
+                print(self.fail + f"\nError: Task failed - {error_info}" + self.endc)
+                return None
+
+            # processing → 继续循环
+            pass
+
+        # 达到最大等待时间仍未返回
+        print(self.warning + f"\nStopped polling: reached {max_seconds} seconds limit." + self.endc)
         return None
 
     # 生成视频
@@ -4495,11 +4509,560 @@ class Jimeng:
             sys.exit(1)
 
         # 轮询任务结果
-        self.video_url = self.__poll_task_result()
+        self.video_output_url = self.__poll_task_result()
 
-        if not self.video_url:
+        if not self.video_output_url:
             print(self.warning + f"\nWarning: Exceeding the maximum number of polls" + self.endc)
             print(f"You can manually query later using this task ID: {self.okcyan}{self.task_id}{self.endc}")
+
+        return None
+
+
+""" 即梦 AI 图生成模型 """
+class Jimeng_image:
+    """
+    Jimeng_image 图片生成
+    """
+
+    def __init__(self, access_key: Optional[str] = None, secret_key: Optional[str] = None,
+                 image_path: Optional[str] = None, image_url_list: Optional[list] = None,
+                 prompt: Optional[str] = None, use_pre_llm: bool = True, save_path: Optional[str] = None):
+        """
+        初始化 Jimeng 图片生成器
+        Initialize the Jimeng image generator.
+
+        :param access_key: (str): 访问密钥 ID
+        :param secret_key: (str): 秘密访问密钥
+        :param image_path: (str): 图片地址
+        :param image_url_list: (list): 图片的 URL，需要为 list，优先级高
+        :param prompt: (str): 图片描述文本，必需输入
+        :param use_pre_llm: (bool): 文生图时文本扩写，默认为 True
+        :param save_path: (str): 图片保存目录，必需输入
+        """
+
+        # 参数初始化
+        if access_key is not None:
+            self.access_key = access_key
+        else:
+            self.access_key = Jimeng_api_key
+        if secret_key is not None:
+            self.secret_key = secret_key
+        else:
+            self.secret_key = Jimeng_api_secret
+        if image_path is not None:
+            self.image_path = image_path
+        else:
+            self.image_path = None
+        if image_url_list is not None:
+            self.image_url_list = image_url_list
+        else:
+            self.image_url_list = []  # 用于保存输入图片的 URL
+        if prompt is not None:
+            self.prompt = prompt
+        else:
+            class_name = self.__class__.__name__
+            method_name = inspect.currentframe().f_code.co_name
+            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, the prompt cannot be None.")
+        self.use_pre_llm = use_pre_llm
+        if save_path is not None:
+            self.save_path = save_path
+        else:
+            class_name = self.__class__.__name__
+            method_name = inspect.currentframe().f_code.co_name
+            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, the save_path cannot be None.")
+
+        self.task_id = None
+        self.image_input_base64_list = None  # 输入的 base64 格式的图片
+        self.image_output_base64_list = None  # 生成的 base64 格式的图片
+
+        # 服务配置常量
+        self.method = 'POST'
+        self.host = 'visual.volcengineapi.com'
+        self.region = 'cn-north-1'
+        self.endpoint = 'https://visual.volcengineapi.com'
+        self.service = 'cv'
+        self.api_version = '2022-08-31'
+
+        # 判断生图模式
+        self.mode = self.__detect_mode()
+        if self.mode == "text_to_image":  # 文生图
+            self.req_key = "jimeng_t2i_v31"  # 即梦文生图 3.1
+        elif self.mode == "local_image_to_image":  # 本地图生图，优先级高
+            self.req_key = 'jimeng_i2i_v30'  # 即梦 3.0
+        elif self.mode == "url_image_to_image":  # URL 图生图
+            self.req_key = self.req_key = 'jimeng_t2i_v40'   # 即梦 4 .0
+        else:
+            class_name = self.__class__.__name__  # 获取类名
+            method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                            f"the AI image generation mode is incorrect.")
+
+        # 图片参数
+        self.image_save_full_path = self.__generate_image_name()  # 图片的保存路径 (全路径)
+        self.width = 2016  # 图片的宽度 取值 [1024, 4096]
+        self.height = 2016  # 图片的高度 取值 [1024, 4096]
+        self.scale = 0.5  # 文本的影响程度 取值 [0, 1]
+        self.force_single = False  # 是否强制生成单图
+        self.min_ratio = 1/3  # 生图结果的宽 / 高 取值 [1/16, 16)
+        self.max_ratio = 3  # 生图结果的宽 / 高 取值 [1/16, 16)
+        self.seed = -1  # 随机种子，默认无
+
+        # ANSI颜色代码
+        self.header = '\033[95m'
+        self.okblue = '\033[94m'
+        self.okcyan = '\033[96m'
+        self.okgreen = '\033[92m'
+        self.warning = '\033[93m'
+        self.fail = '\033[91m'
+        self.endc = '\033[0m'
+        self.bold = '\033[1m'
+
+        # 验证输入参数
+        if not all([self.access_key, self.secret_key, self.prompt, self.save_path]):
+            print(self.fail + 'Error: Missing required input parameters' + self.endc)
+            sys.exit(1)
+
+    # 判断生图模式
+    def __detect_mode(self):
+        """
+        自动判断生成模式：
+        - 文生图: 仅 prompt 不为 None
+        - 本地图生图: image_path 和 prompt 均不为 None
+        - URL图生图: image_url_list 和 prompt 均不为 None
+        """
+
+        has_prompt = self.prompt is not None and self.prompt != ""
+        has_local_img = self.image_path is not None
+        has_url_img = (
+            self.image_url_list is not None
+            and isinstance(self.image_url_list, list)
+            and len(self.image_url_list) > 0
+        )
+
+        # 1. 文生图模式
+        if has_prompt and not has_local_img and not has_url_img:
+            return "text_to_image"
+
+        # 2. 本地图生图模式
+        if has_prompt and has_local_img:
+            return "local_image_to_image"
+
+        # 3. URL 图生图模式
+        if has_prompt and has_url_img:
+            return "url_image_to_image"
+
+        # 4. 如果没有任何有效输入
+        return "invalid"
+
+    # 生成文件名
+    def __generate_image_name(self) -> str:
+        """
+        自动生成文件名
+
+        :return image_save_full_path: (str) 生成的文件名
+        """
+
+        # 自动生成不重复的文件名
+        counter = 1
+        while True:
+            filename = f"Image_{counter}.png"
+            file_path = os.path.join(self.save_path, filename)
+
+            if not os.path.exists(file_path):
+                break  # 找到不存在的文件名
+            counter += 1
+
+        self.image_save_full_path = file_path
+
+        return file_path
+
+    # 生成签名
+    def __generate_signature(self, current_date: Optional[str] = None, date_stamp: Optional[str] = None,
+                             payload_hash: Optional[str] = None, canonical_querystring: Optional[str] = '') -> str:
+        """
+        生成请求签名 (HMAC-SHA256)
+
+        :param current_date: (Optional[str]) 当前时间戳，格式为 ISO 8601，如 '20250926T212000Z'。
+        :param date_stamp: (Optional[str]) 日期戳，格式为 'YYYYMMDD'。
+        :param payload_hash: (Optional[str]) 请求体内容的 SHA256 哈希值。
+        :param canonical_querystring: (Optional[str]) 请求的规范查询字符串，默认为空。
+
+        :return: (str) 完整的 Authorization 签名字符串。
+        """
+
+        # 构建规范请求
+        canonical_uri = '/'
+        signed_headers = 'content-type;host;x-content-sha256;x-date'
+        content_type = 'application/json'
+
+        canonical_headers = (
+            f"content-type:{content_type}\n"
+            f"host:{self.host}\n"
+            f"x-content-sha256:{payload_hash}\n"
+            f"x-date:{current_date}\n"
+        )
+
+        canonical_request = (
+            f"{self.method}\n{canonical_uri}\n{canonical_querystring}\n"
+            f"{canonical_headers}\n{signed_headers}\n{payload_hash}"
+        )
+
+        # 构建待签名字符串
+        algorithm = 'HMAC-SHA256'
+        credential_scope = f"{date_stamp}/{self.region}/{self.service}/request"
+        canonical_request_hash = hashlib.sha256(canonical_request.encode('utf-8')).hexdigest()
+        string_to_sign = f"{algorithm}\n{current_date}\n{credential_scope}\n{canonical_request_hash}"
+
+        # 生成签名密钥
+        def sign(key, msg):
+            return hmac.new(key, msg.encode('utf-8'), hashlib.sha256).digest()
+
+        k_date = sign(self.secret_key.encode('utf-8'), date_stamp)
+        k_region = sign(k_date, self.region)
+        k_service = sign(k_region, self.service)
+        k_signing = sign(k_service, 'request')
+
+        # 计算签名
+        signature = hmac.new(k_signing, string_to_sign.encode('utf-8'), hashlib.sha256).hexdigest()
+
+        return (f"{algorithm} Credential={self.access_key}/{credential_scope}, SignedHeaders={signed_headers}, "
+                f"Signature={signature}")
+
+    # 发送请求
+    def __send_signed_request(self, action: str, body_params: Dict[str, Any]) -> requests.Response:
+        """
+        发送签名请求
+
+        :param action: (str) API 接口操作名称，例如 'CVSync2AsyncGetResult'。
+        :param body_params: (Dict[str, Any]) 请求体参数字典，将被 JSON 序列化后发送。
+
+        :return: (requests.Response) requests 库返回的响应对象，包含接口返回的内容。
+        """
+
+        if not self.access_key or not self.secret_key:
+            print(self.fail + 'Error: Missing API credentials' + self.endc)
+            sys.exit(1)
+
+        # 获取当前时间
+        current_utc = datetime.now(timezone.utc)
+        current_date = current_utc.strftime('%Y%m%dT%H%M%SZ')
+        date_stamp = current_utc.strftime('%Y%m%d')
+
+        # 构建查询参数
+        query_params = {
+            'Action': action,
+            'Version': self.api_version,
+        }
+        canonical_querystring = '&'.join([
+            f"{k}={urllib.parse.quote_plus(str(v))}" for k, v in sorted(query_params.items())
+        ])
+
+        # 构建请求体
+        req_body = json.dumps(body_params)
+        payload_hash = hashlib.sha256(req_body.encode('utf-8')).hexdigest()
+
+        # 生成签名
+        authorization_header = self.__generate_signature(
+            current_date, date_stamp, payload_hash, canonical_querystring
+        )
+
+        # 构建请求头
+        headers = {
+            'X-Date': current_date,
+            'Authorization': authorization_header,
+            'X-Content-Sha256': payload_hash,
+            'Content-Type': 'application/json'
+        }
+
+        # 发送请求
+        request_url = f"{self.endpoint}?{canonical_querystring}"
+
+        return requests.post(request_url, headers=headers, data=req_body)
+
+    # 图片转为 base64
+    def __images_to_base64_list(self, max_images: int = 6) -> None:
+        """
+        将本地图片路径或目录下所有图片转为 Base64 字符串列表。
+        """
+
+        base64_list = []
+        path = Path(self.image_path)
+
+        # 收集图片文件
+        files = []
+        if path.is_file():
+            files.append(path)
+        elif path.is_dir():
+            for file in path.iterdir():
+                if file.is_file() and file.suffix.lower() in {'.jpg', '.jpeg', '.png', '.bmp', '.gif'}:
+                    files.append(file)
+        else:
+            class_name = self.__class__.__name__  # 获取类名
+            method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                             f"the path does not exist or is not a file/directory: {self.image_path}")
+
+        # 转 Base64
+        for file in files[:max_images]:
+            try:
+                with open(file, 'rb') as f:
+                    img_bytes = f.read()
+                    img_base64 = base64.b64encode(img_bytes).decode('utf-8')
+                    base64_list.append(img_base64)
+                    
+            except Exception as e:
+                print(f"Exception converting {file.name}: {e}")
+
+        self.image_input_base64_list = base64_list
+
+        return None
+
+    # 提交任务
+    def submit_task(self) -> int or None:
+        """
+        提交图片生成任务
+
+        :return: (Optional[int]) 提交成功返回任务 ID (task_id)，失败返回 None。
+        """
+
+        # 本地图片
+        if self.mode == "local_image_to_image":
+            self.__images_to_base64_list()
+
+        print(self.okcyan + f"\nSubmitting image generation task." + self.endc)
+
+        body_params = {
+            "req_key": self.req_key,
+            "prompt": self.prompt,
+            "width": self.width,
+            "height": self.height,
+            "seed": self.seed,
+        }
+
+        if self.mode == "text_to_image":
+            body_params["use_pre_llm"] = self.use_pre_llm
+
+        elif self.mode == "local_image_to_image":
+            body_params["binary_data_base64"] = self.image_input_base64_list
+
+        elif self.mode == "url_image_to_image":
+            body_params["image_urls"] = self.image_url_list
+            body_params["force_single"] = self.force_single
+            body_params["min_ratio"] = self.min_ratio
+            body_params["max_ratio"] = self.max_ratio
+
+        response = self.__send_signed_request('CVSync2AsyncSubmitTask', body_params)
+
+        if response.status_code != 200:
+            # print(self.fail + f"Error: Task submission failed, status code: {response.status_code}\n" + self.endc)
+            print(self.fail + f"Error: Task submission failed, status code: {response.status_code}\n" +
+                  f"The status code: {response.json().get('code')}" + self.endc)
+            return None
+
+        try:
+            response_data = response.json()
+            if response_data.get('code') != 10000:
+                error_msg = response_data.get('message', 'Unknown error')
+                print(self.fail + f"API Error: {error_msg}" + self.endc)
+                return None
+
+            self.task_id = response_data['data']['task_id']
+            print(self.okgreen + f"Success: Task submitted! Task ID: {self.task_id}" + self.endc)
+            return self.task_id
+
+        except Exception as e:
+            print(self.fail + f"Error: Failed to parse task ID - {e}" + self.endc)
+            print(f"Raw response: {response.text[:200]}...")
+            return None
+
+    # 获取任务
+    def __get_task_result(self) -> requests.Response:
+        """
+        获取任务结果
+
+        :return: (dict) 任务执行结果，内容由接口返回的 JSON 数据组成。
+        """
+
+        body_params = {
+            "req_key": self.req_key,
+            "task_id": self.task_id
+        }
+        return self.__send_signed_request(action='CVSync2AsyncGetResult', body_params=body_params)
+
+    # 轮询结果
+    def __poll_task_result(self, max_seconds: int = 200) -> None:
+        """
+        每秒轮询任务，实时显示已查询秒数。
+        任务完成立即返回；达到最大秒数仍未完成则退出。
+
+        :param max_seconds: 最大等待秒数(默认 200 秒)
+
+        :return: 图片 base64 或 URL，失败返回 None
+        """
+
+        print(self.okcyan + "\nStart polling the task status..." + self.endc)
+
+        start_time = time.time()
+
+        for waited in range(1, max_seconds + 1):
+
+            # 动态显示已等待时间
+            sys.stdout.write(f"\rHas waited for {waited} seconds...")
+            sys.stdout.flush()
+            time.sleep(1)
+
+            # 查询任务结果
+            response = self.__get_task_result()
+
+            if response.status_code != 200:
+                print(self.warning +
+                      f"\nWarning: Query failed with HTTP {response.status_code}. "
+                      f"API code: {response.json().get('code')}" +
+                      self.endc)
+                return None
+
+            try:
+                result = response.json()
+            except Exception as e:
+                print(self.fail + f"\nError: Failed to parse response JSON - {e}" + self.endc)
+                return None
+
+            # API错误
+            if result.get("code") != 10000:
+                print(self.warning + f"\nAPI Error: {result.get('message', 'Unknown error')}" + self.endc)
+                return None
+
+            # 解析任务状态
+            task_data = result["data"]
+            status = task_data.get("status")
+
+            # 处理各种状态
+            if status == "done":
+                sys.stdout.write("\r" + " " * 50 + "\r")
+                sys.stdout.flush()
+                print(self.okgreen + "Received task result!" + self.endc)
+
+                # 先尝试取 base64
+                images = task_data.get("binary_data_base64")
+                self.image_output_base64_list = images
+
+                # 如果没有 base64，则看 resp_data 的 image_urls
+                if not images:
+                    try:
+                        resp_data = json.loads(task_data.get("resp_data", "{}"))
+                        urls = resp_data.get("image_urls", [])
+                        if urls:
+                            images = urls[0]
+                    except Exception as e:
+                        print(self.warning + f"Parsing resp_data failed - {e}" + self.endc)
+
+                if images:
+
+                    total_time = time.time() - start_time
+
+                    print("\n" + "=" * 60)
+                    print(self.header + self.bold + "The image was generated successfully!" + self.endc)
+                    print(f"Time used: {self.okcyan}{total_time:.2f} seconds{self.endc}")
+
+                    # 保存路径
+                    if self.__save_base64_image():
+                        print(f"Saved to: {self.okcyan}{self.image_save_full_path}{self.endc}")
+                    else:
+                        print(f"Saved to: {self.okcyan}The Image is not saved.{self.endc}")
+                    print("=" * 60 + "\n")
+
+                    return images
+
+                else:
+                    print(self.fail + "\nError: No valid image returned." + self.endc)
+                    return None
+
+            elif status == "failed":
+                error_info = task_data.get("error", "Unknown error")
+                print(self.fail + f"\nError: Task failed - {error_info}" + self.endc)
+                return None
+
+            # 状态为 processing → 继续循环
+            pass
+
+        # 达到最大等待时间仍未返回
+        print(self.warning + f"\nStopped polling: reached {max_seconds} seconds limit." + self.endc)
+
+        return None
+
+    # 下载图片
+    def __save_base64_image(self) -> bool:
+        """
+        保存 Base64 图片文件到本地
+        文件命名为 Image_1.png，如果存在则自动递增为 Image_2.png、Image_3.png...
+        """
+
+        try:
+            # 确保保存路径存在
+            os.makedirs(self.save_path, exist_ok=True)
+
+            if not hasattr(self, 'image_output_base64_list') or not self.image_output_base64_list:
+                print(self.fail + "Error: No images in 'image_output_base64_list' to save." + self.endc)
+                return False
+
+            for idx, binary_b64 in enumerate(self.image_output_base64_list, start=1):
+
+                # 解码 Base64
+                try:
+                    image_bytes = base64.b64decode(binary_b64)
+                except Exception as e:
+                    print(self.fail + f"Invalid base64: {e}" + self.endc)
+                    continue
+
+                # 保存到本地
+                with open(self.image_save_full_path, "wb") as f:
+                    f.write(image_bytes)
+
+            return True
+
+        except Exception as e:
+            print(self.fail + f"Error: Exception occurred while saving images - {e}" + self.endc)
+            return False
+
+    # 生成图片
+    def run_image_generation(self) -> None:
+        """
+        运行图片生成工作流，包括创建保存目录、提交任务、轮询任务结果和下载图片。
+
+        过程说明：
+        1. 创建图片保存目录（如果不存在）。
+        2. 打印任务信息（图片描述和保存路径）。
+        3. 提交图片生成任务，并获取任务 ID。
+        4. 轮询任务结果，直到生成完成或达到最大轮询次数。
+        5. 下载生成的图片文件，如果任务失败或超时则给出提示。
+
+        :return: (None) 方法不返回值，所有结果通过控制台打印或文件保存体现。
+        """
+        # 创建保存目录
+        if not os.path.exists(self.save_path):
+            os.makedirs(self.save_path)
+            print(self.okcyan + f"Created directory: {self.save_path}" + self.endc)
+
+        # 打印任务信息
+        print("\n" + "=" * 60)
+        print(self.header + self.bold + "Start the image generation task" + self.endc)
+        print(f"Mode and req_key: {self.okcyan}{self.mode} / {self.req_key}{self.endc}")
+        print(f"image description: {self.okcyan}{self.prompt}{self.endc}")
+        print("=" * 60)
+
+        # 提交任务
+        self.task_id = self.submit_task()
+        if not self.task_id:
+            print(self.fail + "Error: Task submission failed, program exits" + self.endc)
+            sys.exit(1)
+
+        # 轮询任务结果
+        self.__poll_task_result()
+
+        if not self.image_output_base64_list:
+            print(self.warning + f"\nWarning: Exceeding the maximum number of polls" + self.endc)
+            print(f"You can manually query laimage_base64_listter using this task ID: "
+                  f"{self.okcyan}{self.task_id}{self.endc}")
 
         return None
 

@@ -1618,7 +1618,7 @@ class AI:
                                             last_received_time = time.time()  # 刷新更新时间
 
                                             # 处理工具调用（累积参数）
-                                            if "tool_calls" in delta:
+                                            if delta.get("tool_calls") is not None:
                                                 for call in delta["tool_calls"]:
                                                     index = call["index"]
 
@@ -2069,7 +2069,7 @@ class AI:
                                                 last_received_time = time.time()  # 刷新更新时间
 
                                         # 处理工具调用（累积参数）
-                                        if "tool_calls" in delta:
+                                        if delta.get("tool_calls") is not None:
                                             for call in delta["tool_calls"]:
                                                 index = call["index"]
 
@@ -2436,7 +2436,7 @@ class AI:
                                         yield chunk_content
 
                                         # 处理工具调用（累积参数）
-                                        if "tool_calls" in delta:
+                                        if delta.get("tool_calls") is not None:
                                             for call in delta["tool_calls"]:
                                                 index = call["index"]
 

@@ -86,6 +86,7 @@ avaliable_model = [
     'yi-large',  # 零一万物
     'yi-large-fc',  # 零一万物
     'yi-large-preview',  # 零一万物
+    'moonshotai/Kimi-K2-Thinking',  # 月之暗面
 
     # Generate image
     'Qwen/Qwen-Image',  # 通义千问
@@ -5346,14 +5347,16 @@ class Assist(AI):
 """ AI 大模型互动区 """
 class Muse:
     """
-    各种 AI 大模型与人类休闲交互区
+    各种 AI 大模型与人类休闲交互区，设置不同模型的AI时，仅适用于同一API与base url。
 
     Apply various large-scale AI models such as ChatGPT, DeepSeek, Claude, Gemini, and Grok to interact casually
-    with humans and enhance inspiration.
+    with humans and enhance inspiration.When setting up AI for different models,
+    it is only applicable to the same API and base url.
     """
 
     # 初始化，应当包含所有 AI 大模型的参数
-    def __init__(self, man_number: int = 0, ai_number: int = 0):
+    def __init__(self, man_number: int = 0, ai_number: int = 0,
+                 api_key: Optional[str] = None, base_url: Optional[str] = None):
         """
         DeepSeek 特有参数初始化
         Initialization of DeepSeek's unique parameters.
@@ -5361,6 +5364,8 @@ class Muse:
         # 玩家数量配置 (2)
         :param man_number: (int) 真人玩家的数量，默认为 None，表示根据需要分配
         :param ai_number: (int) AI 玩家的数量，默认为 None，表示根据需要分配
+        :param api_key: (str) 输入的 API KEY，即 API 密钥
+        :param base_url: (str) 输入的 base URL
         """
 
         # 玩家配置
@@ -5373,6 +5378,19 @@ class Muse:
 
         # AI 玩家参数
         self.ai_number = ai_number
+
+        # API & URL
+        if api_key is not None:
+            self.api_key = api_key
+        else:
+            class_name = self.__class__.__name__  # 获取类名
+            method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                             f"the API value must be entered.")
+        if base_url is not None:
+            self.base_url = base_url
+        else:
+            self.base_url = base_url_1
 
     # 配置环境，几位真人，几个 AI
     def setup_environment(self, man_number: Optional[int] = None, ai_number: Optional[int] = None,
@@ -5494,7 +5512,8 @@ class Muse:
                 else:
                     # 其他模型用映射表
                     model_name = ai_model_map[ai_type]
-                instances[instance_id] = AI(instance_id=instance_id, model=model_name)
+                instances[instance_id] = AI(instance_id=instance_id, model=model_name,
+                                            api_key=self.api_key, base_url=self.base_url)
 
         # 可选调试输出
         if show_result:
@@ -5582,7 +5601,8 @@ class Muse:
         for model_name, count in ai_counts.items():
             for i in range(count):
                 instance_id = f"{model_name}_{i + 1}"
-                instances[instance_id] = AI(instance_id=instance_id, model=model_name)
+                instances[instance_id] = AI(instance_id=instance_id, model=model_name,
+                                            api_key=self.api_key, base_url=self.base_url)
 
         # 可选调试输出
         if show_result:
@@ -5633,7 +5653,8 @@ class Muse:
             else:
                 ai_counts[model_name] = ai_counts.get(model_name, 0) + 1
                 instance_id = f"{model_name}_{ai_counts[model_name]}"
-                instances[instance_id] = AI(instance_id=instance_id, model=model_name)
+                instances[instance_id] = AI(instance_id=instance_id, model=model_name,
+                                            api_key=self.api_key, base_url=self.base_url)
 
         # 可选调试输出
         if show_result:
@@ -5652,10 +5673,17 @@ class Muse:
 
 """ 多名 AI 对话区 """
 class ChatBoat(Muse):
+    """
+    多个 AI 大模型与多个人类对话
+
+    Multiple large AI models have conversations with multiple humans.
+    Everyone takes turns to speak as required by the system.
+    """
 
     # 初始化
     def __init__(self, man_number: int = 0, ai_number: int = 0, player: list or dict = None, name_list: list = None,
-                 info_list: list = None, key_prompt: str = None):
+                 info_list: list = None, key_prompt: str = None,
+                 api_key: Optional[str] = None, base_url: Optional[str] = None):
         """
         ChatBoat 的初始化
 
@@ -5663,9 +5691,11 @@ class ChatBoat(Muse):
         :param name_list: (list) 名称 list，长度需与 player 一致
         :param info_list: (list) 每个玩家的特点，长度需与 player 一致
         :param key_prompt: (str) 关键 prompt，所有玩家共有
+        :param api_key: (str) 输入的 API KEY，即 API 密钥
+        :param base_url: (str) 输入的 base URL
         """
 
-        super().__init__(man_number=man_number, ai_number=ai_number)
+        super().__init__(man_number=man_number, ai_number=ai_number, api_key=api_key, base_url=base_url)
 
         self.player_list = None
         if player is not None:

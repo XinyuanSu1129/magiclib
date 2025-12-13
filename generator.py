@@ -5681,18 +5681,32 @@ class ChatBoat(Muse):
     """
 
     # 初始化
-    def __init__(self, man_number: int = 0, ai_number: int = 0, player: list or dict = None, name_list: list = None,
-                 info_list: list = None, key_prompt: str = None,
-                 api_key: Optional[str] = None, base_url: Optional[str] = None):
+    def __init__(self, api_key: Optional[str] = None, base_url: Optional[str] = None,
+                 man_number: int = 0, ai_number: int = 0, player: list or dict = None, name_list: list = None,
+                 info_list: list = None, key_prompt: str = None, show_response: bool = False,
+                 stream: bool = True, show_reasoning: bool = False, tools: Optional[list] = None,
+                 tool_methods: Optional[dict] = None, tool_choice: str = "auto"):
         """
         ChatBoat 的初始化
 
+        :param api_key: (str) 输入的 API KEY，即 API 密钥
+        :param base_url: (str) 输入的 base URL
+        :param man_number: (int) 真人玩家的数量，默认为 None，表示根据需要分配
+        :param ai_number: (int) AI 玩家的数量，分配 AI 之和的总数需要小于等于 AI 玩家的总数。不足的用 DeepSeek AI 补全。
+                                默认为 None，表示根据需要分配
         :param player: (list / dict) 玩家 list 或 dict，key 为名，value 为 实例
         :param name_list: (list) 名称 list，长度需与 player 一致
         :param info_list: (list) 每个玩家的特点，长度需与 player 一致
         :param key_prompt: (str) 关键 prompt，所有玩家共有
-        :param api_key: (str) 输入的 API KEY，即 API 密钥
-        :param base_url: (str) 输入的 base URL
+        :param show_response: (bool) 是否在 AI 回复时就打印其回复的内容，默认为 False
+        :param stream: (bool) 是否实时打印，默认为 True
+        :param show_reasoning: (bool) 是否打印思考，默认为 False
+        :param tools: (list) 工具信息条，用于描述工具
+        :param tool_methods: (dict) 工具包，放有具体工具
+        :param tool_choice: (str) 工具选取方式，"auto" 为自动选取，"none" 为决不会选取"，
+                            {"type": "function", "function": {"name": "xxx"}} 为强制调用指定工具，并且只能调用它。
+                            "required"(部分文档称为 {"type": "function", "function": "required"} 的形式)，
+                            模型必须调用某个工具，但可以自己选择哪一个
         """
 
         super().__init__(man_number=man_number, ai_number=ai_number, api_key=api_key, base_url=base_url)
@@ -5731,6 +5745,12 @@ There is no need to include your name or colon.
 <important>(content)</important> --> indicates that the part you mentioned is very important
 <praise>{name}</praise> --> indicates that you praise this character {player name}
 """
+        self.show_response = show_response
+        self.stream = stream
+        self.show_reasoning = show_reasoning
+        self.tools = tools
+        self.tool_methods = tool_methods
+        self.tool_choice = tool_choice
 
         # 重要属性
         self.player_dic = {}  # 所有玩家的信息
@@ -5758,8 +5778,15 @@ There is no need to include your name or colon.
                 raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
                                  f"the value player cannot be None.")
 
+        # 集中改变类属性
         for model in self.player_list:
-            model.tools = []
+            # 对话
+            model.stream = self.stream
+            model.show_reasoning = self.show_reasoning
+            # 工具
+            model.tools = self.tools
+            model.tool_methods = self.tool_methods
+            model.tool_choice = self.tool_choice
 
         self.player_number = len(self.player_list)
 
@@ -5833,9 +5860,10 @@ You will have a conversation in turn. Next are the important prompt words of thi
 
             assistant_str = model.chat(
                 messages=history_content,
-                show_response=True,  #
-                raise_error=True,  #
-                return_all_messages=False  #
+
+                show_response=self.show_response,  # 打印 AI 回复的内容
+                raise_error=True,  # 相应错误时会抛出错误
+                return_all_messages=False  # 返回内容为单次 response_content
             )
             self.player_dic[name]["history_content"].append({"role": "assistant", "content": assistant_str})
             self.__player_output_process(model, assistant_str)
@@ -5870,6 +5898,7 @@ You will have a conversation in turn. Next are the important prompt words of thi
 
         :param name: (str) 玩家名
         """
+
         # 找到最后一次 name 出现的索引
         last_index = -1
         for i, record in enumerate(self.history_list):

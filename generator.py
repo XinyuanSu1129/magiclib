@@ -5687,8 +5687,7 @@ class ChatBoat(Muse):
     def __init__(self, api_key: Optional[str] = None, base_url: Optional[str] = None,
                  man_number: int = 0, ai_number: int = 0, player: list or dict = None, name_list: list = None,
                  info_list: list = None, key_prompt: str = None, show_response: bool = False,
-                 stream: bool = True, show_reasoning: bool = False, tools: Optional[list] = None,
-                 tool_methods: Optional[dict] = None, tool_choice: str = "auto",
+                 stream: bool = True, show_reasoning: bool = False,
                  end_token: Optional[str] = None, target_token: str = r'^\s*<target>([\s\S]*)'):
         r"""
         ChatBoat 的初始化
@@ -5705,12 +5704,6 @@ class ChatBoat(Muse):
         :param show_response: (bool) 是否在 AI 回复时就打印其回复的内容，默认为 False
         :param stream: (bool) 是否实时打印，默认为 True
         :param show_reasoning: (bool) 是否打印思考，默认为 False
-        :param tools: (list) 工具信息条，用于描述工具
-        :param tool_methods: (dict) 工具包，放有具体工具
-        :param tool_choice: (str) 工具选取方式，"auto" 为自动选取，"none" 为决不会选取"，
-                            {"type": "function", "function": {"name": "xxx"}} 为强制调用指定工具，并且只能调用它。
-                            "required"(部分文档称为 {"type": "function", "function": "required"} 的形式)，
-                            模型必须调用某个工具，但可以自己选择哪一个
         :param end_token: (str) 人类回复时的结尾，此参数不允许包含换行符。end_token 默认情况下，只有在空的一行输入换行符
                          '\n' 或空按“回车”才会将内容输入，否则只是换到下一行并等待继续输入，此情况下最下面的换行符 \n 不会保留
         :param target_token: (str) 寻找的回答，为正则表达式，如找到则会结束对话。默认为 r'^\s*<target>([\s\S]*)'
@@ -5755,9 +5748,6 @@ There is no need to include your name or colon.
         self.show_response = show_response
         self.stream = stream
         self.show_reasoning = show_reasoning
-        self.tools = tools
-        self.tool_methods = tool_methods
-        self.tool_choice = tool_choice
         self.end_token = end_token
         self.target_token = target_token
 
@@ -5795,10 +5785,6 @@ There is no need to include your name or colon.
             # 对话
             model.stream = self.stream
             model.show_reasoning = self.show_reasoning
-            # 工具
-            model.tools = self.tools
-            model.tool_methods = self.tool_methods
-            model.tool_choice = self.tool_choice
 
         self.player_number = len(self.player_list)
 

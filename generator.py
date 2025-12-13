@@ -1430,7 +1430,7 @@ class AI:
 
     # 与 AI 大模型聊天
     def chat(self, messages: Optional[List[dict]] = None, show_response: bool = True, raise_error: bool = False,
-             return_all_messages: bool = True) -> List[dict] or str:
+             return_all_messages: bool = True, **kwargs) -> List[dict] or str:
         """
         与 AI 大模型聊天，单次交互，传入完整 messages，返回 AI 回复并保存。允许调用工具，调用返回时以 system 返回给 AI 工具调用结果，
         且不会自动二次调用 AI 处理工具调用后的结果
@@ -1442,6 +1442,9 @@ class AI:
         :param show_response: (bool) 是否打印返回的 reasoning & content，默认为 True
         :param raise_error: (bool) 遇到响应问题时为抛出错误，否则打印错误。默认为 False
         :param return_all_messages: (bool) 返回内容为单次消息 response_content or 整个 messages list，默认为 True
+
+        --- **kwargs ---
+        仅 chat() 有，用于占位。
 
         :return result_content: (str / list) AI 返回的单次消息 response_content or 整个 messages list
         """
@@ -5685,8 +5688,9 @@ class ChatBoat(Muse):
                  man_number: int = 0, ai_number: int = 0, player: list or dict = None, name_list: list = None,
                  info_list: list = None, key_prompt: str = None, show_response: bool = False,
                  stream: bool = True, show_reasoning: bool = False, tools: Optional[list] = None,
-                 tool_methods: Optional[dict] = None, tool_choice: str = "auto"):
-        """
+                 tool_methods: Optional[dict] = None, tool_choice: str = "auto",
+                 end_token: Optional[str] = None, target_token: str = r'^\s*<target>([\s\S]*)'):
+        r"""
         ChatBoat 的初始化
 
         :param api_key: (str) 输入的 API KEY，即 API 密钥
@@ -5707,6 +5711,9 @@ class ChatBoat(Muse):
                             {"type": "function", "function": {"name": "xxx"}} 为强制调用指定工具，并且只能调用它。
                             "required"(部分文档称为 {"type": "function", "function": "required"} 的形式)，
                             模型必须调用某个工具，但可以自己选择哪一个
+        :param end_token: (str) 人类回复时的结尾，此参数不允许包含换行符。end_token 默认情况下，只有在空的一行输入换行符
+                         '\n' 或空按“回车”才会将内容输入，否则只是换到下一行并等待继续输入，此情况下最下面的换行符 \n 不会保留
+        :param target_token: (str) 寻找的回答，为正则表达式，如找到则会结束对话。默认为 r'^\s*<target>([\s\S]*)'
         """
 
         super().__init__(man_number=man_number, ai_number=ai_number, api_key=api_key, base_url=base_url)
@@ -5751,6 +5758,8 @@ There is no need to include your name or colon.
         self.tools = tools
         self.tool_methods = tool_methods
         self.tool_choice = tool_choice
+        self.end_token = end_token
+        self.target_token = target_token
 
         # 重要属性
         self.player_dic = {}  # 所有玩家的信息
@@ -5758,6 +5767,9 @@ There is no need to include your name or colon.
         self.scene = None  # 场景
         self.scene_description = None  # 场景描述
         self.end_chat = False  # bool 结束对话
+
+        # 对话检索内容
+        self.target_content = None
 
     # 初始化对话
     def __inint_chating(self):
@@ -5815,9 +5827,9 @@ There is no need to include your name or colon.
 <system>You will play the role of {name} and take turns speaking with {self.player_number-1} other character(s).
 The names of the other several characters are respectively: {"，".join([n for n in self.name_list if n != name])}.
 You will have a conversation in turn. Next are the important prompt words of this round of dialogue{
-            ",\nas well as the detailed information of your character " if prompt else ""}. </system>
+            ",\nas well as the detailed information of your character" if prompt else ""}. </system>
 ------------------------------------------------------------
-{self.key_prompt}{"------------------------------------------------------------"
+{self.key_prompt}{"\n------------------------------------------------------------"
     if prompt else ""}{"\n" + prompt if prompt else ""}"""
             prompt_list.append(system_prompt)
 
@@ -5863,10 +5875,12 @@ You will have a conversation in turn. Next are the important prompt words of thi
 
                 show_response=self.show_response,  # 打印 AI 回复的内容
                 raise_error=True,  # 相应错误时会抛出错误
-                return_all_messages=False  # 返回内容为单次 response_content
+                return_all_messages=False,  # 返回内容为单次 response_content
+                input_role_user=False,  # 人类回复时角色为 assistant
+                end_token=self.end_token  # 人类回复时的结尾标识
             )
             self.player_dic[name]["history_content"].append({"role": "assistant", "content": assistant_str})
-            self.__player_output_process(model, assistant_str)
+            self.__player_output_process(assistant_str)
 
             # 输出内容整理
             self.history_list.append({name: assistant_str})
@@ -5924,38 +5938,37 @@ You will have a conversation in turn. Next are the important prompt words of thi
         return user_content_dic
 
     # 玩家输出判断
-    def __player_output_process(self, model, assistant_str: str):
+    def __player_output_process(self, assistant_str: str):
         """
-        玩家输出内容的判断，如果是 AI 则跳过此选项。
-        如果是人类玩家，则会根据内容调用函数
+        玩家输出内容判断，不依赖 target_model，所有输入都进行检查
 
-        :param model: (str) 玩家实例
         :param assistant_str: (str) 玩家返回的内容
         """
 
         command_pattern_list = [
             r"<quit>",  # 结束对话
+            self.target_token,  # 目标内容
             r"^<to>.*",  # 换地点
         ]
 
-        if not isinstance(model, Human):
-            return None
+        matched_pattern = None
+        matched_content = None
 
-        else:
-            matched_pattern = None
-            # matched_content = None
+        for pattern in command_pattern_list:
+            match = re.search(pattern, assistant_str)
+            if match:
+                matched_pattern = pattern
+                # 如果正则有分组则取第 1 组，否则取整个匹配
+                matched_content = match.group(1) if match.groups() else match.group(0)
+                break
 
-            for pattern in command_pattern_list:
-                match = re.match(pattern, assistant_str)
-                if match:
-                    matched_pattern = pattern  # 匹配的正则
-                    # matched_content = match.group(0)  # 匹配的内容
-                    break
-
-            if matched_pattern == "<quit>":
+        if matched_pattern:
+            if matched_pattern == r"<quit>":
                 self.end_chat = True
-
-            elif matched_pattern == "^<to>.*":
+            elif matched_pattern == self.target_token:
+                self.target_content = matched_content
+                self.end_chat = True
+            elif matched_pattern == r"^<to>.*":
                 pass
 
     def run(self):

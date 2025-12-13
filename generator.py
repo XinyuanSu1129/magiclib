@@ -1621,30 +1621,30 @@ class AI:
                                                 print(content_piece, end="", flush=True)
                                             last_received_time = time.time()  # 刷新更新时间
 
-                                            # 处理工具调用（累积参数）
-                                            if delta.get("tool_calls") is not None:
-                                                for call in delta["tool_calls"]:
-                                                    index = call["index"]
+                                    # 处理工具调用（累积参数）
+                                    if delta.get("tool_calls") is not None:
+                                        for call in delta["tool_calls"]:
+                                            index = call["index"]
 
-                                                    # 初始化工具调用记录
-                                                    if index not in tool_calls:
-                                                        tool_calls[index] = {
-                                                            "id": "",
-                                                            "function": {"name": "", "arguments": ""}
-                                                        }
+                                            # 初始化工具调用记录
+                                            if index not in tool_calls:
+                                                tool_calls[index] = {
+                                                    "id": "",
+                                                    "function": {"name": "", "arguments": ""}
+                                                }
 
-                                                    # 更新工具调用ID
-                                                    if call.get("id"):
-                                                        tool_calls[index]["id"] = call["id"]
+                                            # 更新工具调用ID
+                                            if call.get("id"):
+                                                tool_calls[index]["id"] = call["id"]
 
-                                                    # 更新函数名称
-                                                    if "function" in call and call["function"].get("name"):
-                                                        tool_calls[index]["function"]["name"] = call["function"]["name"]
+                                            # 更新函数名称
+                                            if "function" in call and call["function"].get("name"):
+                                                tool_calls[index]["function"]["name"] = call["function"]["name"]
 
-                                                    # 累积参数
-                                                    if "function" in call and call["function"].get("arguments"):
-                                                        tool_calls[index]["function"]["arguments"] += call["function"][
-                                                            "arguments"]
+                                            # 累积参数
+                                            if "function" in call and call["function"].get("arguments"):
+                                                tool_calls[index]["function"]["arguments"] += call["function"][
+                                                    "arguments"]
 
                             except json.JSONDecodeError:
                                 # 如果解析 JSON 出错（可能是心跳包或非 JSON 格式内容），则跳过
@@ -2439,30 +2439,30 @@ class AI:
                                         chunk_content = content_piece
                                         yield chunk_content
 
-                                        # 处理工具调用（累积参数）
-                                        if delta.get("tool_calls") is not None:
-                                            for call in delta["tool_calls"]:
-                                                index = call["index"]
+                                # 处理工具调用（累积参数）
+                                if delta.get("tool_calls") is not None:
+                                    for call in delta["tool_calls"]:
+                                        index = call["index"]
 
-                                                # 初始化工具调用记录
-                                                if index not in tool_calls:
-                                                    tool_calls[index] = {
-                                                        "id": "",
-                                                        "function": {"name": "", "arguments": ""}
-                                                    }
+                                        # 初始化工具调用记录
+                                        if index not in tool_calls:
+                                            tool_calls[index] = {
+                                                "id": "",
+                                                "function": {"name": "", "arguments": ""}
+                                            }
 
-                                                # 更新工具调用ID
-                                                if call.get("id"):
-                                                    tool_calls[index]["id"] = call["id"]
+                                        # 更新工具调用ID
+                                        if call.get("id"):
+                                            tool_calls[index]["id"] = call["id"]
 
-                                                # 更新函数名称
-                                                if "function" in call and call["function"].get("name"):
-                                                    tool_calls[index]["function"]["name"] = call["function"]["name"]
+                                        # 更新函数名称
+                                        if "function" in call and call["function"].get("name"):
+                                            tool_calls[index]["function"]["name"] = call["function"]["name"]
 
-                                                # 累积参数
-                                                if "function" in call and call["function"].get("arguments"):
-                                                    tool_calls[index]["function"]["arguments"] += call["function"][
-                                                        "arguments"]
+                                        # 累积参数
+                                        if "function" in call and call["function"].get("arguments"):
+                                            tool_calls[index]["function"]["arguments"] += call["function"][
+                                                "arguments"]
 
                         except json.JSONDecodeError:
                             # 如果解析 JSON 出错（可能是心跳包或非 JSON 格式内容），则跳过

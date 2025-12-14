@@ -1,5 +1,5 @@
 
-__version__ = '6.3.6'
+__version__ = '6.3.7'
 
 __all__ = ['general', 'grapher', 'projector', 'performer', 'potter', 'author', 'generator', 'learny', 'inspector']
 
@@ -354,8 +354,10 @@ MAGIC
                 Update method read_pdf() of class PDF.
 -> 6.3.5        25-12-09 11:47 The generator class has been updated.
                 Add a new class Jimeng_image  to model generator.
--> 6.3.6        25-12-13 18:00 ChatBoat has been optimized. Now, more dialogue Settings such as show_response, 
+-> 6.3.6        25-12-13 18:00 Class ChatBoat has been optimized. Now, more dialogue Settings such as show_response, 
                 stream, show_reasoning, tools, etc. can be made.
+-> 6.3.7        25-12-14 13:05 Class ChatBoat has been optimized. Now errors encountered during a conversation 
+                request support retrying.
                 
        
  ------ Attention ------

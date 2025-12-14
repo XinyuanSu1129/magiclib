@@ -669,7 +669,7 @@ class Tools:
         print(f'\033[90m[{status}]\033[0m\n')
 
         return status
-    
+
     # 音频转文本
     def speech_to_text(self):
         pass
@@ -1444,6 +1444,7 @@ class AI:
         :param return_all_messages: (bool) 返回内容为单次消息 response_content or 整个 messages list，默认为 True
 
         --- **kwargs ---
+
         仅 chat() 有，用于占位。
 
         :return result_content: (str / list) AI 返回的单次消息 response_content or 整个 messages list
@@ -5688,7 +5689,7 @@ class ChatBoat(Muse):
                  man_number: int = 0, ai_number: int = 0, player: list or dict = None, name_list: list = None,
                  info_list: list = None, key_prompt: str = None, show_response: bool = False,
                  stream: bool = True, show_reasoning: bool = False,
-                 end_token: Optional[str] = None, target_token: str = r'^.*?<target>([\s\S]*)'):
+                 end_token: Optional[str] = None, target_token: str = r"^[\s\S]*?<target>([\s\S]*)", **kwargs):
         r"""
         ChatBoat 的初始化
 
@@ -5706,7 +5707,13 @@ class ChatBoat(Muse):
         :param show_reasoning: (bool) 是否打印思考，默认为 False
         :param end_token: (str) 人类回复时的结尾，此参数不允许包含换行符。end_token 默认情况下，只有在空的一行输入换行符
                          '\n' 或空按“回车”才会将内容输入，否则只是换到下一行并等待继续输入，此情况下最下面的换行符 \n 不会保留
-        :param target_token: (str) 寻找的回答，为正则表达式，如找到则会结束对话。默认为 r'^.*?<target>([\s\S]*)'
+        :param target_token: (str) 寻找的回答，为正则表达式，如找到则会结束对话。默认为 r"^[\s\S]*?<target>([\s\S]*)"
+
+        --- **kwargs ---
+
+        - retry_on_error: (bool) 请求时遇到报错，等待 retry_wait_seconds 秒重新请求，默认为 False
+        - retry_wait_seconds: 触发限额后等待多久再发，默认为 2 秒
+        - max_retry_times: 最多重试次数 (防止死循环)，默认为 2 次
         """
 
         super().__init__(man_number=man_number, ai_number=ai_number, api_key=api_key, base_url=base_url)
@@ -5760,6 +5767,11 @@ There is no need to include your name or colon.
 
         # 对话检索内容
         self.target_content = None
+
+        # 关键字参数
+        self.retry_on_error = kwargs.get("retry_on_error", False)
+        self.retry_wait_seconds = kwargs.get("retry_wait_seconds", 2)
+        self.max_retry_times = kwargs.get("max_retry_times", 2)
 
     # 初始化对话
     def __inint_chating(self):
@@ -5856,15 +5868,35 @@ You will have a conversation in turn. Next are the important prompt words of thi
             # 输入内容准备
             history_content.append(user_content_dic)
 
-            assistant_str = model.chat(
-                messages=history_content,
+            # 报错时多次尝试
+            attempt = 0
+            assistant_str = ''
+            while attempt <= self.max_retry_times:
+                try:
+                    assistant_str = model.chat(
+                        messages=history_content,
 
-                show_response=self.show_response,  # 打印 AI 回复的内容
-                raise_error=True,  # 相应错误时会抛出错误
-                return_all_messages=False,  # 返回内容为单次 response_content
-                input_role_user=False,  # 人类回复时角色为 assistant
-                end_token=self.end_token  # 人类回复时的结尾标识
-            )
+                        show_response=self.show_response,  # 打印 AI 回复的内容
+                        raise_error=True,  # 相应错误时会抛出错误
+                        return_all_messages=False,  # 返回内容为单次 response_content
+                        input_role_user=False,  # 人类回复时角色为 assistant
+                        end_token=self.end_token  # 人类回复时的结尾标识
+                    )
+                    break  # 成功则跳出循环
+
+                except Exception as e:
+
+                    # 判断是否重试
+                    if self.retry_on_error and attempt < self.max_retry_times:
+                        print(f"\033[90m[Call error: {e}] "
+                              f"Wait for {self.retry_wait_seconds}s and try again (the {attempt + 1} th time).\033[0m")
+                        time.sleep(self.retry_wait_seconds)
+                        attempt += 1
+                    else:
+                        # 超过最大重试次数仍然抛出异常
+                        print(f"\033[90mstill fails] Reaches the maximum retry count ({self.max_retry_times}).\033[90m")
+                        raise
+
             self.player_dic[name]["history_content"].append({"role": "assistant", "content": assistant_str})
             self.__player_output_process(assistant_str)
 

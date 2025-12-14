@@ -4823,7 +4823,7 @@ class Jimeng_image:
                     img_bytes = f.read()
                     img_base64 = base64.b64encode(img_bytes).decode('utf-8')
                     base64_list.append(img_base64)
-                    
+
             except Exception as e:
                 print(f"Exception converting {file.name}: {e}")
 
@@ -5688,7 +5688,7 @@ class ChatBoat(Muse):
                  man_number: int = 0, ai_number: int = 0, player: list or dict = None, name_list: list = None,
                  info_list: list = None, key_prompt: str = None, show_response: bool = False,
                  stream: bool = True, show_reasoning: bool = False,
-                 end_token: Optional[str] = None, target_token: str = r'^\s*<target>([\s\S]*)'):
+                 end_token: Optional[str] = None, target_token: str = r'^.*?<target>([\s\S]*)'):
         r"""
         ChatBoat 的初始化
 
@@ -5706,7 +5706,7 @@ class ChatBoat(Muse):
         :param show_reasoning: (bool) 是否打印思考，默认为 False
         :param end_token: (str) 人类回复时的结尾，此参数不允许包含换行符。end_token 默认情况下，只有在空的一行输入换行符
                          '\n' 或空按“回车”才会将内容输入，否则只是换到下一行并等待继续输入，此情况下最下面的换行符 \n 不会保留
-        :param target_token: (str) 寻找的回答，为正则表达式，如找到则会结束对话。默认为 r'^\s*<target>([\s\S]*)'
+        :param target_token: (str) 寻找的回答，为正则表达式，如找到则会结束对话。默认为 r'^.*?<target>([\s\S]*)'
         """
 
         super().__init__(man_number=man_number, ai_number=ai_number, api_key=api_key, base_url=base_url)

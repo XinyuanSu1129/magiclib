@@ -1258,11 +1258,11 @@ class AI:
                  ai_keyword: Optional[str] = None, instance_id: Optional[str] = None,
                  information: Optional[str] = None, show_reasoning: bool = False,
 
-                 # 附加参数 (11)
+                 # 附加参数 (13)
                  max_tokens: int = 128000, temperature: float = 0.7, top_p: float = 1.0, n: int = 1,
                  stream: bool = False, stop: Union[str, list, None] = None, presence_penalty: float = 0.0,
                  frequency_penalty: float = 0.0, seed: Optional[int] = None, tools: Optional[list] = None,
-                 tool_methods: Optional[dict] = None, tool_choice: str = "auto"
+                 tool_methods: Optional[dict] = None, tool_choice: str = "auto", strict: bool = False
                  ):
         """
         推理 AI 大模型公有参数
@@ -1280,7 +1280,7 @@ class AI:
         :param information: (str) 当前 AI 被实例化后的信息，自定义输入，用于区分多个 AI 模型
         :param show_reasoning: (bool) 是否打印推理过程，如果有推理的话。默认为 False
 
-        # 附加参数 (12)
+        # 附加参数 (13)
         :param max_tokens: (int) 生成的最大 token 数 (输入 + 输出)
         :param temperature: (float) 控制输出的随机性 (0.0-2.0)，数值越低越确定，越高越有创意
         :param top_p: (float) 核采样概率 (0.0-1.0)，仅保留概率累计在前 top_p 的词汇，与 temperature 二选一
@@ -1289,13 +1289,14 @@ class AI:
         :param stop: (str / list) 停止生成的标记，遇到这些字符串时终止输出
         :param presence_penalty: (float)  避免重复主题 (-2.0-2.0)，正值降低重复提及同一概念的概率，适合长文本生成
         :param frequency_penalty: (float) 避免重复词汇 (-2.0-2.0)，正值降低重复用词概率，适合技术文档写作
-        :param seed: (int) 随机种子，默认为 None，表示完全随机
-        :param tools: (list) 工具信息条，用于描述工具
+        :param seed: (int) 随机种子，只有部分模型支持此参数。默认为 None，表示完全随机
+        :param tools: (list) 工具信息条，用于描述工具，为判断是否启用工具的参数。只有部分模型支持此参数
         :param tool_methods: (dict) 工具包，放有具体工具
         :param tool_choice: (str) 工具选取方式，"auto" 为自动选取，"none" 为决不会选取"，
                             {"type": "function", "function": {"name": "xxx"}} 为强制调用指定工具，并且只能调用它。
                             "required"(部分文档称为 {"type": "function", "function": "required"} 的形式)，
                             模型必须调用某个工具，但可以自己选择哪一个
+        :param strict: (bool) AI 在调用工具时是否以严格的 JSON 格式回复，只有部分模型支持此参数，默认为 False
         """
 
         # 必要参数 (4)
@@ -1326,7 +1327,7 @@ class AI:
         self.information = information
         self.show_reasoning = show_reasoning
 
-        # 附加参数 (11)
+        # 附加参数 (13)
         self.max_tokens = max_tokens
         self.temperature = temperature
         self.top_p = top_p
@@ -1366,6 +1367,7 @@ class AI:
                 # "rerank": self.tools_instance.rerank,
             }
         self.tool_choice = tool_choice
+        self.strict = strict
 
         # 输入参数 (3)
         self.target_url = None
@@ -1478,16 +1480,22 @@ class AI:
             "frequency_penalty": self.frequency_penalty,
             # 流式输出
             "stream": self.stream,
-            # 种子参数
-            "seed": self.seed,
             # # 敏感内容
             # "extra_body": {"safetySettings": self.safety_settings},
         }
+
+        # 随机种子参数
+        if self.seed:  # 只有在 self.seed 被赋值时有效
+            self.request_body_dict["seed"] = self.seed
 
         # 工具参数
         if self.tools:  # 只有在 self.tools 不为空时有效
             self.request_body_dict["tools"] = self.tools
             self.request_body_dict["tool_choice"] = self.tool_choice
+
+        # JSON 格式参数
+        if self.strict:  # 只有在 self.strict == True 时有效
+            self.request_body_dict["strict"] = self.strict
 
         # 流式输出
         if self.stream:
@@ -1863,16 +1871,22 @@ class AI:
             "frequency_penalty": self.frequency_penalty,
             # 流式输出
             "stream": stream,
-            # 种子参数
-            "seed": self.seed,
             # # 敏感内容
             # "extra_body": {"safetySettings": self.safety_settings},
         }
+
+        # 随机种子参数
+        if self.seed:  # 只有在 self.seed 被赋值时有效
+            self.request_body_dict["seed"] = self.seed
 
         # 工具参数
         if self.tools:  # 只有在 self.tools 不为空时有效
             self.request_body_dict["tools"] = self.tools
             self.request_body_dict["tool_choice"] = self.tool_choice
+
+        # JSON 格式参数
+        if self.strict:  # 只有在 self.strict == True 时有效
+            self.request_body_dict["strict"] = self.strict
 
         print(f"Let's start chatting! The current model is \033[31m{self.model}\033[0m.")
         self.start_time = time.time()
@@ -2321,16 +2335,22 @@ class AI:
             "frequency_penalty": self.frequency_penalty,
             # 流式输出
             "stream": True,
-            # 种子参数
-            "seed": self.seed,
             # # 敏感内容
             # "extra_body": {"safetySettings": self.safety_settings},
         }
+
+        # 随机种子参数
+        if self.seed:  # 只有在 self.seed 被赋值时有效
+            self.request_body_dict["seed"] = self.seed
 
         # 工具参数
         if self.tools:  # 只有在 self.tools 不为空时有效
             self.request_body_dict["tools"] = self.tools
             self.request_body_dict["tool_choice"] = self.tool_choice
+
+        # JSON 格式参数
+        if self.strict:  # 只有在 self.strict == True 时有效
+            self.request_body_dict["strict"] = self.strict
 
         # 流式请求 使用 requests 以流式方式 POST 请求接口
         with requests.post(
@@ -3420,7 +3440,7 @@ class Gemini(AI):
 
         # 其它参数 (3)
         :param stream: (list) 是否启用流输出 (逐字返回)，默认为 False
-        :param tools: (list) 工具信息条，用于描述工具
+        :param tools: (list) 工具信息条，用于描述工具，为判断是否启用工具的参数。只有部分模型支持此参数
         :param tool_methods: (dict) 工具包，放有具体工具
 
         --- 文本生成网址 ---
@@ -5102,11 +5122,11 @@ class Assist(AI):
                  ai_keyword: Optional[str] = None, instance_id: Optional[str] = None,
                  information: Optional[str] = None, show_reasoning: bool = False,
 
-                 # 附加参数 (11)
+                 # 附加参数 (13)
                  max_tokens: int = 128000, temperature: float = 0.7, top_p: float = 1.0, n: int = 1,
                  stream: bool = False, stop: Union[str, list, None] = None, presence_penalty: float = 0.0,
                  frequency_penalty: float = 0.0, seed: Optional[int] = None, tools: Optional[list] = None,
-                 tool_methods: Optional[dict] = None, tool_choice: str = "auto"):
+                 tool_methods: Optional[dict] = None, tool_choice: str = "auto", strict: bool = False):
         """
         推理 AI 大模型公有参数
         Public parameters of the inference AI large model.
@@ -5123,7 +5143,7 @@ class Assist(AI):
         :param information: (str) 当前 AI 被实例化后的信息，自定义输入，用于区分多个 AI 模型
         :param show_reasoning: (bool) 是否打印推理过程，如果有推理的话。默认为 False
 
-        # 附加参数 (11)
+        # 附加参数 (13)
         :param max_tokens: (int) 生成的最大 token 数 (输入 + 输出)
         :param temperature: (float) 控制输出的随机性 (0.0-2.0)，数值越低越确定，越高越有创意
         :param top_p: (float) 核采样概率 (0.0-1.0)，仅保留概率累计在前 top_p 的词汇，与 temperature 二选一
@@ -5132,13 +5152,14 @@ class Assist(AI):
         :param stop: (str / list) 停止生成的标记，遇到这些字符串时终止输出
         :param presence_penalty: (float)  避免重复主题 (-2.0-2.0)，正值降低重复提及同一概念的概率，适合长文本生成
         :param frequency_penalty: (float) 避免重复词汇 (-2.0-2.0)，正值降低重复用词概率，适合技术文档写作
-        :param seed: (int) 随机种子，默认为 None，表示完全随机
-        :param tools: (list) 工具信息条，用于描述工具
+        :param seed: (int) 随机种子，只有部分模型支持此参数。默认为 None，表示完全随机
+        :param tools: (list) 工具信息条，用于描述工具，为判断是否启用工具的参数。只有部分模型支持此参数
         :param tool_methods: (dict) 工具包，放有具体工具
         :param tool_choice: (str) 工具选取方式，"auto" 为自动选取，"none" 为决不会选取"，
                             {"type": "function", "function": {"name": "xxx"}} 为强制调用指定工具，并且只能调用它。
                             "required"(部分文档称为 {"type": "function", "function": "required"} 的形式)，
                             模型必须调用某个工具，但可以自己选择哪一个
+        :param strict: (bool) AI 在调用工具时是否以严格的 JSON 格式回复，只有部分模型支持此参数，默认为 False
         """
 
         # 超类初始化
@@ -5149,10 +5170,10 @@ class Assist(AI):
             # 自定义参数 (4)
             ai_keyword=ai_keyword, instance_id=instance_id, information=information, show_reasoning=show_reasoning,
 
-            # 附加参数 (11)
+            # 附加参数 (13)
             max_tokens=max_tokens, temperature=temperature, top_p=top_p, n=n, stream=stream, stop=stop,
             presence_penalty=presence_penalty, frequency_penalty=frequency_penalty, seed=seed, tools=tools,
-            tool_methods=tool_methods, tool_choice=tool_choice
+            tool_methods=tool_methods, tool_choice=tool_choice, strict=strict
         )
 
     # 利用 DeepSeek 模型修改手稿
@@ -5278,16 +5299,22 @@ class Assist(AI):
             "frequency_penalty": self.frequency_penalty,
             # 流式输出
             "stream": self.stream,
-            # 种子参数
-            "seed": self.seed,
             # # 敏感内容
             # "extra_body": {"safetySettings": self.safety_settings},
         }
+
+        # 随机种子参数
+        if self.seed:  # 只有在 self.seed 被赋值时有效
+            self.request_body_dict["seed"] = self.seed
 
         # 工具参数
         if self.tools:  # 只有在 self.tools 不为空时有效
             self.request_body_dict["tools"] = self.tools
             self.request_body_dict["tool_choice"] = self.tool_choice
+
+        # JSON 格式参数
+        if self.strict:  # 只有在 self.strict == True 时有效
+            self.request_body_dict["strict"] = self.strict
 
         # 发送请求
         self.response = requests.post(

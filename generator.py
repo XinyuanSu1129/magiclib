@@ -1254,9 +1254,9 @@ class AI:
                  api_key: Optional[str] = None, base_url: Optional[str] = None,
                  model: Optional[str] = None, messages: Optional[List[dict]] = None,
 
-                 # 自定义参数 (4)
+                 # 自定义参数 (5)
                  ai_keyword: Optional[str] = None, instance_id: Optional[str] = None,
-                 information: Optional[str] = None, show_reasoning: bool = False,
+                 information: Optional[str] = None, show_reasoning: bool = False, show_instance_id: bool = False,
 
                  # 附加参数 (13)
                  max_tokens: int = 128000, temperature: float = 0.7, top_p: float = 1.0, n: int = 1,
@@ -1274,11 +1274,12 @@ class AI:
         :param model: (str) 指定使用的模型，如 'deepseek-chat' 与 'deepseek-reasoner'
         :param messages: (list) 对话消息列表，包含完整对话历史，最后一条为当前发送的信息
 
-        # 自定义参数 (4)
+        # 自定义参数 (5)
         :param ai_keyword: (str) 自定义 AI 关键词，可以将 api_key 与 base_url 关联起来
         :param instance_id: (str) AI 大模型的实例化 id，该 id 可以直接被实例化对象打印
         :param information: (str) 当前 AI 被实例化后的信息，自定义输入，用于区分多个 AI 模型
         :param show_reasoning: (bool) 是否打印推理过程，如果有推理的话。默认为 False
+        :param show_instance_id: (bool) 在模型生成内容时否以 instance_id 的方式显示名称，否则以模型名称显示，默认为 False
 
         # 附加参数 (13)
         :param max_tokens: (int) 生成的最大 token 数 (输入 + 输出)
@@ -1321,11 +1322,20 @@ class AI:
             self.messages = [{"role": "system", "content": "You are a helpful assistant. You will kindly answer "
                                                            "users' messages and use tools at the appropriate time."}]
 
-        # 自定义参数 (4)
+        # 自定义参数 (5)
         self.ai_keyword = ai_keyword
         self.instance_id = instance_id
         self.information = information
         self.show_reasoning = show_reasoning
+
+        if show_instance_id and instance_id is None:
+            class_name = self.__class__.__name__  # 获取类名
+            raise ValueError(f"\033[95mIn {class_name}\033[0m, "
+                             f"when show_instance_id is True, instance_id must be assigned.")
+        if show_instance_id:  # 打印模型名或 instance_id
+            self.show_name = self.instance_id
+        else:
+            self.show_name = self.model
 
         # 附加参数 (13)
         self.max_tokens = max_tokens
@@ -1524,7 +1534,7 @@ class AI:
                     # 改为打印信息
                     else:
                         message = AI.status_code_messages.get(self.response_status, "Unknown Error")  # 未知错误
-                        print(f"{self.system_remark_color}[{self.model}]{self.end_style} "
+                        print(f"{self.system_remark_color}[{self.show_name}]{self.end_style} "
                               f"\033[31mRequest failed!\033[0m status_code: {self.response_status} ({message})")
 
                 response_reasoning = ""
@@ -1570,12 +1580,13 @@ class AI:
                                         # 打印 AI 思考过程的字体
                                         if self.show_reasoning:
                                             print(
-                                                f"{self.bold}{self.tool_role_color}{self.model}{self.end_style}: "
+                                                f"{self.bold}{self.tool_role_color}{self.show_name}{self.end_style}: "
                                                 f"{self.tool_content_color}", end="", flush=True)
                                         # 不打印 AI 思考过程的字体
                                         else:
-                                            print(f"{self.bold}{self.assistant_role_color}{self.model}{self.end_style}:"
-                                                  f" {self.assistant_content_color}", end="", flush=True)
+                                            print(f"{self.bold}{self.assistant_role_color}"
+                                                  f"{self.show_name}{self.end_style}: {self.assistant_content_color}",
+                                                  end="", flush=True)
 
                                     last_received_time = time.time()  # 刷新更新时间
                                     self.stream_begin_output = False  # 获取本次信息后关闭
@@ -1615,7 +1626,7 @@ class AI:
                                         if show_response:
                                             # 打印 AI 回复内容的字体
                                             if self.show_reasoning:
-                                                print(f"{self.bold}{self.assistant_role_color}{self.model}"
+                                                print(f"{self.bold}{self.assistant_role_color}{self.show_name}"
                                                       f"{self.end_style}: {self.assistant_content_color}",
                                                       end="", flush=True)
                                         self.reasoning_output = False
@@ -1727,7 +1738,7 @@ class AI:
                 # 改为打印信息
                 else:
                     message = AI.status_code_messages.get(self.response_status, "Unknown Error")  # 未知错误
-                    print(f"{self.system_remark_color}[{self.model}]{self.end_style} "
+                    print(f"{self.system_remark_color}[{self.show_name}]{self.end_style} "
                           f"\033[31mRequest failed!\033[0m status_code: {self.response_status} ({message})")
 
             # 解析返回参数
@@ -1764,11 +1775,11 @@ class AI:
             if show_response:
                 # 打印 AI 的思考内容
                 if self.show_reasoning:
-                    print(f"{self.bold}{self.tool_role_color}{self.model}{self.end_style}: "
+                    print(f"{self.bold}{self.tool_role_color}{self.show_name}{self.end_style}: "
                           f"{self.tool_content_color}{self.response_reasoning}{self.end_style}")
 
                 # 打印 AI 的回复内容
-                print(f"{self.bold}{self.assistant_role_color}{self.model}{self.end_style}: "
+                print(f"{self.bold}{self.assistant_role_color}{self.show_name}{self.end_style}: "
                       f"{self.assistant_content_color}{self.response_content}{self.end_style}\n")
 
             #  处理 tool_calls
@@ -1888,7 +1899,7 @@ class AI:
         if self.strict:  # 只有在 self.strict == True 时有效
             self.request_body_dict["strict"] = self.strict
 
-        print(f"Let's start chatting! The current model is \033[31m{self.model}\033[0m.")
+        print(f"Let's start chatting! The current model is \033[31m{self.show_name}\033[0m.")
         self.start_time = time.time()
 
         # 对话循环
@@ -1991,7 +2002,7 @@ class AI:
                         # 改为打印信息
                         else:
                             message = AI.status_code_messages.get(self.response_status, "Unknown Error")  # 未知错误
-                            print(f"{self.system_remark_color}[{self.model}]{self.end_style} "
+                            print(f"{self.system_remark_color}[{self.show_name}]{self.end_style} "
                                   f"\033[31mRequest failed!\033[0m status_code: {self.response_status} ({message})")
 
                     response_reasoning = ""
@@ -2035,12 +2046,13 @@ class AI:
                                         # 打印 AI 思考过程的字体
                                         if self.show_reasoning:
                                             print(
-                                                f"{self.bold}{self.tool_role_color}{self.model}{self.end_style}: "
+                                                f"{self.bold}{self.tool_role_color}{self.show_name}{self.end_style}: "
                                                 f"{self.tool_content_color}", end="", flush=True)
                                         # 不打印 AI 思考过程的字体
                                         else:
-                                            print(f"{self.bold}{self.assistant_role_color}{self.model}{self.end_style}:"
-                                                  f" {self.assistant_content_color}", end="", flush=True)
+                                            print(f"{self.bold}{self.assistant_role_color}{self.show_name}"
+                                                  f"{self.end_style}: {self.assistant_content_color}",
+                                                  end="", flush=True)
 
                                         last_received_time = time.time()  # 刷新更新时间
                                         self.stream_begin_output = False  # 获取本次信息后关闭
@@ -2074,7 +2086,7 @@ class AI:
 
                                             # 打印 AI 回复内容的字体
                                             if self.show_reasoning:
-                                                print(f"{self.bold}{self.assistant_role_color}{self.model}"
+                                                print(f"{self.bold}{self.assistant_role_color}{self.show_name}"
                                                       f"{self.end_style}: {self.assistant_content_color}",
                                                       end="", flush=True)
                                             self.reasoning_output = False
@@ -2206,7 +2218,7 @@ class AI:
                     # 改为打印信息
                     else:
                         message = AI.status_code_messages.get(self.response_status, "Unknown Error")  # 未知错误
-                        print(f"{self.system_remark_color}[{self.model}]{self.end_style} "
+                        print(f"{self.system_remark_color}[{self.show_name}]{self.end_style} "
                               f"\033[31mRequest failed!\033[0m status_code: {self.response_status} ({message})")
 
                 # 解析返回参数
@@ -2236,10 +2248,10 @@ class AI:
 
                     # 打印 AI 的思考过程
                     if self.show_reasoning:
-                        print(f"{self.bold}{self.tool_role_color}{self.model}{self.end_style}: "
+                        print(f"{self.bold}{self.tool_role_color}{self.show_name}{self.end_style}: "
                               f"{self.tool_content_color}{self.response_reasoning}{self.end_style}")
                     # 打印 AI 的回复内容
-                    print(f"{self.bold}{self.assistant_role_color}{self.model}{self.end_style}: "
+                    print(f"{self.bold}{self.assistant_role_color}{self.show_name}{self.end_style}: "
                           f"{self.assistant_content_color}{self.response_content}{self.end_style}\n")
 
                     #  处理 tool_calls
@@ -2376,7 +2388,7 @@ class AI:
                 # 改为打印信息
                 else:
                     message = AI.status_code_messages.get(self.response_status, "Unknown Error")  # 未知错误
-                    print(f"{self.system_remark_color}[{self.model}]{self.end_style} "
+                    print(f"{self.system_remark_color}[{self.show_name}]{self.end_style} "
                           f"\033[31mRequest failed!\033[0m status_code: {self.response_status} ({message})")
 
             response_reasoning = ""
@@ -2607,7 +2619,7 @@ class AI:
         self.total_cost = total_cost  # 保存到类的属性中
 
         print(
-            f"{self.system_role_color}{self.model}{self.end_style} | {self.user_role_color}Input{self.end_style}: "
+            f"{self.system_role_color}{self.show_name}{self.end_style} | {self.user_role_color}Input{self.end_style}: "
             f"{self.user_content_color}{prompt_tokens}{self.end_style} tokens "
             f"({self.user_remark_color}¥{input_cost:.4f}{self.end_style}), "
             f"{self.assistant_role_color}Output{self.end_style}: {self.assistant_content_color}{completion_tokens}"
@@ -3345,19 +3357,8 @@ class Human:
         return result_content
 
 
-""" DeepSeek 大模型 """
-class DeepSeek(AI):
-    """
-    DeepSeek
-
-    Use the DeepSeek model for chatting and analysis.
-    """
-
-    pass
-
-
 """ Gemini 大模型 """
-class Gemini(AI):
+class Gemini:
     """
     Gemini 的 AI 大模型
     Gemini's AI large model
@@ -5118,9 +5119,9 @@ class Assist(AI):
                  api_key: Optional[str] = None, base_url: Optional[str] = None,
                  model: Optional[str] = None, messages: Optional[List[dict]] = None,
 
-                 # 自定义参数 (4)
+                 # 自定义参数 (5)
                  ai_keyword: Optional[str] = None, instance_id: Optional[str] = None,
-                 information: Optional[str] = None, show_reasoning: bool = False,
+                 information: Optional[str] = None, show_reasoning: bool = False, show_instance_id: bool = False,
 
                  # 附加参数 (13)
                  max_tokens: int = 128000, temperature: float = 0.7, top_p: float = 1.0, n: int = 1,
@@ -5142,6 +5143,7 @@ class Assist(AI):
         :param instance_id: (str) AI 大模型的实例化 id，该 id 可以直接被实例化对象打印
         :param information: (str) 当前 AI 被实例化后的信息，自定义输入，用于区分多个 AI 模型
         :param show_reasoning: (bool) 是否打印推理过程，如果有推理的话。默认为 False
+        :param show_instance_id: (bool) 在模型生成内容时否以 instance_id 的方式显示名称，否则以模型名称显示，默认为 False
 
         # 附加参数 (13)
         :param max_tokens: (int) 生成的最大 token 数 (输入 + 输出)
@@ -5169,6 +5171,7 @@ class Assist(AI):
 
             # 自定义参数 (4)
             ai_keyword=ai_keyword, instance_id=instance_id, information=information, show_reasoning=show_reasoning,
+            show_instance_id=show_instance_id,
 
             # 附加参数 (13)
             max_tokens=max_tokens, temperature=temperature, top_p=top_p, n=n, stream=stream, stop=stop,
@@ -5339,7 +5342,7 @@ class Assist(AI):
             # 改为打印信息
             else:
                 message = AI.status_code_messages.get(self.response_status, "Unknown Error")  # 未知错误
-                print(f"{self.system_remark_color}[{self.model}]{self.end_style} "
+                print(f"{self.system_remark_color}[{self.show_name}]{self.end_style} "
                       f"\033[31mRequest failed!\033[0m status_code: {self.response_status} ({message})")
 
         # 解析返回参数
@@ -5363,7 +5366,7 @@ class Assist(AI):
         self.response_total_tokens = usage.get("total_tokens", 0)  # 总共消耗的 tokens 数
 
         # 打印回复
-        print(f"{self.bold}{self.assistant_role_color}{self.model}{self.end_style}: "
+        print(f"{self.bold}{self.assistant_role_color}{self.show_name}{self.end_style}: "
               f"{self.assistant_content_color}{self.response_content}{self.end_style}\n")
 
         # 保存 AI 回复为 assistant 角色追加到 self.messages

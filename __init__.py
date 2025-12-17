@@ -1,5 +1,5 @@
 
-__version__ = '6.3.7'
+__version__ = '6.3.8'
 
 __all__ = ['general', 'grapher', 'projector', 'performer', 'potter', 'author', 'generator', 'learny', 'inspector']
 
@@ -71,7 +71,6 @@ MAGIC
  -Tools-           AI 工具区：用于存放 AI 可以调用的工具
  -AI-              AI 参数公有区：用于管理公有参数与 OpenAI 实例化
  -Human-           用户交互区：用于单或多用户与 AI 交互
- -DeepSeek-        DeepSeek 区：利用 DeepSeek 进行对话与分析操作
  -Gemini-          Gemini 区：利用 Gemini 进行对话与分析操作，还可以处理图像、音频与视频数据
  -Jimeng_video-    即梦 AI 视频生成区：利用 即梦 AI 生成视频
  -Jimeng_image-    即梦 AI 图片生成区：利用 即梦 AI 生成图片
@@ -143,7 +142,6 @@ MAGIC
  -Tools-           AI Tool area: It is used to store tools that AI can invoke
  -AI-              AI Parameter Public Zone: Used for managing public parameters and OpenAI instantiations
  -Human-           User Interaction Area: Used for single or multiple users to interact with AI
- -DeepSeek-        DeepSeek area: Utilize DeepSeek for dialogue and analysis operations
  -Gemini-          Gemini Zone: Utilize Gemini for dialogue and analysis operations, and also handle audio or video data
  -Jimeng_video-    Jimeng video AI Zone: Create videos with Jimeng AI
  -Jimeng_image-    Jimeng Image AI Zone: Create Image with Jimeng AI
@@ -358,6 +356,8 @@ MAGIC
                 stream, show_reasoning, tools, etc. can be made.
 -> 6.3.7        25-12-14 13:05 Class ChatBoat has been optimized. Now errors encountered during a conversation 
                 request support retrying.
+-> 6.3.8        25-12-17 14:32 Add the input parameter show_instance_id and the class attribute self.show_name 
+                to the class AI.
                 
        
  ------ Attention ------
@@ -789,8 +789,6 @@ list_historical_conversations()
 
 ------ Human ------
 chat()
-
------- DeepSeek ------
 
 ------ Gemini ------
 __gemini_client()

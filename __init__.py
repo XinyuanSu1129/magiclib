@@ -1,5 +1,5 @@
 
-__version__ = '6.3.8'
+__version__ = '6.3.9'
 
 __all__ = ['general', 'grapher', 'projector', 'performer', 'potter', 'author', 'generator', 'learny', 'inspector']
 
@@ -342,7 +342,7 @@ MAGIC
 -> 6.3.2        25-09-26 22:40 The entire magiclib has been updated, modifying the logic of comments and some code, 
                 as well as importing libraries.
                 The chat() method in the Human class has been adjusted.
--> 6.3.3        25-10-10 15:40 In the module generator, a Chatbo-like feature has been added, which enables simultaneous 
+-> 6.3.3        25-10-10 15:40 In the module generator, a Chatbo-like feature has been added, which enables simultaneous
                 conversations with multiple ais.
                 In the module learny, the manipulation of the model is divided into ML_C_Operate 
                 and ML_R_Operate (not added yet).
@@ -358,6 +358,12 @@ MAGIC
                 request support retrying.
 -> 6.3.8        25-12-17 14:32 Add the input parameter show_instance_id and the class attribute self.show_name 
                 to the class AI.
+-> 6.3.9        25-12-19 12:35 Optimized the ChatBoat class in the generator module by updating the assignment of 
+                prompts, and added a new class attribute self.turn_index along with a new input 
+                parameter self.first_message.
+                The Muse class has been optimized.
+                Some class attributes and the methods and order of description have been adjusted 
+                in the module generator.
                 
        
  ------ Attention ------

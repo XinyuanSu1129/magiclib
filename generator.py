@@ -24,6 +24,7 @@ import time
 import json
 import hmac
 import base64
+import random
 import hashlib
 import inspect
 import tempfile
@@ -173,11 +174,14 @@ class Tools:
     # 无需初始化，被调用时赋值
     def __init__(self, api_key: Optional[str] = None, base_url: Optional[str] = None):
 
-        # API & BASE_URL
+        # API_KEY & BASE_URL
         if api_key is not None:
             self.api_key = api_key
         else:
-            self.api_key = api_key_1
+            class_name = self.__class__.__name__  # 获取类名
+            method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                             f"the API value must be entered.")
 
         if base_url is not None:
             self.base_url = base_url
@@ -1304,7 +1308,10 @@ class AI:
         if api_key is not None:
             self.api_key = api_key
         else:
-            self.api_key = api_key_1
+            class_name = self.__class__.__name__  # 获取类名
+            method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                             f"the API value must be entered.")
 
         if base_url is not None:
             self.base_url = base_url
@@ -1355,7 +1362,10 @@ class AI:
             self.tool_methods = tool_methods
         else:
             # 创建 Tools 实例
-            self.tools_instance = Tools()
+            self.tools_instance = Tools(
+                api_key=self.api_key,
+                base_url=self.base_url
+            )
             self.tool_methods = {
                 "save_messages_to_txt": self.save_messages_to_txt,
                 "load_messages_from_txt": self.load_messages_from_txt,
@@ -1461,6 +1471,10 @@ class AI:
 
         :return result_content: (str / list) AI 返回的单次消息 response_content or 整个 messages list
         """
+
+        # 仅 chat() 有，用于占位。
+        if kwargs is not None:
+            pass
 
         # 检查 messages 的赋值情况
         if messages is not None:
@@ -3226,7 +3240,7 @@ class Human:
 
         - input_role_user: (bool) 用户输入在 messages 中记录为 'user' (True) 还是 'assistant' (False)，默认为 True
         - end_token: (str) 此参数不允许包含换行符。end_token 默认情况下，只有在空的一行输入换行符 '\n' 或空按“回车”才会将
-                                内容输入，否则只是换到下一行并等待继续输入，此情况下最下面的换行符 \n 不会保留
+                           内容输入，否则只是换到下一行并等待继续输入，此情况下最下面的换行符 \n 不会保留
 
         :return result_content: (str / list) AI 返回的单次消息 response_content or 整个 messages list
         """
@@ -3455,7 +3469,10 @@ class Gemini:
         if api_key is not None:
             self.api_key = api_key
         else:
-            self.api_key = Gemini_api_key_1
+            class_name = self.__class__.__name__  # 获取类名
+            method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                             f"the API value must be entered.")
 
         if base_url is not None:  # Gemini 请求用不到
             self.base_url = base_url
@@ -5389,29 +5406,20 @@ class Muse:
     """
 
     # 初始化，应当包含所有 AI 大模型的参数
-    def __init__(self, man_number: int = 0, ai_number: int = 0,
-                 api_key: Optional[str] = None, base_url: Optional[str] = None):
+    def __init__(self, api_key: Optional[str] = None, base_url: Optional[str] = None,
+                 man_number: int = 0, ai_number: int = 0):
         """
         DeepSeek 特有参数初始化
         Initialization of DeepSeek's unique parameters.
 
+        # API_KEY & BASE_URL
+        :param api_key: (str) 输入的 API KEY，即 API 密钥
+        :param base_url: (str) 输入的 base URL
+
         # 玩家数量配置 (2)
         :param man_number: (int) 真人玩家的数量，默认为 None，表示根据需要分配
         :param ai_number: (int) AI 玩家的数量，默认为 None，表示根据需要分配
-        :param api_key: (str) 输入的 API KEY，即 API 密钥
-        :param base_url: (str) 输入的 base URL
         """
-
-        # 玩家配置
-        self.player_configuration = {}  # setup_environment()
-        self.player_configuration_model = {}  # setup_environment_models()
-        self.player_configuration_dict = {}  # setup_environment_dict()
-
-        # 真人玩家参数
-        self.man_number = man_number
-
-        # AI 玩家参数
-        self.ai_number = ai_number
 
         # API & URL
         if api_key is not None:
@@ -5421,45 +5429,37 @@ class Muse:
             method_name = inspect.currentframe().f_code.co_name  # 获取方法名
             raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
                              f"the API value must be entered.")
+
         if base_url is not None:
             self.base_url = base_url
         else:
             self.base_url = base_url_1
 
+        self.man_number = man_number  # 真人玩家数量
+        self.ai_number = ai_number   # AI 玩家数量
+
+        # 玩家配置
+        self.player_configuration = {}  # setup_environment()
+        self.player_configuration_model = {}  # setup_environment_models()
+        self.player_configuration_dict = {}  # setup_environment_dict()
+
     # 配置环境，几位真人，几个 AI
     def setup_environment(self, man_number: Optional[int] = None, ai_number: Optional[int] = None,
-                          default_ai_model: str = 'deepseek', show_result: bool = False, **kwargs) -> dict:
+                          ai_model: str = 'deepseek-ai/DeepSeek-R1', human_positions: Optional[list[int]] = None,
+                          show_result: bool = False) -> dict:
         """
-        环境配置：有几位真人玩家与几个 AI，多出的 AI 用 DeepSeek 补全
-        The environmental configuration: several real players and several ais.
-        The extra ais are completed with DeepSeek.
+        环境配置：有几位真人玩家与几个 AI，AI 模型均为 ai_model，所有模型均无工具
+        Environmental configuration: There are several real players and several ais.
+        All AI models are AI_models, and all models have no tools.
 
         :param man_number: (int) 真人玩家的数量，默认为 None，表示根据需要分配
         :param ai_number: (int) AI 玩家的数量，分配 AI 之和的总数需要小于等于 AI 玩家的总数。不足的用 DeepSeek AI 补全。
                                 默认为 None，表示根据需要分配
-        :param default_ai_model: (str) 默认的 AI 模型，默认为 deepseek-ai/DeepSeek-R1
+        :param ai_model: (str) 默认的 AI 模型，默认为 deepseek-ai/DeepSeek-R1
+        :param human_positions: (list[int]) 人类玩家在序列中的位置 (从1开始)，默认为 None，表示随机位置，长度需要与 man_number相等
         :param show_result: (bool) 是否打印分配结果，默认为 False
 
         :return instance: (dict) 实例化的全部玩家，key 值与 instance_id 一样，value 为类 Human 或 AI 对象
-
-        --- **kwargs ---
-
-        # 可用 AI 大模型 (15)
-        - deepseek_ai_number: (int) DeepSeek 的 AI 大模型的个数
-        - chatgpt_ai_number: (int) ChatGPT 的 AI 大模型的个数
-        - gemini_ai_number: (int) Gemini 的 AI 大模型的个数
-        - moonshot_ai_number: (int) Moonshot 的 AI 大模型的个数
-        - zhipu_ai_number: (int) ZHIPU 的 AI 大模型的个数
-        - tongyiqianwen_ai_number: (int) TONGYIQIANWEN 的 AI 大模型的个数
-        - minimax_ai_number: (int) MiniMax 的 AI 大模型的个数
-        - wenxinyiyan_ai_number: (int) WENXINYIYAN 的 AI 大模型的个数
-        - xunfeixinghuo_ai_number: (int) XUNFEIXINGHUO 的 AI 大模型的个数
-        - tengxunhunyuan_ai_number: (int) TENGXUNHUNYUAN 的 AI 大模型的个数
-        - cohere_ai_number: (int) Cohere 的 AI 大模型的个数
-        - lingyiwanwu_ai_number: (int) LINGYIWANWU 的 AI 大模型的个数
-        - mistral_ai_number: (int) Mistral 的 AI 大模型的个数
-        - llama_ai_number: (int) Llama 的 AI 大模型的个数
-        - doubao_ai_number: (int) DOUBAO 的 AI 大模型的个数
         """
 
         # 玩家数量分配
@@ -5475,106 +5475,74 @@ class Muse:
             raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
                              f"all parameters must be greater than 0.")
 
-        # 模型种类与完整模型名的映射
-        ai_model_map = {
-            'deepseek': 'deepseek-ai/DeepSeek-R1',  # DeepSeek
-            'chatgpt': 'gpt-oss-120b',  # ChatGPT
-            'gemini': 'gemini-2.5-pro',  # Gemini
-            'moonshot': 'moonshot-v1-128k',  # Moonshot
-            'zhipu': 'glm-4-0520',  # 智谱
-            'tongyiqianwen': 'Qwen/QVQ-72B-Preview',  # 通义千问
-            'minimax': 'abab6.5s',  # MiniMax
-            'wenxinyiyan': 'baidu/ERNIE-4.5-300B-A47B',  # 文心一言
-            'xunfeixinghuo': 'SparkDesk-4.0Ultra',  # 讯飞星火
-            'tengxunhunyuan': 'hunyuan-large-longcontext',  # 腾讯混元
-            'cohere': 'command-r-plus',  # Cohere
-            'lingyiwanwu': 'yi-large',  # 零一万物
-            'mistral': 'mistral-large-pixtral-2411',  # Mistral AI
-            'llama': 'meta-llama/llama-4-maverick-17b-128e-instruct',  # Llama
-            'doubao': 'doubao-1.5-thinking-pro',  # 豆包
-        }
+        total_players = man_number + ai_number
 
-        instances = {}
-
-        # 实例化 Human 类
-        for i in range(man_number):
-            human_key = f"human_{i + 1}"
-            instances[human_key] = Human(instance_id=human_key)
-
-        # 校验 default_ai_model（直接是模型名称）
-        if not isinstance(default_ai_model, str) or not default_ai_model.strip():
-            class_name = self.__class__.__name__
-            method_name = inspect.currentframe().f_code.co_name
-            raise ValueError(
-                f"\033[95mIn {method_name} of {class_name}\033[0m, "
-                f"default_ai_model must be a non-empty string representing the AI model name."
-            )
-
-        # 获取各类型数量并校验（只校验 ai_model_map 里的）
-        ai_counts = {}
-        for ai_type in ai_model_map.keys():
-            count = kwargs.get(f"{ai_type}_ai_number", 0) or 0
-            if count < 0:
-                class_name = self.__class__.__name__
-                method_name = inspect.currentframe().f_code.co_name
+        # 检查 human_positions
+        if human_positions is not None:
+            if len(human_positions) != man_number:
+                class_name = self.__class__.__name__  # 获取类名
+                method_name = inspect.currentframe().f_code.co_name  # 获取方法名
                 raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
-                                 f"{ai_type}_ai_number cannot be less than 0.")
-            ai_counts[ai_type] = count
+                                 f"human_positions length ({len(human_positions)}) does not "
+                                 f"match man_number ({man_number})")
+            if not all(1 <= pos <= total_players for pos in human_positions):
+                class_name = self.__class__.__name__  # 获取类名
+                method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+                raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                                 f"all human_positions must be between 1 and total number of players ({total_players})")
+        else:
+            human_positions = random.sample(range(1, total_players + 1), man_number)
 
-        # 校验 ai_number
-        total_specified = sum(ai_counts.values())
-        if ai_number < total_specified:
-            class_name = self.__class__.__name__
-            method_name = inspect.currentframe().f_code.co_name
-            raise ValueError(
-                f"\033[95mIn {method_name} of {class_name}\033[0m, "
-                f"ai_number ({ai_number}) must be greater than or equal to the sum of the quantities "
-                f"of each type ({total_specified})."
-            )
+        # 构建玩家序列
+        instances = {}
+        current_human_index = 0
+        current_ai_index = 0
 
-        # 分配多余的到 default_ai_model
-        if ai_number > total_specified:
-            ai_counts["default_ai"] = ai_counts.get("default_ai", 0) + (ai_number - total_specified)
+        for position in range(1, total_players + 1):
+            if position in human_positions:
+                human_key = f"human_{current_human_index + 1}"
+                instances[human_key] = Human(instance_id=human_key)
+                current_human_index += 1
+            else:
+                ai_key = f"ai_{current_ai_index + 1}"
+                instances[ai_key] = AI(
+                    api_key=self.api_key,
+                    base_url=self.base_url,
+                    model=ai_model,
 
-        # 实例化 OtherAI
-        for ai_type, count in ai_counts.items():
-            for i in range(count):
-                instance_id = f"{ai_type}_{i + 1}"
-                if ai_type == "default_ai":
-                    # 默认模型直接用 default_ai_model
-                    model_name = default_ai_model
-                else:
-                    # 其他模型用映射表
-                    model_name = ai_model_map[ai_type]
-                instances[instance_id] = AI(instance_id=instance_id, model=model_name,
-                                            api_key=self.api_key, base_url=self.base_url)
+                    instance_id=ai_key,
+                    show_instance_id=True,  # 为了区分
 
-        # 可选调试输出
+                    tools=[]
+                )
+                current_ai_index += 1
+
         if show_result:
-            print("AI allocation result:")
-            for ai_type, count in ai_counts.items():
-                if ai_type == "default_ai":
-                    print(f"default ({default_ai_model}): {count}")
-                else:
-                    print(f"{ai_type}: {count}")
-            print(f"\nTotal: {man_number + sum(ai_counts.values())}  Human: {man_number}  AI: {ai_number}")
+            print(f"Total players: {total_players}")
+            print(f"Human count: {man_number}, AI count: {ai_number}")
+            print("Player order:")
+            for idx, key in enumerate(instances.keys(), 1):
+                obj_type = 'Human' if isinstance(instances[key], Human) else f"AI({ai_model})"
+                print(f"{idx}: {key} -> {obj_type}")
 
         self.player_configuration = instances
-
         return instances
 
     # 根据 model 来设置 AI 的环境
     def setup_environment_models(self, man_number: Optional[int] = None, show_result: bool = False, **kwargs) -> dict:
         """
-        环境配置：支持无限个模型，用户通过 model_1, model_1_number, model_2, model_2_number ... 指定
+        环境配置：支持无限个模型，用户通过 model_1, model_1_number, model_2, model_2_number ... 指定，所有模型均无工具
+        model_1 与 model_1_number 需要成对赋值，如果有一方没有被赋值则不会加入该模型
         Environment configuration: Supports an unlimited number of models. Users can use model_1, model_1_number,
-        model_2, model_2_number... Specified
+        model_2, model_2_number... Specified, all models have no tools
+        model_1 and model_1_number need to be assigned values in pairs. If either of them is not assigned a value,
+        they will not be added to the model.
 
         :param man_number: (int) 真人玩家数量
         :param show_result: (bool) 是否打印分配结果
         :param kwargs: 包含若干对 (model_x, model_x_number)
 
-        :return: (dict) {player_id: 实例对象}
+        :return instances: (dict) {player_id: 实例对象}
         """
 
         # 玩家数量分配
@@ -5635,8 +5603,16 @@ class Muse:
         for model_name, count in ai_counts.items():
             for i in range(count):
                 instance_id = f"{model_name}_{i + 1}"
-                instances[instance_id] = AI(instance_id=instance_id, model=model_name,
-                                            api_key=self.api_key, base_url=self.base_url)
+                instances[instance_id] = AI(
+                    api_key=self.api_key,
+                    base_url=self.base_url,
+                    model=model_name,
+
+                    instance_id=instance_id,
+                    show_instance_id=True,  # 为了区分
+
+                    tools=[]
+                )
 
         # 可选调试输出
         if show_result:
@@ -5652,14 +5628,14 @@ class Muse:
     # 通过输入 ai_models 的 list 来配置 AI 的环境
     def setup_environment_dict(self, model_list: list, show_result: bool = False) -> dict:
         """
-        环境配置：通过 list 指定 AI 与人类模型
-        Environment configuration: Use a list to specify both AI and Human players
+        环境配置：通过 list 指定 AI 与人类模型，所有模型均无工具
+        Environment configuration: Specify AI and human models through list. All models have no tools.
 
         :param model_list: (list[str]) 模型名称的列表，如 ['gpt-oss-120b', 'Human_1', 'GPT-5', 'gpt-oss-120b']
                            如想代表人类，则名中需要有 'Human'
         :param show_result: (bool) 是否打印分配结果
 
-        :return: (dict) {player_id: 实例对象}
+        :return instances: (dict) {player_id: 实例对象}
         """
 
         if not isinstance(model_list, list):
@@ -5687,8 +5663,16 @@ class Muse:
             else:
                 ai_counts[model_name] = ai_counts.get(model_name, 0) + 1
                 instance_id = f"{model_name}_{ai_counts[model_name]}"
-                instances[instance_id] = AI(instance_id=instance_id, model=model_name,
-                                            api_key=self.api_key, base_url=self.base_url)
+                instances[instance_id] = AI(
+                    api_key=self.api_key,
+                    base_url=self.base_url,
+                    model=model_name,
+
+                    instance_id=instance_id,
+                    show_instance_id=True,  # 为了区分
+
+                    tools=[]
+                    )
 
         # 可选调试输出
         if show_result:
@@ -5715,28 +5699,49 @@ class ChatBoat(Muse):
     """
 
     # 初始化
-    def __init__(self, api_key: Optional[str] = None, base_url: Optional[str] = None,
-                 man_number: int = 0, ai_number: int = 0, player: list or dict = None, name_list: list = None,
-                 info_list: list = None, key_prompt: str = None, show_response: bool = False,
-                 stream: bool = True, show_reasoning: bool = False,
-                 end_token: Optional[str] = None, target_token: str = r"<target>([\s\S]*)", **kwargs):
+    def __init__(self,
+                 # 关键参数 (2)
+                 api_key: Optional[str] = None, base_url: Optional[str] = None,
+
+                 # 配置参数 (6)
+                 man_number: int = 0, ai_number: int = 0, player: list or dict = None,
+                 name_list: list = None, info_list: list = None, key_prompt: str = None,
+
+                 # 对话参数 (6)
+                 first_message: Union[str, List[str], None] = None, show_response: bool = False, stream: bool = True,
+                 show_reasoning: bool = False, end_token: str = "", target_token: str = r"<target>([\s\S]*)",
+
+                 # 关键字参数
+                 **kwargs):
         r"""
         ChatBoat 的初始化
 
+        # 关键参数 (2)
         :param api_key: (str) 输入的 API KEY，即 API 密钥
         :param base_url: (str) 输入的 base URL
+
+        # 配置参数 (6)
         :param man_number: (int) 真人玩家的数量，默认为 None，表示根据需要分配
         :param ai_number: (int) AI 玩家的数量，分配 AI 之和的总数需要小于等于 AI 玩家的总数。不足的用 DeepSeek AI 补全。
                                 默认为 None，表示根据需要分配
         :param player: (list / dict) 玩家 list 或 dict，key 为名，value 为 实例
         :param name_list: (list) 名称 list，长度需与 player 一致
-        :param info_list: (list) 每个玩家的特点，长度需与 player 一致
-        :param key_prompt: (str) 关键 prompt，所有玩家共有
+        :param info_list: (list) 每个玩家的各自 prompt，放在 system_prompt 中，长度需与 player 一致，默认为无各自提示词
+        :param key_prompt: (str) 共有 prompt，所有玩家共有，放在 system_prompt 中，
+                                 如果为 ""，那么将不存在共有 prompt，此时 info_list 将分配到每个玩家，默认为一些通用 prompt
+
+        # 对话参数 (6)
+        :param first_message: (str / list) 首条消息的内容，支持 str 或 list，该消息前无 'name:'。
+                              如为 str，则会以 "role": "user" 的形式加入到 players_dic[name]["history_content"]。
+                              如为 list，则均会以 "role": "user" 的形式将其中的每一条消息加入到
+                              players_dic[name]["history_content"]。
+                              first_message 不会加入到历史对话 history_list，因为无法区分角色。
+                              以上两种方式均不会影响 system_prompt，first_message 默认为 None，表示无历史对话
         :param show_response: (bool) 是否在 AI 回复时就打印其回复的内容，默认为 False
         :param stream: (bool) 是否实时打印，默认为 True
         :param show_reasoning: (bool) 是否打印思考，默认为 False
         :param end_token: (str) 人类回复时的结尾，此参数不允许包含换行符。end_token 默认情况下，只有在空的一行输入换行符
-                         '\n' 或空按“回车”才会将内容输入，否则只是换到下一行并等待继续输入，此情况下最下面的换行符 \n 不会保留
+                          '\n' 或空按“回车”才会将内容输入，否则只是换到下一行并等待继续输入，此情况下最下面的换行符 \n 不会保留
         :param target_token: (str) 寻找的回答，为正则表达式，如找到则会结束对话。默认为 r"<target>([\s\S]*)"
 
         --- **kwargs ---
@@ -5746,8 +5751,13 @@ class ChatBoat(Muse):
         - max_retry_times: 最多重试次数 (防止死循环)，默认为 2 次
         """
 
-        super().__init__(man_number=man_number, ai_number=ai_number, api_key=api_key, base_url=base_url)
+        super().__init__(
+            # 关键参数 (2)
+            api_key=api_key, base_url=base_url,
+            # 配置参数 (2)
+            man_number=man_number, ai_number=ai_number)
 
+        # 配置参数 (4)
         self.player_list = None
         if player is not None:
             if isinstance(player, dict):
@@ -5767,11 +5777,11 @@ class ChatBoat(Muse):
             method_name = inspect.currentframe().f_code.co_name
             raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
                              f"name_list cannot be None.")
-        self.player_number = 0
+
         if info_list is not None:
             self.info_list = info_list
         else:
-            self.info_list = [""] * self.player_number  # 生成长度为 number 的空字符串列表
+            self.info_list = []
 
         if key_prompt is not None:
             self.key_prompt = key_prompt
@@ -5780,8 +5790,10 @@ class ChatBoat(Muse):
 There is no need to include your name or colon.
 <system>(system Content)</system> --> System content. Players do not need to use this prompt word
 <important>(content)</important> --> indicates that the part you mentioned is very important
-<praise>{name}</praise> --> indicates that you praise this character {player name}
-"""
+<praise>{name}</praise> --> indicates that you praise this character {player name}"""
+
+        # 对话参数 (6)
+        self.first_message = first_message
         self.show_response = show_response
         self.stream = stream
         self.show_reasoning = show_reasoning
@@ -5789,11 +5801,12 @@ There is no need to include your name or colon.
         self.target_token = target_token
 
         # 重要属性
+        self.total_players = 0  # 玩家数量
         self.player_dic = {}  # 所有玩家的信息
-        self.history_list = []  # 玩家的对话记录，不包含 'system' 信息
-        self.scene = None  # 场景
-        self.scene_description = None  # 场景描述
+        self.history_list = []  # 玩家的对话记录，不包含 'system' 信息，为一人一条的结构
         self.end_chat = False  # bool 结束对话
+        self.turn_index = 0  # 标记第几轮对话
+        self.turn_player_count = 0  # 本轮已经行动的玩家数
 
         # 对话检索内容
         self.target_content = None
@@ -5804,9 +5817,11 @@ There is no need to include your name or colon.
         self.max_retry_times = kwargs.get("max_retry_times", 2)
 
     # 初始化对话
-    def __inint_chating(self):
+    def __inint_chating(self) -> None:
         """
         聊天初始化，会优先使用传入的 player，否则用类 Muse 中构建的 player dict
+        For chat initialization, the passed-in player will be used first; otherwise,
+        the player dict built in the class Muse will be used.
         """
 
         if self.player_list is None:
@@ -5828,41 +5843,52 @@ There is no need to include your name or colon.
             model.stream = self.stream
             model.show_reasoning = self.show_reasoning
 
-        self.player_number = len(self.player_list)
+        self.total_players = len(self.player_list)
 
         # 检查长度
-        if self.info_list:
+        if self.info_list:  # 输入了 self.info_list
             if not (len(self.player_list) == len(self.name_list) == len(self.info_list)):
                 class_name = self.__class__.__name__
                 method_name = inspect.currentframe().f_code.co_name
                 raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
                                  f"the lengths of player_list, name_list and info_list must be the same.")
-        else:
-            # 如果 info_list 是空列表 []，自动补为 [None] * len(name_list)
-            if isinstance(self.info_list, list) and len(self.info_list) == 0:
-                self.info_list = [None] * len(self.name_list)
 
-            # 再检查 player_list 和 name_list
+        else:  # 没有输入 self.info_list
+            # 检查 player_list 和 name_list
             if not (len(self.player_list) == len(self.name_list)):
                 class_name = self.__class__.__name__
                 method_name = inspect.currentframe().f_code.co_name
                 raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
                                  f"the lengths of player_list and name_list must be the same.")
 
+            # 如果 info_list 是空列表 []，自动补为 [None] * len(name_list)
+            if isinstance(self.info_list, list) and len(self.info_list) == 0:
+                self.info_list = [None] * self.total_players
+
+        # system prompt
         prompt_list = []
         for name, prompt in zip(self.name_list, self.info_list):
-            system_prompt = f"""--- Chat Boat ---
-<system>You will play the role of {name} and take turns speaking with {self.player_number-1} other character(s).
+
+            # 存在共有 prompt
+            if self.key_prompt:
+                system_prompt = f"""--- Chat Boat ---
+<system>You will play the role of {name} and take turns speaking with {self.total_players-1} other character(s).
 The names of the other several characters are respectively: {"，".join([n for n in self.name_list if n != name])}.
 You will have a conversation in turn. Next are the important prompt words of this round of dialogue{
             ",\nas well as the detailed information of your character" if prompt else ""}. </system>
 ------------------------------------------------------------
 {self.key_prompt}{"\n------------------------------------------------------------"
     if prompt else ""}{"\n" + prompt if prompt else ""}"""
+
+            # 没有共有 prompt，self.info_list 将分配到各自玩家
+            else:
+                system_prompt = prompt
+
             prompt_list.append(system_prompt)
 
+        # 创建玩家 player_dic
         players_dic = {}
-        for model, name, info, system_content in zip(self.player_list, self.name_list, self.info_list, prompt_list):
+        for name, model, info, system_content in zip(self.name_list, self.player_list, self.info_list, prompt_list):
             players_dic[name] = {
                 "name": name,
                 "model": model,
@@ -5873,30 +5899,60 @@ You will have a conversation in turn. Next are the important prompt words of thi
                 }]
             }
 
+            # 有初始消息
+            if self.first_message:
+                if isinstance(self.first_message, str):  # str
+                    players_dic[name]["history_content"].append(
+                        {"role": "user", "content": self.first_message}
+                    )
+
+                elif isinstance(self.first_message, list):  # list
+                    players_dic[name]["history_content"].extend(
+                        {"role": "user", "content": msg} for msg in self.first_message
+                    )
+                else:
+                    class_name = self.__class__.__name__
+                    method_name = inspect.currentframe().f_code.co_name
+                    raise TypeError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                                    f"first_message must be a str or list[str], "
+                                    f"but got {type(self.first_message).__name__}")
+
         self.player_dic = players_dic
 
         return None
 
     # 轮流发言
-    def turns_to_speak(self):
+    def turns_to_speak(self) -> None:
         """
-        轮流发言
+        轮流发言，不允许进行加人或减人的操作
+        Take turns to speak. It is not allowed to add or subtract people.
         """
 
+        self.turn_index = 1  # 初始化对话轮数
         for name in itertools.cycle(self.name_list):  # 无限循环
 
-            model = self.player_dic[name]["model"]
-            history_content = self.player_dic[name]["history_content"]
+            model = self.player_dic[name]["model"]  # 玩家的模型
+            history_content = self.player_dic[name]["history_content"]  # 玩家的历史对话
 
+            # 如果存在历史对话
             if self.history_list:
                 user_content_dic = self.__convert_history_to_user_content(name)
 
-            else:  # 首次对话
-                user_content_dic = {"role": "user",
-                                    "content": "You are the first to speak. Let's start!"}  # 不会出现在 history_list 中
+            # 首次对话
+            else:
+                # 无初始消息
+                if not self.first_message:
+                    # 不会出现在 history_list 中
+                    user_content_dic = {"role": "user",
+                                        "content": "You are the first to speak. Let's start!"}
+
+                # 有初始消息 self.first_message
+                else:
+                    user_content_dic = {}
 
             # 输入内容准备
-            history_content.append(user_content_dic)
+            if user_content_dic:
+                history_content.append(user_content_dic)
 
             # 报错时多次尝试
             attempt = 0
@@ -5924,23 +5980,43 @@ You will have a conversation in turn. Next are the important prompt words of thi
                         attempt += 1
                     else:
                         # 超过最大重试次数仍然抛出异常
-                        print(f"\033[90mstill fails] Reaches the maximum retry count ({self.max_retry_times}).\033[90m")
-                        raise
+                        if self.retry_on_error:
+                            print(f"\033[90m[still fails] Reaches the maximum retry count "
+                                  f"({self.max_retry_times}).\033[0m")
+                            raise
 
+                        # 不重试
+                        else:
+                            raise
+
+            # 将历史对话添加到记录中，回答者的身份永远是 assistant
             self.player_dic[name]["history_content"].append({"role": "assistant", "content": assistant_str})
-            self.__player_output_process(assistant_str)
+            self.__player_output_process(assistant_str)  # 检查输出指令，是否有正则表达式捕捉
 
             # 输出内容整理
             self.history_list.append({name: assistant_str})
+
+            # 本玩家发言结束
+            self.turn_player_count += 1
+
+            # 如果本轮所有玩家都说过话了
+            if self.turn_player_count >= self.total_players:
+                self.turn_index += 1  # 进入下一轮
+                self.turn_player_count = 0  # 重置本轮计数
 
             # 结束对话
             if self.end_chat:
                 break
 
-    # 内容格式转化
-    def __convert_history_to_user_content(self, name: str):
+        return None
+
+    # 对话前整理: 内容格式转化
+    def __convert_history_to_user_content(self, name: str) -> dict:
         """
-        将玩家历史列表转换为 user_content_dic 结构，仅处理最后一次 name 发言之后的内容。
+        将用于记录的 self.history_list 格式转化为 输入 AI 的 user_content_dic 格式，
+        仅处理最后一次 name 发言之后的内容，因为之前已经处理过了
+        Convert the self.history_list format used for recording to the user_content_dic format of the input AI
+        Only handle the content after the last name statement, as it has already been processed before.
 
         self.history_list = [
             {"name1": "content1"},
@@ -5985,10 +6061,11 @@ You will have a conversation in turn. Next are the important prompt words of thi
 
         return user_content_dic
 
-    # 玩家输出判断
-    def __player_output_process(self, assistant_str: str):
+    # 对话后检索: 玩家输出判断
+    def __player_output_process(self, assistant_str: str) -> None:
         """
-        玩家输出内容判断，不依赖 target_model，所有输入都进行检查
+        玩家输出内容判断，所有输入都进行检查
+        Player output content judgment: All inputs are checked.
 
         :param assistant_str: (str) 玩家返回的内容
         """
@@ -6019,9 +6096,12 @@ You will have a conversation in turn. Next are the important prompt words of thi
             elif matched_pattern == r"^<to>.*":
                 pass
 
+        return None
+
     def run(self):
         """
         运行
+        run.
         """
 
         self.__inint_chating()

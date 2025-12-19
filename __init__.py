@@ -839,6 +839,7 @@ __inint_chating()
 turns_to_speak()
 __convert_history_to_user_content()
 __player_output_process()
+collect_targets_from_content()
 run()
 
 

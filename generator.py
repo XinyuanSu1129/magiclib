@@ -5719,7 +5719,7 @@ class ChatBoat(Muse):
 
                  # 对话参数 (6)
                  first_message: Union[str, List[str], None] = None, show_response: bool = False, stream: bool = True,
-                 show_reasoning: bool = False, end_token: str = "", target_token: str = r"<target>([\s\S]*)",
+                 show_reasoning: bool = False, end_token: str = "", target_token: str = r"<target>([\s\S]*?)</target>",
 
                  # 关键字参数
                  **kwargs):
@@ -5752,7 +5752,7 @@ class ChatBoat(Muse):
         :param show_reasoning: (bool) 是否打印思考，默认为 False
         :param end_token: (str) 人类回复时的结尾，此参数不允许包含换行符。end_token 默认情况下，只有在空的一行输入换行符
                           '\n' 或空按“回车”才会将内容输入，否则只是换到下一行并等待继续输入，此情况下最下面的换行符 \n 不会保留
-        :param target_token: (str) 寻找的回答，为正则表达式，如找到则会结束对话。默认为 r"<target>([\s\S]*)"
+        :param target_token: (str) 寻找的回答，为正则表达式，默认为 r"<target>([\s\S]*?)</target>"
 
         --- **kwargs ---
 
@@ -5817,6 +5817,8 @@ There is no need to include your name or colon.
         self.end_chat = False  # bool 结束对话
         self.turn_index = 0  # 标记第几轮对话
         self.turn_player_count = 0  # 本轮已经行动的玩家数
+
+        self.collected_targets = {}  # 最终结果容器 collect_targets_from_content()
 
         # 对话检索内容
         self.target_content = None
@@ -6045,6 +6047,9 @@ You will have a conversation in turn. Next are the important prompt words of thi
         }
 
         :param name: (str) 玩家名
+
+        :return user_content_dic: (dict) AI messages 中接受的 messages 类型，
+                                  如 {"role": "user", "content": "name2: content4"}
         """
 
         # 找到最后一次 name 出现的索引
@@ -6100,13 +6105,80 @@ You will have a conversation in turn. Next are the important prompt words of thi
         if matched_pattern:
             if matched_pattern == r"<quit>":
                 self.end_chat = True
+
             elif matched_pattern == self.target_token:
                 self.target_content = matched_content
-                self.end_chat = True
+
             elif matched_pattern == r"^<to>.*":
                 pass
 
         return None
+
+    # 阶段式信息采集
+    def collect_targets_from_content(self, *, allow_override: bool = False, end_chat: bool = False,
+                                     **targets) -> Dict[str: str] | None:
+        """
+        从 self.target_content 中按给定正则图样逐步收集目标字段。
+        当所有 targets 均成功收集后，写入 self.collected_targets 并返回该 dict。
+        否则返回 None
+
+        接受的关键字参数值只能是正则表达式图样，如 value = r'<submit>(.*?)</submit>'，value2 = r'<submit2>(.*?)</submit2>'
+
+        * 后面的参数只允许以关键字方式输入，不能用位置参数
+        :param allow_override: (bool) 已收集到的数据再次匹配是否覆盖，默认为 False
+        :param end_chat: (bool) 收集到所有数据后是否结束对话，默认为 False
+
+        :return result: (dict) key 为输入的关键字参数的 key，值为对应的匹配到的值，如 {'value': '12', 'value2': '22'}
+        """
+
+        if len(set(targets.values())) != len(targets):
+            class_name = self.__class__.__name__
+            method_name = inspect.currentframe().f_code.co_name
+            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                             f"the same regular expression is not allowed for multiple target fields.")
+
+        if not self.target_content:
+            return None
+
+        for key, pattern in targets.items():
+            attr_name = f"_{key}_result"
+
+            # 已存在且不允许覆盖，直接跳过
+            if hasattr(self, attr_name) and not allow_override:
+                continue
+
+            # 在 target_content 中按正则 pattern 搜索（支持跨行匹配）
+            match = re.search(pattern, self.target_content, re.S)
+
+            # 如果当前正则没有匹配到内容，则跳过，继续处理下一个目标
+            if not match:
+                continue
+
+            # 尝试获取正则中的“命名捕获组”
+            group_dict = match.groupdict()  # 例如 (?P<title>...)、(?P<content>...)
+
+            # 如果存在命名捕获组，则使用结构化结果
+            value = group_dict if group_dict else match.group(0)  # 否则使用整个匹配到的原始字符串作为结果
+
+            # 将结果动态保存为实例属性 (中间态缓存)
+            setattr(self, attr_name, value)  # 例如：self._submit_result = value
+
+        # 检查是否所有 targets 均已收集
+        result = {}
+        for key in targets.keys():
+            attr_name = f"_{key}_result"
+            if not hasattr(self, attr_name):
+                return None
+            result[key] = getattr(self, attr_name)
+
+        # 写入最终结果容器
+        self.collected_targets = result
+
+        # 是否结束对话
+        if end_chat:
+            self.end_chat = True
+
+        return result
 
     def run(self):
         """

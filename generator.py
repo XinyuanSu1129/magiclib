@@ -181,7 +181,7 @@ class Tools:
             class_name = self.__class__.__name__  # 获取类名
             method_name = inspect.currentframe().f_code.co_name  # 获取方法名
             raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
-                             f"the API value must be entered.")
+                             f"the API_KEY value must be entered.")
 
         if base_url is not None:
             self.base_url = base_url
@@ -1311,7 +1311,7 @@ class AI:
             class_name = self.__class__.__name__  # 获取类名
             method_name = inspect.currentframe().f_code.co_name  # 获取方法名
             raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
-                             f"the API value must be entered.")
+                             f"the API_KEY value must be entered.")
 
         if base_url is not None:
             self.base_url = base_url
@@ -3180,7 +3180,7 @@ class Human:
 
     # 初始化
     def __init__(self, ai_keyword: Optional[str] = None, instance_id: Optional[str] = None,
-                 information: Optional[str] = None, show_reasoning: bool = False):
+                 information: Optional[str] = None, show_reasoning: bool = False, **kwargs):
         """
         Human 类参数初始化，主要参数需要与类 AI 相同
         Initialize the parameters of the Human class. The main parameters need to be the same as those of the class AI.
@@ -3190,6 +3190,12 @@ class Human:
         :param instance_id: (str) AI 大模型的实例化 id，该 id 可以直接被实例化对象打印
         :param information: (str) 当前 AI 被实例化后的信息，自定义输入，用于区分多个 AI 模型
         :param show_reasoning: (bool) 是否打印推理过程，如果有推理的话。默认为 False
+
+        --- **kwargs ---
+
+        - input_role_user: (bool) 用户输入在 messages 中记录为 'user' (True) 还是 'assistant' (False)，默认为 True
+        - end_token: (str) 此参数不允许包含换行符。end_token 默认情况下，只有在空的一行输入换行符 '\n' 或空按“回车”才会将
+                           内容输入，否则只是换到下一行并等待继续输入，此情况下最下面的换行符 \n 不会保留
         """
 
         # 自定义参数 (4)
@@ -3197,6 +3203,10 @@ class Human:
         self.instance_id = instance_id
         self.information = information
         self.show_reasoning = show_reasoning
+
+        # 关键字参数
+        self.input_role_user = kwargs.get("input_role_user", True)
+        self.end_token = kwargs.get("end_token", "")
 
         # 输入信息
         self.messages = None
@@ -3246,8 +3256,8 @@ class Human:
         """
 
         # 参数
-        input_role_user = kwargs.get("input_role_user", True)
-        end_token = kwargs.get("end_token", "")
+        input_role_user = kwargs.get("input_role_user", self.input_role_user)
+        end_token = kwargs.get("end_token", self.end_token)
 
         # 检查 messages 是否输入
         if messages is None:
@@ -3472,7 +3482,7 @@ class Gemini:
             class_name = self.__class__.__name__  # 获取类名
             method_name = inspect.currentframe().f_code.co_name  # 获取方法名
             raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
-                             f"the API value must be entered.")
+                             f"the API_KEY value must be entered.")
 
         if base_url is not None:  # Gemini 请求用不到
             self.base_url = base_url
@@ -5428,7 +5438,7 @@ class Muse:
             class_name = self.__class__.__name__  # 获取类名
             method_name = inspect.currentframe().f_code.co_name  # 获取方法名
             raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
-                             f"the API value must be entered.")
+                             f"the API_KEY value must be entered.")
 
         if base_url is not None:
             self.base_url = base_url

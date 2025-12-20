@@ -5756,6 +5756,8 @@ class ChatBoat(Muse):
 
         --- **kwargs ---
 
+        - turns_to_end_chat: (int) 几轮对话后结束对话，防止程序无限执行下去，默认为 10
+
         - retry_on_error: (bool) 请求时遇到报错，等待 retry_wait_seconds 秒重新请求，默认为 False
         - retry_wait_seconds: (int) 触发限额后等待多久再发，默认为 2 秒
         - max_retry_times: (int) 最多重试次数 (防止死循环)，默认为 2 次
@@ -5821,6 +5823,7 @@ There is no need to include your name or colon.
         self.end_chat = False  # bool 结束对话
         self.turn_index = 0  # 标记第几轮对话
         self.turn_player_count = 0  # 本轮已经行动的玩家数
+        self.turns_to_end_chat = kwargs.pop("turns_to_end_chat", 10)  # 几轮后结束对话
 
         # 对话检索内容
         self.target_content = None
@@ -6021,37 +6024,39 @@ You will have a conversation in turn. Next are the important prompt words of thi
     # 1 轮发言
     def one_round_speak(self) -> None:
         """
-        让所有模型都自发言一次 (完整一轮)
-        Let each model speak once (for a complete round).
+        让所有模型都自发言一次 (完整一轮)。用于控制轮次
+        Let each model speak once (for a complete round). Used to control rounds.
         """
 
         for name in self.name_list:
-            self.single_model_speak(name)
 
-            # 本玩家发言结束
-            self.turn_player_count += 1
+            self.single_model_speak(name)
 
             # 若中途触发结束
             if self.end_chat:
                 return
 
+            # 本玩家发言结束
+            self.turn_player_count += 1
+
         # 一整轮结束
         self.turn_index += 1
-        self.turn_player_count = 0
+        self.turn_player_count = 1
 
         return None
 
     # 持续轮流发言
     def turns_to_speak(self) -> None:
         """
-        持续轮流发言 (不允许加人或减人)
-        Keep taking turns to speak (no additions or deletions are allowed).
+        持续轮流发言 (不允许加人或减人)。用于初始化
+        Keep taking turns to speak (no additions or deletions are allowed). Used for initialization.
         """
 
         self.turn_index = 1
-        self.turn_player_count = 0
+        self.turn_player_count = 1
 
-        while not self.end_chat:
+        while not self.end_chat and self.turn_index <= self.turns_to_end_chat:
+
             self.one_round_speak()
 
         return None

@@ -1,5 +1,5 @@
 
-__version__ = '6.3.9'
+__version__ = '6.3.10'
 
 __all__ = ['general', 'grapher', 'projector', 'performer', 'potter', 'author', 'generator', 'learny', 'inspector']
 
@@ -364,6 +364,8 @@ MAGIC
                 The Muse class has been optimized.
                 Some class attributes and the methods and order of description have been adjusted 
                 in the module generator.
+-> 6.3.10       25-12-20 11:00 Split the turns_to_speak() in the ChatBoat class and add 
+                the collect_targets_from_content() method.
                 
        
  ------ Attention ------
@@ -836,6 +838,8 @@ setup_environment_dict()
 
 ------ ChatBoat ------
 __inint_chating()
+single_model_speak()
+one_round_speak()
 turns_to_speak()
 __convert_history_to_user_content()
 __player_output_process()

@@ -5757,8 +5757,12 @@ class ChatBoat(Muse):
         --- **kwargs ---
 
         - retry_on_error: (bool) 请求时遇到报错，等待 retry_wait_seconds 秒重新请求，默认为 False
-        - retry_wait_seconds: 触发限额后等待多久再发，默认为 2 秒
-        - max_retry_times: 最多重试次数 (防止死循环)，默认为 2 次
+        - retry_wait_seconds: (int) 触发限额后等待多久再发，默认为 2 秒
+        - max_retry_times: (int) 最多重试次数 (防止死循环)，默认为 2 次
+
+        - collect_?: 在 collect_targets_from_content() 中被当作正则表达式图样的参数必需以 'collect_' 开头，值必需为正则表达式图样
+        - collect_allow_override: (bool) 通过方法 collect_targets_from_content() 收集数据时，多次匹配是否覆盖数据，默认为 True
+        - collected_to_end_chat: (bool) 通过方法 collect_targets_from_content() 收集到所有数据时，是否结束对话，默认为 False
         """
 
         super().__init__(
@@ -5818,15 +5822,21 @@ There is no need to include your name or colon.
         self.turn_index = 0  # 标记第几轮对话
         self.turn_player_count = 0  # 本轮已经行动的玩家数
 
-        self.collected_targets = {}  # 最终结果容器 collect_targets_from_content()
-
         # 对话检索内容
         self.target_content = None
 
         # 关键字参数
-        self.retry_on_error = kwargs.get("retry_on_error", False)
-        self.retry_wait_seconds = kwargs.get("retry_wait_seconds", 2)
-        self.max_retry_times = kwargs.get("max_retry_times", 2)
+        self.retry_on_error = kwargs.pop("retry_on_error", False)
+        self.retry_wait_seconds = kwargs.pop("retry_wait_seconds", 2)
+        self.max_retry_times = kwargs.pop("max_retry_times", 2)
+
+        # collect_targets_from_content()
+        self.collected_targets = {}  # 最终结果容器
+        self.collect_allow_override = kwargs.pop("collect_allow_override", True)  # 覆盖赋值
+        self.collected_to_end_chat = kwargs.pop("collected_to_end_chat", False)  # 结束对话
+
+        # 其它关键字参数 (不含已取走的参数)
+        self.init_kwargs = kwargs
 
     # 初始化对话
     def __inint_chating(self) -> None:
@@ -5933,92 +5943,116 @@ You will have a conversation in turn. Next are the important prompt words of thi
 
         return None
 
-    # 轮流发言
-    def turns_to_speak(self) -> None:
+    # 1 个模型发言
+    def single_model_speak(self, name: str) -> None:
         """
-        轮流发言，不允许进行加人或减人的操作
-        Take turns to speak. It is not allowed to add or subtract people.
+        让单个模型完成一次发言
+        Let a single model complete one speech.
+
+        :param name: (str) 玩家名
         """
 
-        self.turn_index = 1  # 初始化对话轮数
-        for name in itertools.cycle(self.name_list):  # 无限循环
+        model = self.player_dic[name]["model"]  # 玩家的模型
+        history_content = self.player_dic[name]["history_content"]  # 玩家的历史对话
 
-            model = self.player_dic[name]["model"]  # 玩家的模型
-            history_content = self.player_dic[name]["history_content"]  # 玩家的历史对话
+        # 如果存在历史对话
+        if self.history_list:
+            user_content_dic = self.__convert_history_to_user_content(name)
 
-            # 如果存在历史对话
-            if self.history_list:
-                user_content_dic = self.__convert_history_to_user_content(name)
+        # 首次对话
+        else:
+            # 无初始消息
+            if not self.first_message:
+                # 不会出现在 history_list 中
+                user_content_dic = {"role": "user",
+                                    "content": "You are the first to speak. Let's start!"}
 
-            # 首次对话
+            # 有初始消息 self.first_message
             else:
-                # 无初始消息
-                if not self.first_message:
-                    # 不会出现在 history_list 中
-                    user_content_dic = {"role": "user",
-                                        "content": "You are the first to speak. Let's start!"}
+                user_content_dic = {}
 
-                # 有初始消息 self.first_message
+        # 输入内容准备
+        if user_content_dic:
+            history_content.append(user_content_dic)
+
+        # 调用模型 (带重试)
+        attempt = 0
+        assistant_str = ''
+        while attempt <= self.max_retry_times:
+            try:
+                assistant_str = model.chat(
+                    messages=history_content,
+
+                    show_response=self.show_response,  # 打印 AI 回复的内容
+                    raise_error=True,  # 相应错误时会抛出错误
+                    return_all_messages=False,  # 返回内容为单次 response_content
+                    input_role_user=False,  # 人类回复时角色为 assistant
+                    end_token=self.end_token  # 人类回复时的结尾标识
+                )
+                break  # 成功则跳出循环
+
+            except Exception as e:
+
+                # 判断是否重试
+                if self.retry_on_error and attempt < self.max_retry_times:
+                    print(f"\033[90m[Call error: {e}] "
+                          f"Wait for {self.retry_wait_seconds}s and try again (the {attempt + 1} th time).\033[0m")
+                    time.sleep(self.retry_wait_seconds)
+                    attempt += 1
                 else:
-                    user_content_dic = {}
+                    # 超过最大重试次数仍然抛出异常
+                    if self.retry_on_error:
+                        print(f"\033[90m[still fails] Reaches the maximum retry count "
+                              f"({self.max_retry_times}).\033[0m")
+                        raise
 
-            # 输入内容准备
-            if user_content_dic:
-                history_content.append(user_content_dic)
-
-            # 报错时多次尝试
-            attempt = 0
-            assistant_str = ''
-            while attempt <= self.max_retry_times:
-                try:
-                    assistant_str = model.chat(
-                        messages=history_content,
-
-                        show_response=self.show_response,  # 打印 AI 回复的内容
-                        raise_error=True,  # 相应错误时会抛出错误
-                        return_all_messages=False,  # 返回内容为单次 response_content
-                        input_role_user=False,  # 人类回复时角色为 assistant
-                        end_token=self.end_token  # 人类回复时的结尾标识
-                    )
-                    break  # 成功则跳出循环
-
-                except Exception as e:
-
-                    # 判断是否重试
-                    if self.retry_on_error and attempt < self.max_retry_times:
-                        print(f"\033[90m[Call error: {e}] "
-                              f"Wait for {self.retry_wait_seconds}s and try again (the {attempt + 1} th time).\033[0m")
-                        time.sleep(self.retry_wait_seconds)
-                        attempt += 1
+                    # 不重试
                     else:
-                        # 超过最大重试次数仍然抛出异常
-                        if self.retry_on_error:
-                            print(f"\033[90m[still fails] Reaches the maximum retry count "
-                                  f"({self.max_retry_times}).\033[0m")
-                            raise
+                        raise
 
-                        # 不重试
-                        else:
-                            raise
+        # 将历史对话添加到记录中，回答者的身份永远是 assistant
+        self.player_dic[name]["history_content"].append({"role": "assistant", "content": assistant_str})
+        self.__player_output_process(assistant_str)  # 检查输出指令，是否有正则表达式捕捉
+        self.collect_targets_from_content(**self.init_kwargs)  # 处理捕捉内容 self.target_token
+        self.history_list.append({name: assistant_str})  # 将模型输出的内容以名字的形式整理到 self.history_list
 
-            # 将历史对话添加到记录中，回答者的身份永远是 assistant
-            self.player_dic[name]["history_content"].append({"role": "assistant", "content": assistant_str})
-            self.__player_output_process(assistant_str)  # 检查输出指令，是否有正则表达式捕捉
+        return None
 
-            # 输出内容整理
-            self.history_list.append({name: assistant_str})
+    # 1 轮发言
+    def one_round_speak(self) -> None:
+        """
+        让所有模型都自发言一次 (完整一轮)
+        Let each model speak once (for a complete round).
+        """
+
+        for name in self.name_list:
+            self.single_model_speak(name)
 
             # 本玩家发言结束
             self.turn_player_count += 1
 
-            # 如果本轮所有玩家都说过话了
-            if self.turn_player_count >= self.total_players:
-                self.turn_index += 1  # 进入下一轮
-                self.turn_player_count = 0  # 重置本轮计数
-
-            # 结束对话
+            # 若中途触发结束
             if self.end_chat:
-                break
+                return
+
+        # 一整轮结束
+        self.turn_index += 1
+        self.turn_player_count = 0
+
+        return None
+
+    # 持续轮流发言
+    def turns_to_speak(self) -> None:
+        """
+        持续轮流发言 (不允许加人或减人)
+        Keep taking turns to speak (no additions or deletions are allowed).
+        """
+
+        self.turn_index = 1
+        self.turn_player_count = 0
+
+        while not self.end_chat:
+            self.one_round_speak()
 
         return None
 
@@ -6079,11 +6113,17 @@ You will have a conversation in turn. Next are the important prompt words of thi
     # 对话后检索: 玩家输出判断
     def __player_output_process(self, assistant_str: str) -> None:
         """
-        玩家输出内容判断，所有输入都进行检查
-        Player output content judgment: All inputs are checked.
+        玩家输出内容判断，所有输入都进行检查，只取成功捕获的第一个组。
+        有捕获组时只取捕获组内字符 (无论是命名捕获组还是普通捕获组)，无捕获组时取所有内容
+        For player output content validation, check all inputs and only take the first successfully captured group.
+        When there is a capture group, take only the content inside the group (regardless of whether it is a named
+        capture group or a regular capture group). If there is no capture group, take the entire matched content.
 
         :param assistant_str: (str) 玩家返回的内容
         """
+
+        # 新的一轮清空
+        self.target_content = ""
 
         command_pattern_list = [
             r"<quit>",  # 结束对话
@@ -6094,12 +6134,24 @@ You will have a conversation in turn. Next are the important prompt words of thi
         matched_pattern = None
         matched_content = None
 
+        # 寻找是否有匹配项
         for pattern in command_pattern_list:
             match = re.search(pattern, assistant_str)
             if match:
                 matched_pattern = pattern
-                # 如果正则有分组则取第 1 组，否则取整个匹配
-                matched_content = match.group(1) if match.groups() else match.group(0)
+
+                # 获取匹配内容：兼容命名捕获组、普通捕获组或无捕获组
+                group_dict = match.groupdict()
+                if group_dict:
+                    # 如果有命名捕获组，只取第一个 value
+                    matched_content = next(iter(group_dict.values()))
+                elif match.groups():
+                    # 普通捕获组：取第一个括号里的内容
+                    matched_content = match.group(1)
+                else:
+                    # 没有捕获组：取整个匹配
+                    matched_content = match.group(0)
+
                 break
 
         if matched_pattern:
@@ -6115,21 +6167,47 @@ You will have a conversation in turn. Next are the important prompt words of thi
         return None
 
     # 阶段式信息采集
-    def collect_targets_from_content(self, *, allow_override: bool = False, end_chat: bool = False,
-                                     **targets) -> Dict[str: str] | None:
+    def collect_targets_from_content(self, *, collect_allow_override: Optional[bool] = None,
+                                     collected_to_end_chat: Optional[bool] = None, **kwargs) -> Dict[str, str] | None:
         """
-        从 self.target_content 中按给定正则图样逐步收集目标字段。
-        当所有 targets 均成功收集后，写入 self.collected_targets 并返回该 dict。
+        从 self.target_content 中按给定正则图样逐步收集目标字段 (需要先通过 self.target_token 的匹配)。
+        保存为动态类属性，当所有 targets 均成功收集后，写入 self.collected_targets 并返回该 dict。
         否则返回 None
-
-        接受的关键字参数值只能是正则表达式图样，如 value = r'<submit>(.*?)</submit>'，value2 = r'<submit2>(.*?)</submit2>'
+        Collect the target field step by step from self.target_content according to the given regular pattern
+        (matching through self.target_token is required first).
+        Save as a dynamic class attribute. When all targets have been successfully collected, write
+        self.collected_targets and return this dict.
+        Otherwise, return None
 
         * 后面的参数只允许以关键字方式输入，不能用位置参数
-        :param allow_override: (bool) 已收集到的数据再次匹配是否覆盖，默认为 False
-        :param end_chat: (bool) 收集到所有数据后是否结束对话，默认为 False
+        :param collect_allow_override: (bool) 已收集到的数据再次匹配是否覆盖，
+                                       默认为跟随类属性 self.collect_allow_override，默认为 True
+        :param collected_to_end_chat: (bool) 收集到所有数据后是否结束对话，默认为 False
+        以上两个参数只能通过直接关键字参数输入，不能通过 **kwargs 方式输入
 
-        :return result: (dict) key 为输入的关键字参数的 key，值为对应的匹配到的值，如 {'value': '12', 'value2': '22'}
+        --- **kwargs ---
+
+        - collect_?: 被当作正则表达式图样的参数必需以 'collect_' 开头，值必需为正则表达式图样。
+                     有捕获组时只取捕获组内字符 (无论是命名捕获组还是普通捕获组)，无捕获组时取所有内容，如
+                     collect_value = r'<submit>(.*?)</submit>'，collect_value2 = r'<submit2>(?P<content>.*?)</submit2>'
+                     collect_value3 = r'<submit3>.*?</submit3>'
+
+        :return result: (dict) key 为输入的关键字参数的 key 去除 'collect_' 开头，值为对应的匹配到的值，如
+        {'value': '11', 'value2': '22', 'value3': '<submit3>33</submit3>}
         """
+
+        # 从 kwargs 中提取 collect_* 参数
+        targets = {
+            k[len("collect_"):]: v
+            for k, v in kwargs.items()
+            if k.startswith("collect_")
+        }
+
+        # 赋值检查
+        if collect_allow_override is None:
+            collect_allow_override = self.collect_allow_override
+        if collected_to_end_chat is None:
+            collected_to_end_chat = self.collected_to_end_chat
 
         if len(set(targets.values())) != len(targets):
             class_name = self.__class__.__name__
@@ -6144,21 +6222,26 @@ You will have a conversation in turn. Next are the important prompt words of thi
             attr_name = f"_{key}_result"
 
             # 已存在且不允许覆盖，直接跳过
-            if hasattr(self, attr_name) and not allow_override:
+            if hasattr(self, attr_name) and not collect_allow_override:
                 continue
 
-            # 在 target_content 中按正则 pattern 搜索（支持跨行匹配）
+            # 在 target_content 中按正则 pattern 搜索 (支持跨行匹配)
             match = re.search(pattern, self.target_content, re.S)
 
             # 如果当前正则没有匹配到内容，则跳过，继续处理下一个目标
             if not match:
                 continue
 
-            # 尝试获取正则中的“命名捕获组”
-            group_dict = match.groupdict()  # 例如 (?P<title>...)、(?P<content>...)
-
-            # 如果存在命名捕获组，则使用结构化结果
-            value = group_dict if group_dict else match.group(0)  # 否则使用整个匹配到的原始字符串作为结果
+            group_dict = match.groupdict()
+            if group_dict:  # (?P<content>.*?)
+                # 取第一个命名捕获组的值 (只要 value，不要整个字典)
+                value = next(iter(group_dict.values()))
+            elif match.groups():  # (.*?)
+                # 普通捕获组：取第一个括号里的内容
+                value = match.group(1)
+            else:
+                # 没有捕获组：取整个匹配
+                value = match.group(0)
 
             # 将结果动态保存为实例属性 (中间态缓存)
             setattr(self, attr_name, value)  # 例如：self._submit_result = value
@@ -6175,11 +6258,12 @@ You will have a conversation in turn. Next are the important prompt words of thi
         self.collected_targets = result
 
         # 是否结束对话
-        if end_chat:
+        if collected_to_end_chat:
             self.end_chat = True
 
         return result
 
+    # 运行
     def run(self):
         """
         运行

@@ -5719,7 +5719,8 @@ class ChatBoat(Muse):
 
                  # 对话参数 (6)
                  first_message: Union[str, List[str], None] = None, show_response: bool = False, stream: bool = True,
-                 show_reasoning: bool = False, end_token: str = "", target_token: str = r"<target>([\s\S]*?)</target>",
+                 show_reasoning: bool = False, end_chat_token: str = r"<quit>",
+                 target_token: str = r"<target>([\s\S]*?)</target>",
 
                  # 关键字参数
                  **kwargs):
@@ -5750,11 +5751,13 @@ class ChatBoat(Muse):
         :param show_response: (bool) 是否在 AI 回复时就打印其回复的内容，默认为 False
         :param stream: (bool) 是否实时打印，默认为 True
         :param show_reasoning: (bool) 是否打印思考，默认为 False
-        :param end_token: (str) 人类回复时的结尾，此参数不允许包含换行符。end_token 默认情况下，只有在空的一行输入换行符
-                          '\n' 或空按“回车”才会将内容输入，否则只是换到下一行并等待继续输入，此情况下最下面的换行符 \n 不会保留
+        :param end_chat_token: (str) 结束对话，为正则表达式，默认为 r"<quit>"
         :param target_token: (str) 寻找的回答，为正则表达式，默认为 r"<target>([\s\S]*?)</target>"
 
         --- **kwargs ---
+
+        - end_token: (str) 人类回复时输入结束，此参数不允许包含换行符。end_token 默认情况下，只有在空的一行输入换行符
+                           '\n' 或空按“回车”才会将内容输入，否则只是换到下一行并等待继续输入，此情况下最下面的换行符 \n 不会保留
 
         - turns_to_end_chat: (int) 几轮对话后结束对话，防止程序无限执行下去，默认为 10
 
@@ -5813,7 +5816,7 @@ There is no need to include your name or colon.
         self.show_response = show_response
         self.stream = stream
         self.show_reasoning = show_reasoning
-        self.end_token = end_token
+        self.end_chat_token = end_chat_token
         self.target_token = target_token
 
         # 重要属性
@@ -5828,7 +5831,10 @@ There is no need to include your name or colon.
         # 对话检索内容
         self.target_content = None
 
-        # 关键字参数
+        # 以下为关键字参数
+        self.end_token = kwargs.pop("end_token", "")  # 人类输入结束参数
+
+        # 重试参数
         self.retry_on_error = kwargs.pop("retry_on_error", False)
         self.retry_wait_seconds = kwargs.pop("retry_wait_seconds", 2)
         self.max_retry_times = kwargs.pop("max_retry_times", 2)
@@ -6131,7 +6137,7 @@ You will have a conversation in turn. Next are the important prompt words of thi
         self.target_content = ""
 
         command_pattern_list = [
-            r"<quit>",  # 结束对话
+            self.end_chat_token,  # 结束对话
             self.target_token,  # 目标内容
             r"^<to>.*",  # 换地点
         ]
@@ -6160,7 +6166,7 @@ You will have a conversation in turn. Next are the important prompt words of thi
                 break
 
         if matched_pattern:
-            if matched_pattern == r"<quit>":
+            if matched_pattern == self.end_chat_token:
                 self.end_chat = True
 
             elif matched_pattern == self.target_token:

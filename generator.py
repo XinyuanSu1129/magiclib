@@ -3196,6 +3196,7 @@ class Human:
         - input_role_user: (bool) 用户输入在 messages 中记录为 'user' (True) 还是 'assistant' (False)，默认为 True
         - end_token: (str) 此参数不允许包含换行符。end_token 默认情况下，只有在空的一行输入换行符 '\n' 或空按“回车”才会将
                            内容输入，否则只是换到下一行并等待继续输入，此情况下最下面的换行符 \n 不会保留
+        - auto_response (str / None) 如果被赋值，将自动回答该值，此时不会打印任何内容，也不会请求 input，默认为 None
         """
 
         # 自定义参数 (4)
@@ -3207,6 +3208,7 @@ class Human:
         # 关键字参数
         self.input_role_user = kwargs.get("input_role_user", True)
         self.end_token = kwargs.get("end_token", "")
+        self.auto_response = kwargs.get("auto_response", None)
 
         # 输入信息
         self.messages = None
@@ -3251,6 +3253,7 @@ class Human:
         - input_role_user: (bool) 用户输入在 messages 中记录为 'user' (True) 还是 'assistant' (False)，默认为 True
         - end_token: (str) 此参数不允许包含换行符。end_token 默认情况下，只有在空的一行输入换行符 '\n' 或空按“回车”才会将
                            内容输入，否则只是换到下一行并等待继续输入，此情况下最下面的换行符 \n 不会保留
+        - auto_response (str / None) 如果被赋值，将自动回答该值，此时不会打印任何内容，也不会请求 input，默认为 None
 
         :return result_content: (str / list) AI 返回的单次消息 response_content or 整个 messages list
         """
@@ -3258,30 +3261,43 @@ class Human:
         # 参数
         input_role_user = kwargs.get("input_role_user", self.input_role_user)
         end_token = kwargs.get("end_token", self.end_token)
+        auto_response = kwargs.get("auto_response", self.auto_response)
 
         # 检查 messages 是否输入
         if messages is None:
-            class_name = self.__class__.__name__  # 获取类名
-            method_name = inspect.currentframe().f_code.co_name  # 获取方法名
-            raise TypeError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
-                            f"messages cannot be None.")
+            class_name = self.__class__.__name__
+            method_name = inspect.currentframe().f_code.co_name
+            raise TypeError(f"\033[95mIn {method_name} of {class_name}\033[0m, messages cannot be None.")
 
         if len(messages) == 0:
-            class_name = self.__class__.__name__  # 获取类名
-            method_name = inspect.currentframe().f_code.co_name  # 获取方法名
-            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
-                             f"messages cannot be an empty list.")
+            class_name = self.__class__.__name__
+            method_name = inspect.currentframe().f_code.co_name
+            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, messages cannot be an empty list.")
 
         # 检查 end_token 是否包含换行符 '\n'
         if '\n' in end_token or '\r' in end_token:
-            class_name = self.__class__.__name__  # 获取类名
-            method_name = inspect.currentframe().f_code.co_name  # 获取方法名
-            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
-                             f"end_token cannot contain line breaks.")
+            class_name = self.__class__.__name__
+            method_name = inspect.currentframe().f_code.co_name
+            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, end_token cannot contain line breaks.")
 
-        self.messages = messages.copy()  # 拷贝一份，避免修改外部列表
+        self.messages = messages.copy()  # 拷贝一份
 
-        # 打印所有消息内容 (role 和 content），根据角色加颜色
+        # auto_response 快速返回分支，不打印、不 input()
+        if auto_response is not None:
+            human_reply = str(auto_response)
+
+            role_to_append = 'user' if input_role_user else 'assistant'
+            self.messages.append({'role': role_to_append, 'content': human_reply})
+            self.response_content = human_reply
+
+            if return_all_messages:  # 返回所有 messages
+                result_content = self.messages
+            else:
+                result_content = self.response_content  # 返回单次 response_content
+
+            return result_content
+
+        # 正常交互，打印所有消息内容
         print("\n\033[3mAll messages\033[0m:")
         for i, msg in enumerate(self.messages, 1):
             role = msg['role']
@@ -3300,33 +3316,29 @@ class Human:
                 print(f"{i}. {self.bold}{self.tool_role_color}Tool{self.end_style}: "
                       f"{self.tool_content_color}{result_str}{self.end_style}")
             else:
-                # 其他角色正常打印，无色彩
                 print(f"{i}. {role}: {content}")
 
-        # 根据 input_role_user 决定输入提示角色和颜色
+        # 根据 input_role_user 决定输入提示角色
         if input_role_user:
             input_role_name = "User"
-            input_color_start = "\033[1m\033[92m"  # 粉色加粗
+            input_color_start = "\033[1m\033[92m"
             input_color_end = "\033[0m"
         else:
             input_role_name = "Assistant"
-            input_color_start = "\033[1m\033[95m"  # 绿色加粗
+            input_color_start = "\033[1m\033[95m"
             input_color_end = "\033[0m"
 
         input_prompt = f"\n{input_color_start}{input_role_name}{input_color_end}: "
 
         # 获取用户输入
-        if end_token == '':
-            # 空 token：出现一个空行就结束
-            lines = []
-            first_line = input(input_prompt)
+        lines = []
+        first_line = input(input_prompt)
 
+        if end_token == '':
             if first_line != '':
                 lines.append(first_line)
-                # 计算续行提示符长度
                 main_prompt_text = f"{input_role_name}: "
-                main_prompt_len = len(main_prompt_text)
-                continuation_prompt_text = '-' * (main_prompt_len - 3) + '-> '
+                continuation_prompt_text = '-' * (len(main_prompt_text) - 3) + '-> '
                 continuation_prompt = f"{input_color_start}{continuation_prompt_text}{input_color_end}"
 
                 while True:
@@ -3334,43 +3346,29 @@ class Human:
                     if line == '':
                         break
                     lines.append(line)
-
-            human_reply = "\n".join(lines)
-
         else:
-            # 非空 token：以 token 结尾换行才结束
-            lines = []
-            first_line = input(input_prompt)
-
             if first_line.endswith(end_token):
-                # 保留去掉 end_token 后的内容
-                content_line = first_line[:-len(end_token)].rstrip()
-                lines.append(content_line)
+                lines.append(first_line[:-len(end_token)].rstrip())
             else:
                 lines.append(first_line)
-                # 计算续行提示符长度
                 main_prompt_text = f"{input_role_name}: "
-                main_prompt_len = len(main_prompt_text)
-                continuation_prompt_text = '-' * (main_prompt_len - 3) + '-> '
+                continuation_prompt_text = '-' * (len(main_prompt_text) - 3) + '-> '
                 continuation_prompt = f"{input_color_start}{continuation_prompt_text}{input_color_end}"
 
                 while True:
                     line = input(continuation_prompt)
                     if line.endswith(end_token):
-                        content_line = line[:-len(end_token)].rstrip()
-                        lines.append(content_line)  # 这里保留去掉 token 的内容
+                        lines.append(line[:-len(end_token)].rstrip())
                         break
                     lines.append(line)
 
-            human_reply = "\n".join(lines)
+        human_reply = "\n".join(lines)
 
         # 决定追加消息的角色
         role_to_append = 'user' if input_role_user else 'assistant'
 
-        # 将用户输入追加到 self.messages
+        # 将回复追加到 self.messages
         self.messages.append({'role': role_to_append, 'content': human_reply})
-
-        # 保存回复内容
         self.response_content = human_reply
 
         if return_all_messages:  # 返回所有 messages
@@ -6182,13 +6180,18 @@ You will have a conversation in turn. Next are the important prompt words of thi
                                      collected_to_end_chat: Optional[bool] = None, **kwargs) -> Dict[str, str] | None:
         """
         从 self.target_content 中按给定正则图样逐步收集目标字段 (需要先通过 self.target_token 的匹配)。
-        保存为动态类属性，当所有 targets 均成功收集后，写入 self.collected_targets 并返回该 dict。
+        保存为动态类属性，当有 targets 收集到后，写入 self.collected_targets，全收齐后返回该 dict。
         否则返回 None
         Collect the target field step by step from self.target_content according to the given regular pattern
         (matching through self.target_token is required first).
-        Save as a dynamic class attribute. When all targets have been successfully collected, write
-        self.collected_targets and return this dict.
-        Otherwise, return None
+        Save as a dynamic class attribute. When targets are collected, write self.collected_targets.
+        After all targets are collected, return this dict.
+        Otherwise, return None.
+
+        - 匹配到几个就立即赋值
+        - self.collected_targets 实时增量更新
+        - 只有当所有 targets 都收集齐时，才 return result
+        - 未收集齐时返回 None
 
         * 后面的参数只允许以关键字方式输入，不能用位置参数
         :param collect_allow_override: (bool) 已收集到的数据再次匹配是否覆盖，
@@ -6207,72 +6210,82 @@ You will have a conversation in turn. Next are the important prompt words of thi
         {'value': '11', 'value2': '22', 'value3': '<submit3>33</submit3>}
         """
 
-        # 从 kwargs 中提取 collect_* 参数
+        # 提取 collect_* 参数
         targets = {
             k[len("collect_"):]: v
             for k, v in kwargs.items()
             if k.startswith("collect_")
         }
 
-        # 赋值检查
         if collect_allow_override is None:
             collect_allow_override = self.collect_allow_override
         if collected_to_end_chat is None:
             collected_to_end_chat = self.collected_to_end_chat
 
+        # 正则重复校验
         if len(set(targets.values())) != len(targets):
             class_name = self.__class__.__name__
             method_name = inspect.currentframe().f_code.co_name
-            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
-                             f"the same regular expression is not allowed for multiple target fields.")
+            raise ValueError(
+                f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                f"the same regular expression is not allowed for multiple target fields."
+            )
 
         if not self.target_content:
             return None
 
+        hit_any = False
+
+        # 收集阶段
         for key, pattern in targets.items():
             attr_name = f"_{key}_result"
 
-            # 已存在且不允许覆盖，直接跳过
+            # 不允许覆盖
             if hasattr(self, attr_name) and not collect_allow_override:
                 continue
 
-            # 在 target_content 中按正则 pattern 搜索 (支持跨行匹配)
             match = re.search(pattern, self.target_content, re.S)
-
-            # 如果当前正则没有匹配到内容，则跳过，继续处理下一个目标
             if not match:
                 continue
 
             group_dict = match.groupdict()
-            if group_dict:  # (?P<content>.*?)
-                # 取第一个命名捕获组的值 (只要 value，不要整个字典)
+            if group_dict:
                 value = next(iter(group_dict.values()))
-            elif match.groups():  # (.*?)
-                # 普通捕获组：取第一个括号里的内容
+            elif match.groups():
                 value = match.group(1)
             else:
-                # 没有捕获组：取整个匹配
                 value = match.group(0)
 
-            # 将结果动态保存为实例属性 (中间态缓存)
-            setattr(self, attr_name, value)  # 例如：self._submit_result = value
+            setattr(self, attr_name, value)
+            hit_any = True
 
-        # 检查是否所有 targets 均已收集
-        result = {}
+        # 本轮完全没有新命中
+        if not hit_any:
+            return None
+
+        # 汇总当前已收集的内容 (不要求齐全)
+        current_result = {}
+        all_collected = True
+
         for key in targets.keys():
             attr_name = f"_{key}_result"
-            if not hasattr(self, attr_name):
-                return None
-            result[key] = getattr(self, attr_name)
+            if hasattr(self, attr_name):
+                current_result[key] = getattr(self, attr_name)
+            else:
+                all_collected = False
 
-        # 写入最终结果容器
-        self.collected_targets = result
+        # 实时更新 collected_targets
+        self.collected_targets = current_result
 
-        # 是否结束对话
+        # 是否齐全，不齐则返回 None
+        if not all_collected:
+            return None
+
+        # 收集齐后是否结束对话
         if collected_to_end_chat:
             self.end_chat = True
 
-        return result
+        return current_result
 
     # 运行
     def run(self):

@@ -3224,7 +3224,7 @@ class Human:
         self.user_content_color = '\033[32m'  # 绿色
         self.user_remark_color = '\033[32;2m'  # 暗绿色
         self.assistant_role_color = '\033[95m'  # 亮粉色
-        self.assistant_content_color = '\033[35;2m'  # 粉色
+        self.assistant_content_color = '\033[35m'  # 粉色
         self.assistant_remark_color = '\033[35;2m'  # 暗粉色
         self.tool_role_color = '\033[94m'  # 亮蓝色
         self.tool_content_color = '\033[34m'  # 蓝色

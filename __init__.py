@@ -366,8 +366,9 @@ MAGIC
                 in the module generator.
 -> 6.3.10       25-12-20 11:00 Split the turns_to_speak() in the ChatBoat class and add 
                 the collect_targets_from_content() method.
--> 6.3.11       25-12-25 14:00 Updated the method collect_targets_from_content(). Method Chat() in class Human has 
+-> 6.3.11       25-12-26 15:00 Updated the method collect_targets_from_content(). Method Chat() in class Human has 
                 been optimized.
+                Adjusted the order of parameter checks in the __player_output_process() method.
                 
        
  ------ Attention ------

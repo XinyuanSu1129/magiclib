@@ -6135,20 +6135,17 @@ You will have a conversation in turn. Next are the important prompt words of thi
         self.target_content = ""
 
         command_pattern_list = [
-            self.end_chat_token,  # 结束对话
             self.target_token,  # 目标内容
             r"^<to>.*",  # 换地点
+            self.end_chat_token,  # 结束对话
         ]
-
-        matched_pattern = None
-        matched_content = None
 
         # 寻找是否有匹配项
         for pattern in command_pattern_list:
-            match = re.search(pattern, assistant_str)
-            if match:
-                matched_pattern = pattern
 
+            match = re.search(pattern, assistant_str)
+
+            if match:
                 # 获取匹配内容：兼容命名捕获组、普通捕获组或无捕获组
                 group_dict = match.groupdict()
                 if group_dict:
@@ -6161,17 +6158,16 @@ You will have a conversation in turn. Next are the important prompt words of thi
                     # 没有捕获组：取整个匹配
                     matched_content = match.group(0)
 
-                break
+                # 匹配图样
+                if pattern:
+                    if pattern == self.target_token:
+                        self.target_content = matched_content
 
-        if matched_pattern:
-            if matched_pattern == self.end_chat_token:
-                self.end_chat = True
+                    elif pattern == r"^<to>.*":
+                        pass
 
-            elif matched_pattern == self.target_token:
-                self.target_content = matched_content
-
-            elif matched_pattern == r"^<to>.*":
-                pass
+                    elif pattern == self.end_chat_token:
+                        self.end_chat = True
 
         return None
 

@@ -4489,23 +4489,26 @@ class Jimeng_video:
             print(self.fail + f"Error: Exception occurred during video download - {e}" + self.endc)
             return False
 
-    def __poll_task_result(self, max_seconds: int = 200) -> Optional[str]:
+    # 轮询结果
+    def __poll_task_result(self, max_seconds: int = 600) -> Optional[str]:
         """
         每秒轮询视频生成任务，实时显示已查询秒数。
         任务完成立即返回；达到最大秒数仍未完成则退出。
 
-        :param max_seconds: 最大等待秒数(默认 200 秒)
+        :param max_seconds: 最大等待秒数 (默认 600 秒)
         :return: 视频 URL，失败返回 None
         """
 
         print(self.okcyan + "\nStart polling the video generation task..." + self.endc)
+        
         start_time = time.time()
+        interval = 5  # 每次轮询间隔 5 秒
 
-        for waited in range(1, max_seconds + 1):
+        for waited in range(interval, max_seconds + 1, interval):
             # 动态显示已等待时间
             sys.stdout.write(f"\rHas waited for {waited} seconds...")
             sys.stdout.flush()
-            time.sleep(1)
+            time.sleep(interval)
 
             # 查询任务结果
             response = self.__get_task_result()
@@ -4992,12 +4995,12 @@ class Jimeng_image:
         return self.__send_signed_request(action='CVSync2AsyncGetResult', body_params=body_params)
 
     # 轮询结果
-    def __poll_task_result(self, max_seconds: int = 200) -> None:
+    def __poll_task_result(self, max_seconds: int = 300) -> None:
         """
         每秒轮询任务，实时显示已查询秒数。
         任务完成立即返回；达到最大秒数仍未完成则退出。
 
-        :param max_seconds: 最大等待秒数(默认 200 秒)
+        :param max_seconds: 最大等待秒数 (默认 300 秒)
 
         :return: 图片 base64 或 URL，失败返回 None
         """
@@ -5005,13 +5008,14 @@ class Jimeng_image:
         print(self.okcyan + "\nStart polling the task status..." + self.endc)
 
         start_time = time.time()
+        interval = 5  # 每次轮询间隔 5 秒
 
-        for waited in range(1, max_seconds + 1):
+        for waited in range(interval, max_seconds + 1, interval):
 
             # 动态显示已等待时间
             sys.stdout.write(f"\rHas waited for {waited} seconds...")
             sys.stdout.flush()
-            time.sleep(1)
+            time.sleep(interval)
 
             # 查询任务结果
             response = self.__get_task_result()
@@ -5059,9 +5063,7 @@ class Jimeng_image:
                         print(self.warning + f"Parsing resp_data failed - {e}" + self.endc)
 
                 if images:
-
                     total_time = time.time() - start_time
-
                     print("\n" + "=" * 60)
                     print(self.header + self.bold + "The image was generated successfully!" + self.endc)
                     print(f"Time used: {self.okcyan}{total_time:.2f} seconds{self.endc}")
@@ -5074,7 +5076,6 @@ class Jimeng_image:
                     print("=" * 60 + "\n")
 
                     return images
-
                 else:
                     print(self.fail + "\nError: No valid image returned." + self.endc)
                     return None
@@ -5089,7 +5090,6 @@ class Jimeng_image:
 
         # 达到最大等待时间仍未返回
         print(self.warning + f"\nStopped polling: reached {max_seconds} seconds limit." + self.endc)
-
         return None
 
     # 下载图片

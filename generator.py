@@ -201,7 +201,6 @@ class Tools:
         self.image_data_list = []  # 图片的 list，base64格式
         self.image_list = []  # save_image()
         self.save_path = None  # save_image()
-        self.image_seed = None
         self.response_created = None
         self.response_total_tokens = 0
         self.response_input_tokens = 0
@@ -364,8 +363,7 @@ class Tools:
 
     # 生成图片  用到 AI 大模型
     def generate_image(self, prompt: str, save_path: Optional[str] = None,
-                       model: str = 'Qwen/Qwen-Image',
-                       size: str = '1024x1024', n: int = 1, seed: int = None) -> str:
+                       model: str = 'Qwen/Qwen-Image', size: str = '1024x1024', n: int = 1) -> str:
         """
         根据用户要求生成图片
         Generate images according to user requirements.
@@ -375,7 +373,6 @@ class Tools:
         :param model: (str) 生成图片的模型，默认为 Black Forest Lab 的 Qwen/Qwen-Image
         :param size: (str) 图片的大小，最大 '2048x2048'，默认为 '1024x1024'
         :param n: (int) 生成图片的数量，默认为 1。注意：目前只能为 1
-        :param seed: (int) 随机种子，默认为无种子
 
         :return status: (str) 图片绘制成功与否的信息
         """
@@ -387,7 +384,6 @@ class Tools:
         # =============== 注意更新 ===============
 
         # 检查输入
-        self.image_seed = seed
         self.save_path = save_path
 
         # 构建 URL
@@ -407,8 +403,7 @@ class Tools:
             "prompt": prompt,
             "size": size,
             "n": n,
-            "response_format": "b64_json",
-            "seed": seed
+            # "response_format": "b64_json"
         }
 
         # 发送请求
@@ -438,17 +433,31 @@ class Tools:
 
         self.image_data_list = response_dic.get('data', [])
         result_list = []
+
+        # 收集所有图片数据
         if self.image_data_list:
             for idx, img_item in enumerate(self.image_data_list):
 
                 # 处理 b64_json 的格式
                 if "b64_json" in img_item and img_item["b64_json"]:
                     b64_img = img_item["b64_json"]
-                    # 去掉前缀
-                    if b64_img.startswith("data:image"):
-                        b64_img_clean = b64_img.split(",")[1]
+
+                    # 尝试提取 base64 内容
+                    b64_match = re.search(r'base64,(.+)', b64_img)
+                    if b64_match:
+                        b64_img_clean = b64_match.group(1)
                     else:
-                        b64_img_clean = b64_img
+                        # 如果没有 base64, 尝试找到 iVBOR 或 /9j/ 开头的内容
+                        m = re.search(r'(iVBOR|/9j/).+', b64_img)
+                        if m:
+                            b64_img_clean = m.group(0)
+                        else:
+                            # 找不到有效 base64，直接标记为 None，并打印调试信息
+                            print(f"[{idx}] Unknown b64_json format."
+                                  f"\nPreview: {b64_img[:200]}"
+                                  f"\nLength: {len(b64_img)}")
+                            b64_img_clean = None
+
                     result_list.append(b64_img_clean)
 
                 # 处理 url 的格式
@@ -457,47 +466,79 @@ class Tools:
 
                 # 处理其它格式
                 else:
-                    result_list.append("No valid image data found")
+                    # 打印调试信息，看看这个 img_item 到底是什么
+                    print(f"[{idx}] Unknown image item format: {img_item}")
+                    result_list.append(None)  # 标记无效数据
 
         self.image_list = result_list
-
         status = 'No pictures were generated.'
-        for idx, b64_data in enumerate(result_list):  # 遍历多个 Base64 图片
+
+        # 遍历每张图片
+        for idx, data in enumerate(result_list):
+            if data is None:
+                print(f"[{idx}] No valid image data to process")
+                continue
+
+            # 判断是否是 URL
+            if isinstance(data, str) and data.startswith("http"):
+                try:
+                    response = requests.get(data)
+                    response.raise_for_status()
+                    image_bytes = response.content
+                except Exception as e:
+                    print(f"[{idx}] Failed to fetch image from URL: {e}")
+                    continue
+            else:
+                # 当作 base64
+                try:
+                    # 清理非法字符
+                    b64_data = re.sub(r"[^A-Za-z0-9+/=]", "", data)
+                    # 补齐长度为 4 的倍数
+                    missing_padding = len(b64_data) % 4
+                    if missing_padding != 0:
+                        b64_data += "=" * (4 - missing_padding)
+                    image_bytes = base64.b64decode(b64_data)
+                except Exception as e:
+                    print(f"[{idx}] Failed to decode base64 image: {e}")
+                    print(f"[{idx}] Preview of data: {data[:200]} Length: {len(data)}")
+                    continue
+
+            # 打开图片
+            try:
+                image = Image.open(BytesIO(image_bytes))
+            except Exception as e:
+                print(f"[{idx}] PIL cannot identify image: {e}")
+                continue
 
             # 显示图片
-            image_bytes = base64.b64decode(b64_data)
-            image = Image.open(BytesIO(image_bytes))
-
-            # 创建没有边距的 figure
             fig = plt.figure(figsize=(image.width / 100, image.height / 100), dpi=100)
-            ax = plt.Axes(fig, [0., 0., 1., 1.])  # 直接占满
+            ax = plt.Axes(fig, [0., 0., 1., 1.])
             ax.set_axis_off()
             fig.add_axes(ax)
-
             ax.imshow(image)
             plt.show()
 
             # 保存图片
-            if save_path is not None:  # 如果 save_path 的值不为 None，则保存
-                status = f'The image has been generated and saved in the {save_path} directory.'
+            if save_path is not None:
                 file_name = "Generate_image.png" if idx == 0 else f"Generate_image_{idx}.png"
                 full_file_path = os.path.join(save_path, file_name)
 
-                if os.path.exists(full_file_path):  # 查看该文件名是否存在
+                if os.path.exists(full_file_path):
                     count = 1
                     file_name = f"Generate_image_{idx}_{count}.png"
                     full_file_path = os.path.join(save_path, file_name)
-
-                    while os.path.exists(full_file_path):  # 不断递增，直到文件名不重复
+                    while os.path.exists(full_file_path):
                         count += 1
                         file_name = f"Generate_image_{idx}_{count}.png"
                         full_file_path = os.path.join(save_path, file_name)
 
-                # 保存 Base64 图片
-                with open(full_file_path, "wb") as f:
-                    f.write(base64.b64decode(b64_data))
-
-            else:  # 如果 save_path 的值为 None
+                try:
+                    with open(full_file_path, "wb") as f:
+                        f.write(image_bytes)
+                    status = f'The image has been generated and saved in the {save_path} directory.'
+                except Exception as e:
+                    print(f"[{idx}] Failed to save image: {e}")
+            else:
                 status = 'The image has been successfully generated but not saved.'
 
         print(f'\033[90m[{status}]\033[0m\n')

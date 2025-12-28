@@ -1688,7 +1688,7 @@ class AI:
 
                                     # 追加 AI 回复内容
                                     if "content" in delta:
-                                        content_piece = delta["content"]
+                                        content_piece = str(delta["content"])
                                         if isinstance(content_piece, str):
                                             response_content += content_piece
                                             # 打印回复
@@ -1814,7 +1814,7 @@ class AI:
                     if response_messages.get(key):
                         self.response_reasoning = response_messages[key]
                         break
-                self.response_content = response_messages.get("content", "")  # AI 生成的回答文本
+                self.response_content = str(response_messages.get("content", ""))  # AI 生成的回答文本
                 self.response_finish_reason = first_choice.get("finish_reason")  # 结束原因，如 "stop"
                 self.response_index = first_choice.get("index")  # 选项索引
 
@@ -2148,7 +2148,7 @@ class AI:
 
                                         # 追加 AI 回复内容
                                         if "content" in delta:
-                                            content_piece = delta["content"]
+                                            content_piece = str(delta["content"])
                                             if isinstance(content_piece, str):
                                                 response_content += content_piece
                                                 print(content_piece, end="", flush=True)
@@ -2294,7 +2294,7 @@ class AI:
                         if response_messages.get(key):
                             self.response_reasoning = response_messages[key]
                             break
-                    self.response_content = response_messages.get("content", "")  # AI 生成的回答文本
+                    self.response_content = str(response_messages.get("content", ""))  # AI 生成的回答文本
                     self.response_finish_reason = first_choice.get("finish_reason")
                     self.response_index = first_choice.get("index")
 
@@ -2518,7 +2518,7 @@ class AI:
 
                                 # 追加 AI 回复内容
                                 if "content" in delta:
-                                    content_piece = delta["content"]
+                                    content_piece = str(delta["content"])
                                     if isinstance(content_piece, str):
                                         response_content += content_piece
 
@@ -5421,7 +5421,7 @@ class Assist(AI):
         choices = response_dict.get("choices", [])  # 返回的回答列表，通常只有一个
         if choices:
             first_choice = choices[0]
-            self.response_content = first_choice.get("message", {}).get("content", "")  # AI 生成的回答文本
+            self.response_content = str(first_choice.get("message", {}).get("content", ""))  # AI 生成的回答文本
             self.response_finish_reason = first_choice.get("finish_reason")  # 结束原因，如 "stop"
             self.response_index = first_choice.get("index")  # 选项索引
 

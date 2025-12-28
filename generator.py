@@ -1814,7 +1814,7 @@ class AI:
                     if response_messages.get(key):
                         self.response_reasoning = response_messages[key]
                         break
-                self.response_content = response_messages.get("content")  # AI 生成的回答文本
+                self.response_content = response_messages.get("content", "")  # AI 生成的回答文本
                 self.response_finish_reason = first_choice.get("finish_reason")  # 结束原因，如 "stop"
                 self.response_index = first_choice.get("index")  # 选项索引
 
@@ -2294,7 +2294,7 @@ class AI:
                         if response_messages.get(key):
                             self.response_reasoning = response_messages[key]
                             break
-                    self.response_content = response_messages.get("content")  # AI 生成的回答文本
+                    self.response_content = response_messages.get("content", "")  # AI 生成的回答文本
                     self.response_finish_reason = first_choice.get("finish_reason")
                     self.response_index = first_choice.get("index")
 
@@ -5258,7 +5258,7 @@ class Assist(AI):
         :param advice: (str) 意见，往往是审稿人给出的，为选填项
         :param to_chat: (bool) 在生成修改后的文本后是否继续对话，默认为 True
 
-        :return revised_text: (str) 修改后的文本
+        :return self.response_content: (str) 修改后的文本
         """
 
         if model is None:
@@ -5419,10 +5419,9 @@ class Assist(AI):
         self.response_created = response_dict.get("created")  # 创建时间，Unix 时间戳
 
         choices = response_dict.get("choices", [])  # 返回的回答列表，通常只有一个
-        response_content = ''
         if choices:
             first_choice = choices[0]
-            self.response_content = response_content = first_choice.get("message", {}).get("content")  # AI 生成的回答文本
+            self.response_content = first_choice.get("message", {}).get("content", "")  # AI 生成的回答文本
             self.response_finish_reason = first_choice.get("finish_reason")  # 结束原因，如 "stop"
             self.response_index = first_choice.get("index")  # 选项索引
 
@@ -5441,7 +5440,7 @@ class Assist(AI):
         if to_chat:
             self.continue_chat()
 
-        return response_content
+        return self.response_content
 
 
 """ AI 大模型互动区 """

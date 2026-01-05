@@ -1688,7 +1688,9 @@ class AI:
 
                                     # 追加 AI 回复内容
                                     if "content" in delta:
-                                        content_piece = str(delta["content"])
+                                        raw_content = delta["content"]
+                                        content_piece = str(raw_content) if raw_content is not None else ""
+
                                         if isinstance(content_piece, str):
                                             response_content += content_piece
                                             # 打印回复
@@ -2148,7 +2150,9 @@ class AI:
 
                                         # 追加 AI 回复内容
                                         if "content" in delta:
-                                            content_piece = str(delta["content"])
+                                            raw_content = delta["content"]
+                                            content_piece = str(raw_content) if raw_content is not None else ""
+
                                             if isinstance(content_piece, str):
                                                 response_content += content_piece
                                                 print(content_piece, end="", flush=True)
@@ -2518,7 +2522,9 @@ class AI:
 
                                 # 追加 AI 回复内容
                                 if "content" in delta:
-                                    content_piece = str(delta["content"])
+                                    raw_content = delta["content"]
+                                    content_piece = str(raw_content) if raw_content is not None else ""
+
                                     if isinstance(content_piece, str):
                                         response_content += content_piece
 

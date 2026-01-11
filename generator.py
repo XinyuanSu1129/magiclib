@@ -363,16 +363,32 @@ class Tools:
 
     # 生成图片  用到 AI 大模型
     def generate_image(self, prompt: str, save_path: Optional[str] = None,
-                       model: str = 'Qwen/Qwen-Image', size: str = '1024x1024', n: int = 1) -> str:
+                       model: str = 'black-forest-labs/FLUX.1-dev', size: str = '1024x1024', **kwargs) -> str:
         """
         根据用户要求生成图片
         Generate images according to user requirements.
 
         :param prompt: (str) 生成图片的英文提示词，为必需输入项。注意：在输入前必需将 prompt 转换成英文！
         :param save_path: (str) 保存的目录路径，若输入则按照路径保存
-        :param model: (str) 生成图片的模型，默认为 Black Forest Lab 的 Qwen/Qwen-Image
+        :param model: (str) 生成图片的模型，默认为 Black Forest Lab 的 black-forest-labs/FLUX.1-dev
         :param size: (str) 图片的大小，最大 '2048x2048'，默认为 '1024x1024'
-        :param n: (int) 生成图片的数量，默认为 1。注意：目前只能为 1
+
+        --- **kwargs ---
+
+        {
+            "model": "Qwen/Qwen-Image-Edit-2509",  // 指定使用的AI模型 (通义千问的图片编辑模型)
+            "prompt": "an island near sea...",     // 正向提示词：描述想要生成的图片内容 (海边岛屿、海鸥、月光、灯塔等)
+            "negative_prompt": "<string>",         // 反向提示词 (占位符) ：填写不想出现在图片里的内容 (比如"模糊、低画质")
+            "image_size": "<string>",              // 图片尺寸 (占位符) ：需替换为具体值，如 "1024x1024"
+            "batch_size": 1,                       // 一次生成的图片数量 (这里是1张)
+            "seed": 4999999999,                    // 随机种子：固定种子可生成相同结果，方便复现
+            "num_inference_steps": 20,             // 推理步数：数值越高生成质量可能越好，但速度越慢
+            "guidance_scale": 7.5,                 // 提示词引导系数：越高越贴合prompt描述
+            "cfg": 10.05,                          // 同guidance_scale，部分模型的兼容参数
+            "image": "https://xxx/641",            // 参考图片URL 也可 base64 格式 (用于图片编辑，比如基于这张图修改)
+            "image2": "https://xxx/641",
+            "image3": "https://xxx/641"
+        }
 
         :return status: (str) 图片绘制成功与否的信息
         """
@@ -385,6 +401,50 @@ class Tools:
 
         # 检查输入
         self.save_path = save_path
+
+        # 图片处理
+        ALLOWED_EXT = {'.jpg', '.jpeg', '.png', '.bmp', '.gif'}
+        TARGET_KEYS = ['image', 'image2', 'image3']
+        processed = {}
+
+        # 遍历目标键，逐个处理
+        for key in TARGET_KEYS:
+            # 步骤1: 检查键存在且值非空 (排除 None、空字符串)
+            if key not in kwargs:
+                continue
+            value = kwargs[key]
+            if value is None or (isinstance(value, str) and len(value.strip()) == 0):
+                continue
+
+            # 判断是否为有效图片路径 (字符串 + 路径存在 + 是文件 + 扩展名匹配)
+            is_valid_path = False
+            if isinstance(value, str):
+                # 检查路径存在且是文件
+                if os.path.exists(value) and os.path.isfile(value):
+                    # 检查扩展名是否在允许列表 (转小写避免大小写问题)
+                    file_ext = os.path.splitext(value)[1].lower()
+                    if file_ext in ALLOWED_EXT:
+                        is_valid_path = True
+
+            # 路径有效则转 base64，否则保留原值
+            if is_valid_path:
+                try:
+                    # 获取扩展名 (统一jpg → jpeg)
+                    ext = os.path.splitext(value)[1].lower()
+                    ext = '.jpeg' if ext == '.jpg' else ext
+                    ext_prefix = ext.lstrip('.')
+                    # 读取并转换为 base64
+                    with open(value, 'rb') as f:
+                        b64_data = base64.b64encode(f.read()).decode('utf-8')
+                        processed[key] = f'data:image/{ext_prefix};base64,{b64_data}'
+                except Exception as e:
+                    print(f"Failed to convert {key}: {e}")
+                    processed[key] = value  # 转换失败则保留原路径
+            else:
+                processed[key] = value
+
+        # 更新至 kwargs
+        kwargs.update(processed)
 
         # 构建 URL
         base_url = generate_image_base_url
@@ -402,8 +462,9 @@ class Tools:
             "model": generate_image_model,
             "prompt": prompt,
             "size": size,
-            "n": n,
-            # "response_format": "b64_json"
+            # "n": 2,
+            # "response_format": "b64_json",
+            **kwargs
         }
 
         # 发送请求
@@ -539,7 +600,7 @@ class Tools:
                 except Exception as e:
                     print(f"[{idx}] Failed to save image: {e}")
             else:
-                status = 'The image has been successfully generated but not saved.'
+                status = 'The image has been successfully generated.'
 
         print(f'\033[90m[{status}]\033[0m\n')
 
@@ -682,7 +743,7 @@ class Tools:
                 play_obj.wait_done()
 
             elif system == "Darwin":  # macOS 使用 pydub.play
-                # 写入临时 WAV 文件（playsound 支持 WAV/MP3）
+                # 写入临时 WAV 文件 (playsound 支持 WAV/MP3)
                 with tempfile.NamedTemporaryFile(suffix=".mp3", delete=True) as f:
                     audio.export(f.name, format="mp3")
                     playsound(f.name)  # 阻塞播放，播放结束才返回
@@ -1285,7 +1346,7 @@ class AI:
         429: "Too Many Requests - Rate limit exceeded",  # 请求次数过多，被限流
         500: "Internal Server Error - Server encountered an error",  # 服务器内部错误
         502: "Bad Gateway - Invalid response from upstream server",  # 网关错误
-        503: "Service Unavailable - Server temporarily unavailable",  # 服务器暂时不可用（过载或维护中）
+        503: "Service Unavailable - Server temporarily unavailable",  # 服务器暂时不可用 (过载或维护中)
         504: "Gateway Timeout - Upstream server took too long to respond"  # 网关超时
     }
 
@@ -1383,7 +1444,7 @@ class AI:
         if show_instance_id:  # 打印模型名或 instance_id
             self.show_name = self.instance_id
         else:
-            self.show_name = self.model
+            self.show_name = self.model  # 如果 model 为单独赋值，则无法正常显示
 
         # 附加参数 (13)
         self.max_tokens = max_tokens
@@ -1599,9 +1660,9 @@ class AI:
                 # 记录最后一次收到数据的时间
                 last_received_time = time.time()
                 break_time = 120
-                # iter_lines() 会按行（以换行符分隔）逐行读取服务器返回的流数据
+                # iter_lines() 会按行 (以换行符分隔) 逐行读取服务器返回的流数据
                 for chunk in response.iter_lines():
-                    if chunk:  # 过滤掉空行（有些 SSE 数据可能包含心跳或空行
+                    if chunk:  # 过滤掉空行 (有些 SSE 数据可能包含心跳或空行
 
                         decoded_chunk = chunk.decode("utf-8")  # 将字节数据解码成字符串
                         # OpenAI 风格的 SSE(Server-Sent Events) 数据以 "data: " 开头
@@ -1698,7 +1759,7 @@ class AI:
                                                 print(content_piece, end="", flush=True)
                                             last_received_time = time.time()  # 刷新更新时间
 
-                                    # 处理工具调用（累积参数）
+                                    # 处理工具调用 (累积参数)
                                     if delta.get("tool_calls") is not None:
                                         for call in delta["tool_calls"]:
                                             index = call["index"]
@@ -1724,7 +1785,7 @@ class AI:
                                                     "arguments"]
 
                             except json.JSONDecodeError:
-                                # 如果解析 JSON 出错（可能是心跳包或非 JSON 格式内容），则跳过
+                                # 如果解析 JSON 出错 (可能是心跳包或非 JSON 格式内容) ，则跳过
                                 continue
 
                 # 打印回复
@@ -1980,7 +2041,7 @@ class AI:
                     chunk = input(prompt)
                     if chunk.endswith(end_token):
                         content_line = chunk[:-len(end_token)].rstrip()
-                        # 如果这一行只有 token（去掉后为空），保留一个空行
+                        # 如果这一行只有 token (去掉后为空) ，保留一个空行
                         if content_line == '':
                             user_input_list.append('')
                         else:
@@ -2069,9 +2130,9 @@ class AI:
                     # 记录最后一次收到数据的时间
                     last_received_time = time.time()
                     break_time = 120
-                    # iter_lines() 会按行（以换行符分隔）逐行读取服务器返回的流数据
+                    # iter_lines() 会按行 (以换行符分隔) 逐行读取服务器返回的流数据
                     for chunk in response.iter_lines():
-                        if chunk:  # 过滤掉空行（有些 SSE 数据可能包含心跳或空行）
+                        if chunk:  # 过滤掉空行 (有些 SSE 数据可能包含心跳或空行)
 
                             decoded_chunk = chunk.decode("utf-8")  # 将字节数据解码成字符串
                             # OpenAI 风格的 SSE(Server-Sent Events) 数据以 "data: " 开头
@@ -2158,7 +2219,7 @@ class AI:
                                                 print(content_piece, end="", flush=True)
                                                 last_received_time = time.time()  # 刷新更新时间
 
-                                        # 处理工具调用（累积参数）
+                                        # 处理工具调用 (累积参数)
                                         if delta.get("tool_calls") is not None:
                                             for call in delta["tool_calls"]:
                                                 index = call["index"]
@@ -2184,7 +2245,7 @@ class AI:
                                                         "arguments"]
 
                                 except json.JSONDecodeError:
-                                    # 如果解析 JSON 出错（可能是心跳包或非 JSON 格式内容），则跳过
+                                    # 如果解析 JSON 出错 (可能是心跳包或非 JSON 格式内容) ，则跳过
                                     continue
 
                     print(f"{self.end_style}\n")  # 结束颜色
@@ -2235,7 +2296,7 @@ class AI:
                             except HTTPError:
                                 if self.response_status == 400:
 
-                                    # 删除最后一条消息（tool）
+                                    # 删除最后一条消息 (tool)
                                     if self.messages:
                                         self.messages.pop()
 
@@ -2341,7 +2402,7 @@ class AI:
                             except HTTPError:
                                 if self.response_status == 400:
 
-                                    # 删除最后一条消息（tool）
+                                    # 删除最后一条消息 (tool)
                                     if self.messages:
                                         self.messages.pop()
 
@@ -2457,9 +2518,9 @@ class AI:
             # 记录最后一次收到数据的时间
             last_received_time = time.time()
             break_time = 120
-            # iter_lines() 会按行（以换行符分隔）逐行读取服务器返回的流数据
+            # iter_lines() 会按行 (以换行符分隔) 逐行读取服务器返回的流数据
             for chunk in response.iter_lines():
-                if chunk:  # 过滤掉空行（有些 SSE 数据可能包含心跳或空行
+                if chunk:  # 过滤掉空行 (有些 SSE 数据可能包含心跳或空行
 
                     decoded_chunk = chunk.decode("utf-8")  # 将字节数据解码成字符串
                     # OpenAI 风格的 SSE(Server-Sent Events) 数据以 "data: " 开头
@@ -2533,7 +2594,7 @@ class AI:
                                         chunk_content = content_piece
                                         yield chunk_content
 
-                                # 处理工具调用（累积参数）
+                                # 处理工具调用 (累积参数)
                                 if delta.get("tool_calls") is not None:
                                     for call in delta["tool_calls"]:
                                         index = call["index"]
@@ -2559,7 +2620,7 @@ class AI:
                                                 "arguments"]
 
                         except json.JSONDecodeError:
-                            # 如果解析 JSON 出错（可能是心跳包或非 JSON 格式内容），则跳过
+                            # 如果解析 JSON 出错 (可能是心跳包或非 JSON 格式内容) ，则跳过
                             continue
 
             self.stream_begin_output = True  # 下一次打印时变成首次输出
@@ -2635,7 +2696,7 @@ class AI:
             raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
                              f"messages cannot be an empty list.")
 
-        # 打印所有消息内容 (role 和 content），根据角色加颜色
+        # 打印所有消息内容 (role 和 content) ，根据角色加颜色
         print("\n\033[3mAll messages\033[0m:")
         for i, msg in enumerate(messages, 1):
             role = msg['role']
@@ -2708,7 +2769,7 @@ class AI:
         print(f"{self.system_remind}[Dialogue history exceeds {len_lim} characters, "
               f"generating summary...]{self.end_style}")
 
-        # 保存当前对话历史（总结前）
+        # 保存当前对话历史 (总结前)
         original_messages = self.messages.copy()
 
         try:
@@ -2986,7 +3047,7 @@ class AI:
             # 添加角色行
             text_content.append(f"{role}:")
 
-            # 添加内容行（多行处理）
+            # 添加内容行 (多行处理)
             content_lines = content.splitlines()
             for line in content_lines:
                 text_content.append(line.strip())
@@ -3073,7 +3134,7 @@ class AI:
                                 "content": content_str
                             })
 
-                        # 提取角色（去除末尾冒号）
+                        # 提取角色 (去除末尾冒号)
                         role_candidate = stripped_line.rstrip(":").strip()
 
                         # 只保留需要的角色
@@ -3144,7 +3205,7 @@ class AI:
                 if f.lower().endswith('.txt') and os.path.isfile(os.path.join(messages_save_path, f))
             ]
 
-            # 按修改时间排序（最新在前）
+            # 按修改时间排序 (最新在前)
             txt_files.sort(key=lambda x: os.path.getmtime(
                 os.path.join(messages_save_path, x)
             ), reverse=True)
@@ -3165,7 +3226,7 @@ class AI:
 
                             # 检查是否是系统消息行
                             if line.startswith("system:") or line.startswith("system：") or line.startswith("SYSTEM:"):
-                                # 获取保存时间内容（通常是下一行）
+                                # 获取保存时间内容 (通常是下一行)
                                 if i + 1 < len(lines):
                                     time_line = lines[i + 1].strip()
 
@@ -3189,7 +3250,7 @@ class AI:
                 return status
 
             else:
-                # 获取排序后的列表（最新在前）
+                # 获取排序后的列表 (最新在前)
                 sorted_items = sorted(time_file_dict.items(), reverse=True)
 
                 # 打印标题
@@ -3735,7 +3796,7 @@ class Gemini:
     # 将 OpenAI 的 messages 转换成 Gemini 格式
     def __convert_openai_messages_to_gemini(self) -> list:
         """
-        将类似 OpenAI SDK 的 messages（list of dicts with 'role' & 'content'）,
+        将类似 OpenAI SDK 的 messages (list of dicts with 'role' & 'content') ,
         转换为 Gemini SDK 的 Content 对象列表
         messages (list of dicts with 'role' & 'content') similar to those in the OpenAI SDK
         Convert to the list of Content objects of the Gemini SDK.
@@ -4063,7 +4124,7 @@ class Gemini:
                     chunk = input(prompt)
                     if chunk.endswith(end_token):
                         content_line = chunk[:-len(end_token)].rstrip()
-                        # 如果这一行只有 token（去掉后为空），保留一个空行
+                        # 如果这一行只有 token (去掉后为空) ，保留一个空行
                         if content_line == '':
                             user_input_list.append('')
                         else:
@@ -4593,8 +4654,8 @@ class Jimeng_video:
         运行视频生成工作流，包括创建保存目录、提交任务、轮询任务结果和下载视频。
 
         过程说明：
-        1. 创建视频保存目录（如果不存在）。
-        2. 打印任务信息（视频描述和保存路径）。
+        1. 创建视频保存目录 (如果不存在) 。
+        2. 打印任务信息 (视频描述和保存路径) 。
         3. 提交视频生成任务，并获取任务 ID。
         4. 轮询任务结果，直到生成完成或达到最大轮询次数。
         5. 下载生成的视频文件，如果任务失败或超时则给出提示。
@@ -5138,8 +5199,8 @@ class Jimeng_image:
         运行图片生成工作流，包括创建保存目录、提交任务、轮询任务结果和下载图片。
 
         过程说明：
-        1. 创建图片保存目录（如果不存在）。
-        2. 打印任务信息（图片描述和保存路径）。
+        1. 创建图片保存目录 (如果不存在) 。
+        2. 打印任务信息 (图片描述和保存路径) 。
         3. 提交图片生成任务，并获取任务 ID。
         4. 轮询任务结果，直到生成完成或达到最大轮询次数。
         5. 下载生成的图片文件，如果任务失败或超时则给出提示。
@@ -6352,7 +6413,7 @@ def set_api_config(ai_instance: object, api_url_pair: str):
     :param api_url_pair: (str) API 与 URL 配对的名称
     """
 
-    # 获取当前函数名（用于错误信息）
+    # 获取当前函数名 (用于错误信息)
     method_name = inspect.currentframe().f_code.co_name
 
     # 预定义的API配置 - 确保这些变量在作用域内

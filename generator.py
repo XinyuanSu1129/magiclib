@@ -1662,7 +1662,7 @@ class AI:
                 break_time = 120
                 # iter_lines() 会按行 (以换行符分隔) 逐行读取服务器返回的流数据
                 for chunk in response.iter_lines():
-                    if chunk:  # 过滤掉空行 (有些 SSE 数据可能包含心跳或空行
+                    if chunk:  # 过滤掉空行 (有些 SSE 数据可能包含心跳或空行)
 
                         decoded_chunk = chunk.decode("utf-8")  # 将字节数据解码成字符串
                         # OpenAI 风格的 SSE(Server-Sent Events) 数据以 "data: " 开头
@@ -2520,7 +2520,7 @@ class AI:
             break_time = 120
             # iter_lines() 会按行 (以换行符分隔) 逐行读取服务器返回的流数据
             for chunk in response.iter_lines():
-                if chunk:  # 过滤掉空行 (有些 SSE 数据可能包含心跳或空行
+                if chunk:  # 过滤掉空行 (有些 SSE 数据可能包含心跳或空行)
 
                     decoded_chunk = chunk.decode("utf-8")  # 将字节数据解码成字符串
                     # OpenAI 风格的 SSE(Server-Sent Events) 数据以 "data: " 开头

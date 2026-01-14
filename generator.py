@@ -1665,128 +1665,130 @@ class AI:
                     if chunk:  # 过滤掉空行 (有些 SSE 数据可能包含心跳或空行)
 
                         decoded_chunk = chunk.decode("utf-8")  # 将字节数据解码成字符串
+
                         # OpenAI 风格的 SSE(Server-Sent Events) 数据以 "data: " 开头
-                        if decoded_chunk.startswith("data: "):
-                            # 去掉开头的 "data: " 前缀，获取纯 JSON 数据部分
-                            json_data = decoded_chunk[len("data: "):]
+                        if decoded_chunk.startswith("data:"):
+                            json_data = decoded_chunk[len("data:"):].strip()  # 去掉开头的 "data: " 前缀
+                        else:
+                            json_data = decoded_chunk
 
-                            # 如果是 "[DONE]" 表示流式输出已经结束
-                            if json_data.strip() == "[DONE]":
-                                break  # 跳出循环
+                        # 如果是 "[DONE]" 表示流式输出已经结束
+                        if json_data.strip() == "[DONE]":
+                            break  # 跳出循环
 
-                            # 检查是否超时 (break_time 秒没有收到数据)
-                            if time.time() - last_received_time > break_time:
-                                print(f"{self.system_remind}[Timeout: No new data received within "
-                                      f"{break_time} seconds.]{self.end_style}")
-                                break
+                        # 检查是否超时 (break_time 秒没有收到数据)
+                        if time.time() - last_received_time > break_time:
+                            print(f"{self.system_remind}[Timeout: No new data received within "
+                                  f"{break_time} seconds.]{self.end_style}")
+                            break
 
-                            try:
-                                # 将 JSON 字符串解析为 Python 字典
-                                content_dict = json.loads(json_data)
+                        try:
+                            # 将 JSON 字符串解析为 Python 字典
+                            content_dict = json.loads(json_data)
 
-                                # 只在第一次解析时获取元信息
-                                if self.stream_begin_output:
-                                    self.response_id = content_dict.get("id")
-                                    self.response_model = content_dict.get("model")
-                                    self.response_object = content_dict.get("object")
-                                    self.response_created = content_dict.get("created")
+                            # 只在第一次解析时获取元信息
+                            if self.stream_begin_output:
+                                self.response_id = content_dict.get("id")
+                                self.response_model = content_dict.get("model")
+                                self.response_object = content_dict.get("object")
+                                self.response_created = content_dict.get("created")
+
+                                # 打印回复
+                                if show_response:
+                                    # 打印 AI 思考过程的字体
+                                    if self.show_reasoning:
+                                        print(
+                                            f"{self.bold}{self.tool_role_color}{self.show_name}{self.end_style}: "
+                                            f"{self.tool_content_color}", end="", flush=True)
+                                    # 不打印 AI 思考过程的字体
+                                    else:
+                                        print(f"{self.bold}{self.assistant_role_color}"
+                                              f"{self.show_name}{self.end_style}: {self.assistant_content_color}",
+                                              end="", flush=True)
+
+                                last_received_time = time.time()  # 刷新更新时间
+                                self.stream_begin_output = False  # 获取本次信息后关闭
+
+                            # 处理 choices
+                            choices = content_dict.get("choices", [])
+                            if choices:
+                                first_choice = choices[0]
+                                delta = first_choice.get("delta", {})
+
+                                # 打印 AI 思考过程
+                                if self.show_reasoning:
+                                    # 追加 AI 思考过程
+                                    reasoning_piece = next((delta.get(key) for key in AI.ai_thinking_parameters
+                                                            if delta.get(key)), None)
+                                    # 如果有思考内容就打印
+                                    if isinstance(reasoning_piece, str):
+                                        response_reasoning += reasoning_piece
+                                        # 打印回复
+                                        if show_response:
+                                            print(reasoning_piece, end="", flush=True)
+                                        last_received_time = time.time()  # 刷新更新时间
+
+                                # 只在第一次收到 content 内容时转换
+                                if delta.get("content") and self.reasoning_output:
 
                                     # 打印回复
                                     if show_response:
-                                        # 打印 AI 思考过程的字体
+                                        # 如果 response_reasoning 为 ''，打印 None
+                                        if not response_reasoning and self.show_reasoning:
+                                            print('None')
+                                        # 如果 response_reasoning 不是以换行符结尾，则打印一个换行符
+                                        elif not response_reasoning.endswith('\n') and self.show_reasoning:
+                                            print('')
+
+                                    # 打印回复
+                                    if show_response:
+                                        # 打印 AI 回复内容的字体
                                         if self.show_reasoning:
-                                            print(
-                                                f"{self.bold}{self.tool_role_color}{self.show_name}{self.end_style}: "
-                                                f"{self.tool_content_color}", end="", flush=True)
-                                        # 不打印 AI 思考过程的字体
-                                        else:
-                                            print(f"{self.bold}{self.assistant_role_color}"
-                                                  f"{self.show_name}{self.end_style}: {self.assistant_content_color}",
+                                            print(f"{self.bold}{self.assistant_role_color}{self.show_name}"
+                                                  f"{self.end_style}: {self.assistant_content_color}",
                                                   end="", flush=True)
+                                    self.reasoning_output = False
 
-                                    last_received_time = time.time()  # 刷新更新时间
-                                    self.stream_begin_output = False  # 获取本次信息后关闭
+                                # 追加 AI 回复内容
+                                if "content" in delta:
+                                    raw_content = delta["content"]
+                                    content_piece = str(raw_content) if raw_content is not None else ""
 
-                                # 处理 choices
-                                choices = content_dict.get("choices", [])
-                                if choices:
-                                    first_choice = choices[0]
-                                    delta = first_choice.get("delta", {})
-
-                                    # 打印 AI 思考过程
-                                    if self.show_reasoning:
-                                        # 追加 AI 思考过程
-                                        reasoning_piece = next((delta.get(key) for key in AI.ai_thinking_parameters
-                                                                if delta.get(key)), None)
-                                        # 如果有思考内容就打印
-                                        if isinstance(reasoning_piece, str):
-                                            response_reasoning += reasoning_piece
-                                            # 打印回复
-                                            if show_response:
-                                                print(reasoning_piece, end="", flush=True)
-                                            last_received_time = time.time()  # 刷新更新时间
-
-                                    # 只在第一次收到 content 内容时转换
-                                    if delta.get("content") and self.reasoning_output:
-
+                                    if isinstance(content_piece, str):
+                                        response_content += content_piece
                                         # 打印回复
                                         if show_response:
-                                            # 如果 response_reasoning 为 ''，打印 None
-                                            if not response_reasoning and self.show_reasoning:
-                                                print('None')
-                                            # 如果 response_reasoning 不是以换行符结尾，则打印一个换行符
-                                            elif not response_reasoning.endswith('\n') and self.show_reasoning:
-                                                print('')
+                                            print(content_piece, end="", flush=True)
+                                        last_received_time = time.time()  # 刷新更新时间
 
-                                        # 打印回复
-                                        if show_response:
-                                            # 打印 AI 回复内容的字体
-                                            if self.show_reasoning:
-                                                print(f"{self.bold}{self.assistant_role_color}{self.show_name}"
-                                                      f"{self.end_style}: {self.assistant_content_color}",
-                                                      end="", flush=True)
-                                        self.reasoning_output = False
+                                # 处理工具调用 (累积参数)
+                                if delta.get("tool_calls") is not None:
+                                    for call in delta["tool_calls"]:
+                                        index = call["index"]
 
-                                    # 追加 AI 回复内容
-                                    if "content" in delta:
-                                        raw_content = delta["content"]
-                                        content_piece = str(raw_content) if raw_content is not None else ""
+                                        # 初始化工具调用记录
+                                        if index not in tool_calls:
+                                            tool_calls[index] = {
+                                                "id": "",
+                                                "function": {"name": "", "arguments": ""}
+                                            }
 
-                                        if isinstance(content_piece, str):
-                                            response_content += content_piece
-                                            # 打印回复
-                                            if show_response:
-                                                print(content_piece, end="", flush=True)
-                                            last_received_time = time.time()  # 刷新更新时间
+                                        # 更新工具调用ID
+                                        if call.get("id"):
+                                            tool_calls[index]["id"] = call["id"]
 
-                                    # 处理工具调用 (累积参数)
-                                    if delta.get("tool_calls") is not None:
-                                        for call in delta["tool_calls"]:
-                                            index = call["index"]
+                                        # 更新函数名称
+                                        if "function" in call and call["function"].get("name"):
+                                            tool_calls[index]["function"]["name"] = call["function"]["name"]
 
-                                            # 初始化工具调用记录
-                                            if index not in tool_calls:
-                                                tool_calls[index] = {
-                                                    "id": "",
-                                                    "function": {"name": "", "arguments": ""}
-                                                }
+                                        # 累积参数
+                                        if "function" in call and call["function"].get("arguments"):
+                                            tool_calls[index]["function"]["arguments"] += call["function"][
+                                                "arguments"]
 
-                                            # 更新工具调用ID
-                                            if call.get("id"):
-                                                tool_calls[index]["id"] = call["id"]
-
-                                            # 更新函数名称
-                                            if "function" in call and call["function"].get("name"):
-                                                tool_calls[index]["function"]["name"] = call["function"]["name"]
-
-                                            # 累积参数
-                                            if "function" in call and call["function"].get("arguments"):
-                                                tool_calls[index]["function"]["arguments"] += call["function"][
-                                                    "arguments"]
-
-                            except json.JSONDecodeError:
-                                # 如果解析 JSON 出错 (可能是心跳包或非 JSON 格式内容) ，则跳过
-                                continue
+                        except json.JSONDecodeError:
+                            # 如果解析 JSON 出错 (可能是心跳包或非 JSON 格式内容) ，则跳过
+                            continue
 
                 # 打印回复
                 if show_response:
@@ -2135,118 +2137,120 @@ class AI:
                         if chunk:  # 过滤掉空行 (有些 SSE 数据可能包含心跳或空行)
 
                             decoded_chunk = chunk.decode("utf-8")  # 将字节数据解码成字符串
+
                             # OpenAI 风格的 SSE(Server-Sent Events) 数据以 "data: " 开头
-                            if decoded_chunk.startswith("data: "):
-                                # 去掉开头的 "data: " 前缀，获取纯 JSON 数据部分
-                                json_data = decoded_chunk[len("data: "):]
+                            if decoded_chunk.startswith("data:"):
+                                json_data = decoded_chunk[len("data:"):].strip()  # 去掉开头的 "data: " 前缀
+                            else:
+                                json_data = decoded_chunk
 
-                                # 如果是 "[DONE]" 表示流式输出已经结束
-                                if json_data.strip() == "[DONE]":
-                                    break  # 跳出循环
+                            # 如果是 "[DONE]" 表示流式输出已经结束
+                            if json_data.strip() == "[DONE]":
+                                break  # 跳出循环
 
-                                # 检查是否超时 (break_time 秒没有收到数据)
-                                if time.time() - last_received_time > break_time:
-                                    print(f"{self.system_remind}[Timeout: No new data received within "
-                                          f"{break_time} seconds.]{self.end_style}")
-                                    break
+                            # 检查是否超时 (break_time 秒没有收到数据)
+                            if time.time() - last_received_time > break_time:
+                                print(f"{self.system_remind}[Timeout: No new data received within "
+                                      f"{break_time} seconds.]{self.end_style}")
+                                break
 
-                                try:
-                                    # 将 JSON 字符串解析为 Python 字典
-                                    content_dict = json.loads(json_data)
+                            try:
+                                # 将 JSON 字符串解析为 Python 字典
+                                content_dict = json.loads(json_data)
 
-                                    # 只在第一次解析时获取元信息
-                                    if self.stream_begin_output:
-                                        self.response_id = content_dict.get("id")
-                                        self.response_model = content_dict.get("model")
-                                        self.response_object = content_dict.get("object")
-                                        self.response_created = content_dict.get("created")
+                                # 只在第一次解析时获取元信息
+                                if self.stream_begin_output:
+                                    self.response_id = content_dict.get("id")
+                                    self.response_model = content_dict.get("model")
+                                    self.response_object = content_dict.get("object")
+                                    self.response_created = content_dict.get("created")
 
-                                        # 打印 AI 思考过程的字体
+                                    # 打印 AI 思考过程的字体
+                                    if self.show_reasoning:
+                                        print(
+                                            f"{self.bold}{self.tool_role_color}{self.show_name}{self.end_style}: "
+                                            f"{self.tool_content_color}", end="", flush=True)
+                                    # 不打印 AI 思考过程的字体
+                                    else:
+                                        print(f"{self.bold}{self.assistant_role_color}{self.show_name}"
+                                              f"{self.end_style}: {self.assistant_content_color}",
+                                              end="", flush=True)
+
+                                    last_received_time = time.time()  # 刷新更新时间
+                                    self.stream_begin_output = False  # 获取本次信息后关闭
+
+                                # 处理 choices
+                                choices = content_dict.get("choices", [])
+                                if choices:
+                                    first_choice = choices[0]
+                                    delta = first_choice.get("delta", {})
+
+                                    # 打印 AI 思考过程
+                                    if self.show_reasoning:
+                                        # 追加 AI 思考过程
+                                        reasoning_piece = next((delta.get(key) for key in AI.ai_thinking_parameters
+                                                           if delta.get(key)), None)
+                                        # 如果有思考内容就打印
+                                        if isinstance(reasoning_piece, str):
+                                            response_reasoning += reasoning_piece
+                                            print(reasoning_piece, end="", flush=True)
+                                            last_received_time = time.time()  # 刷新更新时间
+
+                                    # 只在第一次收到 content 内容时转换
+                                    if delta.get("content") and self.reasoning_output:
+
+                                        # 如果 response_reasoning 为 ''，打印 None
+                                        if not response_reasoning and self.show_reasoning:
+                                            print('None')
+                                        # 如果 response_reasoning 不是以换行符结尾，则打印一个换行符
+                                        elif not response_reasoning.endswith('\n') and self.show_reasoning:
+                                            print('')
+
+                                        # 打印 AI 回复内容的字体
                                         if self.show_reasoning:
-                                            print(
-                                                f"{self.bold}{self.tool_role_color}{self.show_name}{self.end_style}: "
-                                                f"{self.tool_content_color}", end="", flush=True)
-                                        # 不打印 AI 思考过程的字体
-                                        else:
                                             print(f"{self.bold}{self.assistant_role_color}{self.show_name}"
                                                   f"{self.end_style}: {self.assistant_content_color}",
                                                   end="", flush=True)
+                                        self.reasoning_output = False
 
-                                        last_received_time = time.time()  # 刷新更新时间
-                                        self.stream_begin_output = False  # 获取本次信息后关闭
+                                    # 追加 AI 回复内容
+                                    if "content" in delta:
+                                        raw_content = delta["content"]
+                                        content_piece = str(raw_content) if raw_content is not None else ""
 
-                                    # 处理 choices
-                                    choices = content_dict.get("choices", [])
-                                    if choices:
-                                        first_choice = choices[0]
-                                        delta = first_choice.get("delta", {})
+                                        if isinstance(content_piece, str):
+                                            response_content += content_piece
+                                            print(content_piece, end="", flush=True)
+                                            last_received_time = time.time()  # 刷新更新时间
 
-                                        # 打印 AI 思考过程
-                                        if self.show_reasoning:
-                                            # 追加 AI 思考过程
-                                            reasoning_piece = next((delta.get(key) for key in AI.ai_thinking_parameters
-                                                               if delta.get(key)), None)
-                                            # 如果有思考内容就打印
-                                            if isinstance(reasoning_piece, str):
-                                                response_reasoning += reasoning_piece
-                                                print(reasoning_piece, end="", flush=True)
-                                                last_received_time = time.time()  # 刷新更新时间
+                                    # 处理工具调用 (累积参数)
+                                    if delta.get("tool_calls") is not None:
+                                        for call in delta["tool_calls"]:
+                                            index = call["index"]
 
-                                        # 只在第一次收到 content 内容时转换
-                                        if delta.get("content") and self.reasoning_output:
+                                            # 初始化工具调用记录
+                                            if index not in tool_calls:
+                                                tool_calls[index] = {
+                                                    "id": "",
+                                                    "function": {"name": "", "arguments": ""}
+                                                }
 
-                                            # 如果 response_reasoning 为 ''，打印 None
-                                            if not response_reasoning and self.show_reasoning:
-                                                print('None')
-                                            # 如果 response_reasoning 不是以换行符结尾，则打印一个换行符
-                                            elif not response_reasoning.endswith('\n') and self.show_reasoning:
-                                                print('')
+                                            # 更新工具调用ID
+                                            if call.get("id"):
+                                                tool_calls[index]["id"] = call["id"]
 
-                                            # 打印 AI 回复内容的字体
-                                            if self.show_reasoning:
-                                                print(f"{self.bold}{self.assistant_role_color}{self.show_name}"
-                                                      f"{self.end_style}: {self.assistant_content_color}",
-                                                      end="", flush=True)
-                                            self.reasoning_output = False
+                                            # 更新函数名称
+                                            if "function" in call and call["function"].get("name"):
+                                                tool_calls[index]["function"]["name"] = call["function"]["name"]
 
-                                        # 追加 AI 回复内容
-                                        if "content" in delta:
-                                            raw_content = delta["content"]
-                                            content_piece = str(raw_content) if raw_content is not None else ""
+                                            # 累积参数
+                                            if "function" in call and call["function"].get("arguments"):
+                                                tool_calls[index]["function"]["arguments"] += call["function"][
+                                                    "arguments"]
 
-                                            if isinstance(content_piece, str):
-                                                response_content += content_piece
-                                                print(content_piece, end="", flush=True)
-                                                last_received_time = time.time()  # 刷新更新时间
-
-                                        # 处理工具调用 (累积参数)
-                                        if delta.get("tool_calls") is not None:
-                                            for call in delta["tool_calls"]:
-                                                index = call["index"]
-
-                                                # 初始化工具调用记录
-                                                if index not in tool_calls:
-                                                    tool_calls[index] = {
-                                                        "id": "",
-                                                        "function": {"name": "", "arguments": ""}
-                                                    }
-
-                                                # 更新工具调用ID
-                                                if call.get("id"):
-                                                    tool_calls[index]["id"] = call["id"]
-
-                                                # 更新函数名称
-                                                if "function" in call and call["function"].get("name"):
-                                                    tool_calls[index]["function"]["name"] = call["function"]["name"]
-
-                                                # 累积参数
-                                                if "function" in call and call["function"].get("arguments"):
-                                                    tool_calls[index]["function"]["arguments"] += call["function"][
-                                                        "arguments"]
-
-                                except json.JSONDecodeError:
-                                    # 如果解析 JSON 出错 (可能是心跳包或非 JSON 格式内容) ，则跳过
-                                    continue
+                            except json.JSONDecodeError:
+                                # 如果解析 JSON 出错 (可能是心跳包或非 JSON 格式内容) ，则跳过
+                                continue
 
                     print(f"{self.end_style}\n")  # 结束颜色
                     self.stream_begin_output = True  # 下一次打印时变成首次输出
@@ -2523,105 +2527,107 @@ class AI:
                 if chunk:  # 过滤掉空行 (有些 SSE 数据可能包含心跳或空行)
 
                     decoded_chunk = chunk.decode("utf-8")  # 将字节数据解码成字符串
+
                     # OpenAI 风格的 SSE(Server-Sent Events) 数据以 "data: " 开头
-                    if decoded_chunk.startswith("data: "):
-                        # 去掉开头的 "data: " 前缀，获取纯 JSON 数据部分
-                        json_data = decoded_chunk[len("data: "):]
+                    if decoded_chunk.startswith("data:"):
+                        json_data = decoded_chunk[len("data:"):].strip()  # 去掉开头的 "data: " 前缀，获取纯 JSON 数据部分
+                    else:
+                        json_data = decoded_chunk
 
-                        # 如果是 "[DONE]" 表示流式输出已经结束
-                        if json_data.strip() == "[DONE]":
-                            break  # 跳出循环
+                    # 如果是 "[DONE]" 表示流式输出已经结束
+                    if json_data.strip() == "[DONE]":
+                        break  # 跳出循环
 
-                        # 检查是否超时 (break_time 秒没有收到数据)
-                        if time.time() - last_received_time > break_time:
-                            print(f"{self.system_remind}[Timeout: No new data received within "
-                                  f"{break_time} seconds.]{self.end_style}")
-                            break
+                    # 检查是否超时 (break_time 秒没有收到数据)
+                    if time.time() - last_received_time > break_time:
+                        print(f"{self.system_remind}[Timeout: No new data received within "
+                              f"{break_time} seconds.]{self.end_style}")
+                        break
 
-                        try:
-                            # 将 JSON 字符串解析为 Python 字典
-                            content_dict = json.loads(json_data)
+                    try:
+                        # 将 JSON 字符串解析为 Python 字典
+                        content_dict = json.loads(json_data)
 
-                            # 只在第一次解析时获取元信息
-                            if self.stream_begin_output:
-                                self.response_id = content_dict.get("id")
-                                self.response_model = content_dict.get("model")
-                                self.response_object = content_dict.get("object")
-                                self.response_created = content_dict.get("created")
+                        # 只在第一次解析时获取元信息
+                        if self.stream_begin_output:
+                            self.response_id = content_dict.get("id")
+                            self.response_model = content_dict.get("model")
+                            self.response_object = content_dict.get("object")
+                            self.response_created = content_dict.get("created")
 
-                                last_received_time = time.time()  # 刷新更新时间
-                                self.stream_begin_output = False  # 获取本次信息后关闭
+                            last_received_time = time.time()  # 刷新更新时间
+                            self.stream_begin_output = False  # 获取本次信息后关闭
 
-                            # 处理 choices
-                            choices = content_dict.get("choices", [])
-                            if choices:
-                                first_choice = choices[0]
-                                delta = first_choice.get("delta", {})
+                        # 处理 choices
+                        choices = content_dict.get("choices", [])
+                        if choices:
+                            first_choice = choices[0]
+                            delta = first_choice.get("delta", {})
 
-                                # 打印 AI 思考过程
+                            # 打印 AI 思考过程
+                            if self.show_reasoning:
+                                # 追加 AI 思考过程
+                                reasoning_piece = next((delta.get(key) for key in AI.ai_thinking_parameters
+                                                        if delta.get(key)), None)
+                                # 如果有思考内容就打印
+                                if isinstance(reasoning_piece, str):
+                                    response_reasoning += reasoning_piece
+
+                                    last_received_time = time.time()  # 刷新更新时间
+
+                                chunk_reasoning = reasoning_piece
+                                yield chunk_reasoning
+
+                            # 只在第一次收到 content 内容时转换
+                            if delta.get("content") and self.reasoning_output:
+
                                 if self.show_reasoning:
-                                    # 追加 AI 思考过程
-                                    reasoning_piece = next((delta.get(key) for key in AI.ai_thinking_parameters
-                                                            if delta.get(key)), None)
-                                    # 如果有思考内容就打印
-                                    if isinstance(reasoning_piece, str):
-                                        response_reasoning += reasoning_piece
-
-                                        last_received_time = time.time()  # 刷新更新时间
-
-                                    chunk_reasoning = reasoning_piece
+                                    chunk_reasoning = "reasoning_end"  # 表示 reasoning 已经输出完毕
                                     yield chunk_reasoning
 
-                                # 只在第一次收到 content 内容时转换
-                                if delta.get("content") and self.reasoning_output:
+                                self.reasoning_output = False
 
-                                    if self.show_reasoning:
-                                        chunk_reasoning = "reasoning_end"  # 表示 reasoning 已经输出完毕
-                                        yield chunk_reasoning
+                            # 追加 AI 回复内容
+                            if "content" in delta:
+                                raw_content = delta["content"]
+                                content_piece = str(raw_content) if raw_content is not None else ""
 
-                                    self.reasoning_output = False
+                                if isinstance(content_piece, str):
+                                    response_content += content_piece
 
-                                # 追加 AI 回复内容
-                                if "content" in delta:
-                                    raw_content = delta["content"]
-                                    content_piece = str(raw_content) if raw_content is not None else ""
+                                    last_received_time = time.time()  # 刷新更新时间
 
-                                    if isinstance(content_piece, str):
-                                        response_content += content_piece
+                                    chunk_content = content_piece
+                                    yield chunk_content
 
-                                        last_received_time = time.time()  # 刷新更新时间
+                            # 处理工具调用 (累积参数)
+                            if delta.get("tool_calls") is not None:
+                                for call in delta["tool_calls"]:
+                                    index = call["index"]
 
-                                        chunk_content = content_piece
-                                        yield chunk_content
+                                    # 初始化工具调用记录
+                                    if index not in tool_calls:
+                                        tool_calls[index] = {
+                                            "id": "",
+                                            "function": {"name": "", "arguments": ""}
+                                        }
 
-                                # 处理工具调用 (累积参数)
-                                if delta.get("tool_calls") is not None:
-                                    for call in delta["tool_calls"]:
-                                        index = call["index"]
+                                    # 更新工具调用ID
+                                    if call.get("id"):
+                                        tool_calls[index]["id"] = call["id"]
 
-                                        # 初始化工具调用记录
-                                        if index not in tool_calls:
-                                            tool_calls[index] = {
-                                                "id": "",
-                                                "function": {"name": "", "arguments": ""}
-                                            }
+                                    # 更新函数名称
+                                    if "function" in call and call["function"].get("name"):
+                                        tool_calls[index]["function"]["name"] = call["function"]["name"]
 
-                                        # 更新工具调用ID
-                                        if call.get("id"):
-                                            tool_calls[index]["id"] = call["id"]
+                                    # 累积参数
+                                    if "function" in call and call["function"].get("arguments"):
+                                        tool_calls[index]["function"]["arguments"] += call["function"][
+                                            "arguments"]
 
-                                        # 更新函数名称
-                                        if "function" in call and call["function"].get("name"):
-                                            tool_calls[index]["function"]["name"] = call["function"]["name"]
-
-                                        # 累积参数
-                                        if "function" in call and call["function"].get("arguments"):
-                                            tool_calls[index]["function"]["arguments"] += call["function"][
-                                                "arguments"]
-
-                        except json.JSONDecodeError:
-                            # 如果解析 JSON 出错 (可能是心跳包或非 JSON 格式内容) ，则跳过
-                            continue
+                    except json.JSONDecodeError:
+                        # 如果解析 JSON 出错 (可能是心跳包或非 JSON 格式内容) ，则跳过
+                        continue
 
             self.stream_begin_output = True  # 下一次打印时变成首次输出
             self.reasoning_output = True  # 下一次打印时变成首次输出

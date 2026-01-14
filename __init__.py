@@ -1,5 +1,5 @@
 
-__version__ = '6.3.11'
+__version__ = '6.3.12'
 
 __all__ = ['general', 'grapher', 'projector', 'performer', 'potter', 'author', 'generator', 'learny', 'inspector']
 
@@ -369,6 +369,8 @@ MAGIC
 -> 6.3.11       25-12-26 15:00 Updated the method collect_targets_from_content(). Method Chat() in class Human has 
                 been optimized.
                 Adjusted the order of parameter checks in the __player_output_process() method.
+-> 6.3.12       26-01-14 17:26 The methods for obtaining the returned information in chat () and continue_chat () 
+                have been corrected, mainly focusing on the part beginning with "data: ".
                 
        
  ------ Attention ------

@@ -1,5 +1,5 @@
 
-__version__ = '6.3.12'
+__version__ = '6.3.13'
 
 __all__ = ['general', 'grapher', 'projector', 'performer', 'potter', 'author', 'generator', 'learny', 'inspector']
 
@@ -71,7 +71,6 @@ MAGIC
  -Tools-           AI 工具区：用于存放 AI 可以调用的工具
  -AI-              AI 参数公有区：用于管理公有参数与 OpenAI 实例化
  -Human-           用户交互区：用于单或多用户与 AI 交互
- -Gemini-          Gemini 区：利用 Gemini 进行对话与分析操作，还可以处理图像、音频与视频数据
  -Jimeng_video-    即梦 AI 视频生成区：利用 即梦 AI 生成视频
  -Jimeng_image-    即梦 AI 图片生成区：利用 即梦 AI 生成图片
  -Assist-          AI 生产力区：AI 大模型协助用户进行生产力工作
@@ -142,7 +141,6 @@ MAGIC
  -Tools-           AI Tool area: It is used to store tools that AI can invoke
  -AI-              AI Parameter Public Zone: Used for managing public parameters and OpenAI instantiations
  -Human-           User Interaction Area: Used for single or multiple users to interact with AI
- -Gemini-          Gemini Zone: Utilize Gemini for dialogue and analysis operations, and also handle audio or video data
  -Jimeng_video-    Jimeng video AI Zone: Create videos with Jimeng AI
  -Jimeng_image-    Jimeng Image AI Zone: Create Image with Jimeng AI
  -Assist-          AI Productivity Zone: AI large models assist users in productivity work
@@ -371,7 +369,9 @@ MAGIC
                 Adjusted the order of parameter checks in the __player_output_process() method.
 -> 6.3.12       26-01-14 17:26 The methods for obtaining the returned information in chat () and continue_chat () 
                 have been corrected, mainly focusing on the part beginning with "data: ".
-                
+-> 6.3.13       26-03-25 13:28 The library has been adjusted and the sound playback function in MACOS has been removed.
+                Due to an architectural update, Google's model was removed.
+
        
  ------ Attention ------
 For general:
@@ -756,11 +756,10 @@ api_key_1
 base_url_1
 success_requests_per_minute
 avaliable_model
+model_note
 DeepSeek_api_key
 DeepSeek_base_url
 DeepSeek_avaliable_model
-Gemini_api_key_1
-Gemini_base_url
 Jimeng_api_key
 Jimeng_api_secret
 messages_save_path
@@ -802,14 +801,6 @@ list_historical_conversations()
 
 ------ Human ------
 chat()
-
------- Gemini ------
-__gemini_client()
-__get_files_from_kwargs()
-__convert_openai_messages_to_gemini()
-__convert_openai_tools_to_gemini()
-chat()
-continue_chat()
 
 ------ Jimeng_video ------
 __generate_signature()

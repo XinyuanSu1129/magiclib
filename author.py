@@ -1003,38 +1003,229 @@ class ArticleFetcher:
     """
 
     archaeology_journals = {
+        # ==================== Elsevier ====================
         "Journal of Archaeological Science": {
-            "eISSN": "1095-9238",  #
+            "eISSN": "1095-9238",
             "pISSN": "0305-4403"
         },
         "Journal of Archaeological Science: Reports": {
             "eISSN": "2352-409X",
-            "pISSN": "2352-4103"  #
+            "pISSN": "2352-4103"
         },
+        "Journal of Cultural Heritage": {
+            "eISSN": "1778-3674",
+            "pISSN": "1296-2074"
+        },
+        "Journal of Anthropological Archaeology": {
+            "eISSN": "0278-4165",
+            "pISSN": None
+        },
+
+        # ==================== Springer (BMC) ====================
         "Heritage Science": {
             "eISSN": "2050-7445",
             "pISSN": None
         },
-        "Journal of Cultural Heritage": {
-            "eISSN": "1778-3674",  #
-            "pISSN": "1296-2074"
+        "International Journal of Historical Archaeology": {
+            "eISSN": "1573-7748",
+            "pISSN": "1092-7697"
         },
-        "Acta Archaeologica Sinica": {
-            "eISSN": "0453-2902",  #
+
+        # ==================== Taylor & Francis ====================
+        "International Journal of Heritage Studies": {
+            "eISSN": "1470-3576",
             "pISSN": None
         },
-        "The Archaeological Journal": {
+        "Australian Archaeology": {
+            "eISSN": "2470-0363",
+            "pISSN": "0312-2417"
+        },
+        "Journal of Field Archaeology": {
+            "eISSN": "2042-4582",
+            "pISSN": "0093-4690"
+        },
+        "World Archaeology": {
+            "eISSN": "1470-1375",
+            "pISSN": "0043-8243"
+        },
+        "Journal of Island and Coastal Archaeology": {
+            "eISSN": "1556-4894",
+            "pISSN": "1556-1828"
+        },
+        "Lithic Technology": {
+            "eISSN": "2051-6185",
+            "pISSN": "0197-7261"
+        },
+        "PaleoAmerica": {
+            "eISSN": "2055-5571",
+            "pISSN": "2055-5563"
+        },
+        "Journal of Conflict Archaeology": {
+            "eISSN": "1574-0781",
+            "pISSN": "1574-0773"
+        },
+        "Journal of Wetland Archaeology": {
+            "eISSN": "1473-2976",
+            "pISSN": None
+        },
+        "Palestine Exploration Quarterly": {
+            "eISSN": "1743-1301",
+            "pISSN": "0031-0328"
+        },
+
+        # ==================== Wiley ====================
+        "Geoarchaeology": {
+            "eISSN": "1520-6548",
+            "pISSN": "0883-6353"
+        },
+        "Archaeometry": {
+            "eISSN": "1475-4754",
+            "pISSN": "0003-813X"
+        },
+        "Archaeology in Oceania": {
+            "eISSN": "1834-4453",
+            "pISSN": "0728-4896"
+        },
+
+        # ==================== Cambridge University Press ====================
+        "American Antiquity": {
+            "eISSN": None,
+            "pISSN": "0002-7316"
+        },
+        "Antiquity": {
+            "eISSN": "1745-1744",
+            "pISSN": "0003-598X"
+        },
+        "Cambridge Archaeological Journal": {
+            "eISSN": "1474-0540",
+            "pISSN": "0959-7743"
+        },
+        "Archaeological Dialogues": {
+            "eISSN": "1478-2294",
+            "pISSN": "1380-2038"
+        },
+
+        # ==================== Archaeopress ====================
+        "Journal of Greek Archaeology": {
+            "eISSN": "2059-4682",
+            "pISSN": "2059-4674"
+        },
+        "Journal of Hellenistic Pottery": {
+            "eISSN": "2399-1852",
+            "pISSN": "2399-1844"
+        },
+        "Proceedings of the Seminar for Arabian Studies": {
+            "eISSN": None,
+            "pISSN": "0308-8421"
+        },
+
+        # ==================== Peeters ====================
+        "Ancient Near Eastern Studies": {
+            "eISSN": None,
+            "pISSN": "0066-6635"
+        },
+        "Iranica Antiqua": {
+            "eISSN": "1783-1482",
+            "pISSN": "0021-0870"
+        },
+
+        # ==================== 其他国际期刊 ====================
+        "South African Archaeological Bulletin": {
+            "eISSN": "0038-1969",
+            "pISSN": None
+        },
+        "Antiguo Oriente": {
+            "eISSN": None,
+            "pISSN": "1667-9202"
+        },
+        "The Archaeological Journal": {  # Royal Archaeological Institute
             "eISSN": "0066-5983",
             "pISSN": None
         },
-        "International Journal of Heritage Studies": {
-            "eISSN": "1470-3576",  #
+        "Il Capitale Culturale: Studies on the Value of Cultural Heritage": {  # Università di Macerata
+            "eISSN": "2039-2362",
             "pISSN": None
         },
-        "Il Capitale Culturale: Studies on the Value of Cultural Heritage": {
-            "eISSN": "2039-2362",  #
+
+        # ==================== 中国考古学期刊（中文） ====================
+        "Acta Archaeologica Sinica": {  # 考古学报
+            "eISSN": "0453-2902",
             "pISSN": None
-        }
+        },
+        "考古": {
+            "eISSN": "0453-2899",
+            "pISSN": None
+        },
+        "文物": {
+            "eISSN": "0511-4772",
+            "pISSN": None
+        },
+        "考古与文物": {
+            "eISSN": "1000-7830",
+            "pISSN": None
+        },
+        "江汉考古": {
+            "eISSN": "1001-0327",
+            "pISSN": None
+        },
+        "华夏考古": {
+            "eISSN": "1001-9928",
+            "pISSN": None
+        },
+        "故宫博物院院刊": {
+            "eISSN": "0452-7402",
+            "pISSN": None
+        },
+        "四川文物": {
+            "eISSN": "1003-6962",
+            "pISSN": None
+        },
+        "北方文物": {
+            "eISSN": "1001-0483",
+            "pISSN": None
+        },
+        "文物保护与考古科学": {
+            "eISSN": "1005-1538",
+            "pISSN": None
+        },
+        "中国国家博物馆馆刊": {
+            "eISSN": "2095-1639",
+            "pISSN": None
+        },
+        "东南文化": {
+            "eISSN": "1001-179X",
+            "pISSN": None
+        },
+        "中原文物": {
+            "eISSN": "1003-1731",
+            "pISSN": None
+        },
+        "敦煌研究": {
+            "eISSN": "1000-4106",
+            "pISSN": None
+        },
+    }
+    # 该端点支持的 filter 列表（根据 API 错误信息整理）
+    filter_whitelist = {
+        "from-approved-date", "until-approved-date", "has-assertion", "from-print-pub-date",
+        "until-deposit-date", "from-accepted-date", "has-authenticated-orcid", "from-created-date",
+        "relation.object", "issn", "ror-id", "lte-award-amount", "until-online-pub-date",
+        "group-title", "full-text.application", "until-created-date", "license.version",
+        "from-deposit-date", "has-abstract", "from-awarded-date", "has-event", "from-approved-date",
+        "funder", "assertion-group", "from-online-pub-date", "from-issued-date", "directory",
+        "content-domain", "license.url", "from-index-date", "full-text.version", "full-text.type",
+        "until-posted-date", "has-orcid", "has-archive", "type", "has-ror-id", "is-update",
+        "until-event-start-date", "update-type", "from-pub-date", "has-license", "funder-doi-asserted-by",
+        "isbn", "has-full-text", "doi", "orcid", "has-content-domain", "prefix", "until-event-end-date",
+        "has-funder", "award.funder", "clinical-trial-number", "member", "has-domain-restriction",
+        "until-accepted-date", "container-title", "license.delay", "from-posted-date", "has-affiliation",
+        "from-update-date", "has-award", "until-print-pub-date", "from-event-start-date",
+        "gte-award-amount", "has-funder-doi", "has-alias", "until-index-date", "has-update",
+        "until-update-date", "has-prime-doi", "until-issued-date", "until-pub-date", "award.number",
+        "has-references", "type-name", "has-relation", "alternative-id", "archive", "relation.type",
+        "updates", "relation.object-type", "category-name", "until-awarded-date",
+        "has-clinical-trial-number", "assertion", "article-number", "has-update-policy",
+        "from-event-end-date"
     }
 
     # 初始化
@@ -1051,96 +1242,152 @@ class ArticleFetcher:
         self.doi_list = []
 
     # 获取目标期刊下的文章 DOI
-    def seek_doi(self, issn_list: list = None, number: int = 500, query: Optional[str] = None, show_result: bool = True,
+    def seek_doi(self, issn_list: list = None, number: int = 500, query: Optional[str] = None,
+                 show_result: bool = True, sort: str = "published", order: str = "desc",
                  **kwargs) -> List[str]:
         """
-        获取目标期刊下的文章的 DOI，可以加过滤器
-        To obtain the DOI of the articles in the target journal, a filter can be added.
+        获取目标期刊下的文章 DOI，支持过滤和模糊搜索。
 
-        :param issn_list: (list) 需要搜索的期刊
-        :param number: (int) 每个期刊搜索文章的数量
-        :param query: (str) 相关内容，将在全局搜索
-        :param show_result: (bool) 是否打印结果，默认为 True
+        :param issn_list: 期刊 ISSN 列表（支持 eISSN 或 pISSN），若为 None 则默认使用 Journal of Archaeological Science 的 eISSN "1095-9238"
+        :param number: 每个期刊返回的最大文章数（默认 500，最大 1000）
+        :param query: 全局搜索关键词，会在标题、作者、摘要、机构等字段中模糊匹配
+        :param show_result: 是否在控制台打印每篇文章的标题、DOI 和发表日期
+        :param sort: 排序字段，可选 'published'（出版日期）、'issued'（发行日期）、'deposited'（入库日期）等，默认 'published'
+        :param order: 排序顺序，'asc'（升序）或 'desc'（降序），默认 'desc'
+        :param kwargs: 其他筛选参数，支持两类：
+        1. filter 参数（精确过滤）：必须为白名单（FILTER_WHITELIST）中的字段，用于精确条件筛选。
+           常用字段如下：
+           - from_pub_date: 起始发表日期，格式 YYYY-MM-DD，例如 from_pub_date="2023-01-01"
+           - until_pub_date: 截止发表日期，格式 YYYY-MM-DD，例如 until_pub_date="2023-12-31"
+           - from_deposit_date: 起始入库日期（Crossref 收到元数据的日期）
+           - until_deposit_date: 截止入库日期
+           - from_online_pub_date: 起始在线出版日期
+           - until_online_pub_date: 截止在线出版日期
+           - from_issued_date: 起始发行日期（与 pub_date 类似，但更通用）
+           - until_issued_date: 截止发行日期
+           - type: 文献类型，常用值 journal-article, book-chapter, proceedings-article, dissertation 等
+           - has_full_text: 是否有全文链接，值为 true 或 false
+           - has_abstract: 是否有摘要，值为 true 或 false
+           - has_orcid: 是否有 ORCID 标识，值为 true 或 false
+           - has_affiliation: 是否包含作者机构信息，值为 true 或 false
+           - has_funder: 是否有基金信息，值为 true 或 false
+           - has_license: 是否有许可证信息，值为 true 或 false
+           - license.url: 许可证 URL，支持通配符，例如 license.url:* 表示任何许可证
+           - is_referenced_by_count: 被引次数，支持表达式如 >10, <5, 10-20
+           - isbn: ISBN 号（用于图书）
+           - issn: 期刊 ISSN（精确匹配，通常用于过滤）
+           - member: 出版社成员 ID（数字），例如 member="78"（Elsevier）
+           - container_title: 期刊名称（精确匹配）
+           - category_name: 学科分类名称
+           - archive: 存档机构
+           - update_type: 更新类型
+           - article_number: 文章编号
+           - clinical_trial_number: 临床试验号
+           - award.number: 基金项目编号
+           - award.funder: 基金资助机构
+           - orcid: ORCID 标识（精确匹配）
+           - doi: DOI 号（精确匹配）
+           - prefix: DOI 前缀（例如 "10.1016"）
+           - ... 更多字段见 Crossref API 文档
 
-        :return doi_list: (list) 存放 doi 的 list
+        2. query 参数（模糊搜索）：自动添加 query. 前缀，用于在特定字段中模糊匹配。
+           常用字段如下：
+           - author: 作者姓名（支持部分匹配），自动转换为 query.author，例如 author="Smith"
+           - title: 文章标题关键词，自动转换为 query.title，例如 title="bronze age"
+           - affiliation: 作者机构名称，自动转换为 query.affiliation，例如 affiliation="Peking University"
+           - container_title: 期刊名称（模糊匹配），自动转换为 query.container-title，例如 container_title="Archaeology"
+           - abstract: 摘要关键词，自动转换为 query.abstract（注意：此参数仅对部分记录有效）
+           - publisher: 出版社名称，自动转换为 query.publisher
+           - funder: 基金资助机构，自动转换为 query.funder
+           - alternative_id: 替代标识符（如出版商自己的 ID），自动转换为 query.alternative-id
+           - 也可以显式使用 query_author、query_title 等，效果相同。
 
-        --- **kwargs ---
+        3. 全局 query 参数：由独立参数 query 提供，用于在所有元数据字段中模糊搜索，优先级低于特定字段的 query 参数。
+           - query: 自由文本，例如 query="Yangshao pottery"
 
-        filter                    | example                   | 说明
-        --------------------------|---------------------------|--------------------------
-        from-pub-date             | from-pub-date:2020-01-01  | 起始发表日期
-        until-pub-date            | until-pub-date:2022-12-31 | 截止发表日期
-        type                      | type:journal-article      | 文献类型
-        author                    | author:Smith              | 作者姓名
-        container-title           | container-title:Nature    | 期刊名称
-        affiliation               | affiliation:Stanford      | 作者机构
-        license.url               | license.url:*             | 是否有开放获取许可证
-        has-full-text             | has-full-text:true        | 是否有全文链接
-        is-referenced-by-count    | is-referenced-by-count:>10| 被引用次数
+        示例：
+          # 按作者和日期过滤
+          fetcher.seek_doi(issn_list=["1095-9238"], from_pub_date="2023-01-01", author="Wen Rui")
+          # 按被引次数和全文过滤
+          fetcher.seek_doi(has_full_text=True, is_referenced_by_count=">10")
+          # 标题精确搜索+全局搜索
+          fetcher.seek_doi(query_title="settlement", query="bronze age")
 
-        Parameter         | 功能说明
-        ------------------|-----------------------------------------
-        query             | 全文搜索关键词，可在标题、作者、摘要、机构等字段模糊匹配
-        query_title       | 标题关键词搜索，仅在文章标题中匹配
-        query_author      | 作者姓名搜索，可模糊匹配作者字段
-        query_affiliation | 作者机构搜索，可模糊匹配机构字段
+            注意：若传入的参数名不在白名单中，且不以 query- 开头，则自动视为 query 参数并添加 query. 前缀。
+
+        :return: 所有获取到的 DOI 列表
+
+        示例：
+            # 搜索 Journal of Archaeological Science 最近 100 篇有全文的文章
+            fetcher.seek_doi(issn_list=["1095-9238"], number=100, has_full_text=True)
+
+            # 搜索 2023 年后特定作者的文章
+            fetcher.seek_doi(issn_list=["2352-409X"], from_pub_date="2023-01-01", author="Wen Rui")
+
+            # 使用全局搜索和标题搜索
+            fetcher.seek_doi(query="bronze age", query_title="settlement", number=50)
+
+            # 按被引次数过滤
+            fetcher.seek_doi(is_referenced_by_count=">10", type="journal-article")
         """
 
         if issn_list is None:
-            issn_list = ["1095-9238"]  # JAS
+            issn_list = ["1095-9238"]
         self.issn_list = issn_list
 
         start_time = time.time()
         all_dois = []
 
         for issn in issn_list:
-            # 构建 filter 和 query 字符串
             filter_parts = []
             query_parts = []
 
+            # 处理 kwargs 中的参数
             for key, value in kwargs.items():
                 if value is None:
                     continue
                 crossref_key = key.replace("_", "-")
                 if isinstance(value, bool):
                     value = str(value).lower()
+                encoded_value = urllib.parse.quote(str(value))
 
-                if crossref_key.startswith("query-"):
-                    query_param = crossref_key.replace("-", ".")
-                    # 对 query 参数值进行 URL 编码
-                    encoded_value = urllib.parse.quote(str(value))
-                    query_parts.append(f"{query_param}={encoded_value}")
-                else:
-                    # 对 filter 中的值进行 URL 编码
-                    encoded_value = urllib.parse.quote(str(value))
+                # 白名单内的参数作为 filter，否则作为 query 参数
+                if crossref_key in self.filter_whitelist:
                     filter_parts.append(f"{crossref_key}:{encoded_value}")
+                else:
+                    # 若已经以 query- 开头，则直接转为 query. 格式
+                    if crossref_key.startswith("query-"):
+                        query_param = crossref_key.replace("-", ".")
+                    else:
+                        query_param = f"query.{crossref_key}"
+                    query_parts.append(f"{query_param}={encoded_value}")
+
+            # 处理显式的全局 query
+            if query:
+                encoded_query = urllib.parse.quote(str(query))
+                query_parts.append(f"query={encoded_query}")
 
             filter_str = ",".join(filter_parts)
             query_str = "&".join(query_parts)
 
-            # 找到期刊名
+            # 查找期刊名称（用于打印）
             found = False
             for journal, ids in self.archaeology_journals.items():
                 if issn == ids.get("eISSN") or issn == ids.get("pISSN"):
                     found = True
                     if show_result:
                         print(f"\033[33mArticles in {journal}:\033[0m")
-
             if not found and show_result:
-                print(f"\033[31mjournal found for ISSN {issn}:\033[0m")
+                print(f"\033[31mJournal not found for ISSN {issn}\033[0m")
 
             # 构建 URL
-            base_url = f"https://api.crossref.org/journals/{issn}/works?rows={number}&sort=published&order=desc"
+            base_url = f"https://api.crossref.org/journals/{issn}/works?rows={number}&sort={sort}&order={order}"
             if filter_str:
                 base_url += f"&filter={filter_str}"
-            if query:
-                # 对 query 主体也进行编码
-                encoded_query = urllib.parse.quote(str(query))
-                base_url += f"&query={encoded_query}"
             if query_str:
                 base_url += f"&{query_str}"
 
-            #  请求 API
+            # 发送请求
             response = requests.get(base_url)
             if response.status_code == 200:
                 data = response.json()
@@ -1151,18 +1398,20 @@ class ArticleFetcher:
                     doi = article.get('DOI', 'No DOI')
                     all_dois.append(doi)
 
-                    published_date_parts = \
-                        article.get('published-print', article.get('published-online', {})).get('date-parts',
-                                                                                                [[None]])[0]
-                    published_date = "-".join(str(part) for part in published_date_parts if part is not None)
+                    # 尝试获取出版日期（优先印刷版，其次在线版）
+                    pub_date_parts = \
+                    article.get('published-print', article.get('published-online', {})).get('date-parts', [[None]])[0]
+                    pub_date = "-".join(str(p) for p in pub_date_parts if p is not None)
 
                     if show_result:
                         print(f"\033[36m{i + 1}.\033[0m \033[95m{title}\033[0m")
                         print(f"    DOI: https://doi.org/{doi}")
-                        print(f"    Published: {published_date}\n")
+                        print(f"    Published: {pub_date}\n")
             else:
                 if show_result:
                     print(f"\033[31mRequest failed\033[0m for ISSN \033[35m{issn}\033[0m:", response.status_code)
+                    if response.status_code == 400:
+                        print("Response content:", response.text)
                     print('')
 
         end_time = time.time()

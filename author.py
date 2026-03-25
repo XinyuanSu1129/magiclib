@@ -1333,6 +1333,8 @@ class ArticleFetcher:
 
         if issn_list is None:
             issn_list = ["1095-9238"]
+        elif not issn_list:
+            issn_list = [ids['eISSN'] for ids in self.archaeology_journals.values() if ids.get('eISSN')]
         self.issn_list = issn_list
 
         start_time = time.time()

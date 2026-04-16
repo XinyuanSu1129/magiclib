@@ -1,5 +1,5 @@
 
-__version__ = '6.3.13'
+__version__ = '6.3.14'
 
 __all__ = ['general', 'grapher', 'projector', 'performer', 'potter', 'author', 'generator', 'learny', 'inspector']
 
@@ -371,6 +371,7 @@ MAGIC
                 have been corrected, mainly focusing on the part beginning with "data: ".
 -> 6.3.13       26-03-25 13:28 The library has been adjusted and the sound playback function in MACOS has been removed.
                 Due to an architectural update, Google's model was removed.
+-> 6.3.14       26-04-16 16:00 The article search has been optimized.
 
        
  ------ Attention ------

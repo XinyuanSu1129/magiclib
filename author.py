@@ -1240,15 +1240,17 @@ class ArticleFetcher:
         # seek_doi()
         self.issn_list = []
         self.doi_list = []
+        self.title_list = []
 
     # 获取目标期刊下的文章 DOI
     def seek_doi(self, issn_list: list = None, number: int = 500, query: Optional[str] = None,
                  show_result: bool = True, sort: str = "published", order: str = "desc",
-                 **kwargs) -> List[str]:
+                 **kwargs) -> Tuple[List[str], list[str]]:
         """
         获取目标期刊下的文章 DOI，支持过滤和模糊搜索。
 
-        :param issn_list: 期刊 ISSN 列表（支持 eISSN 或 pISSN），若为 None 则默认使用 Journal of Archaeological Science 的 eISSN "1095-9238"
+        :param issn_list: 期刊 ISSN 列表（支持 eISSN 或 pISSN），若为 None 则默认使用 Journal of Archaeological Science 的
+                          eISSN "1095-9238"
         :param number: 每个期刊返回的最大文章数（默认 500，最大 1000）
         :param query: 全局搜索关键词，会在标题、作者、摘要、机构等字段中模糊匹配
         :param show_result: 是否在控制台打印每篇文章的标题、DOI 和发表日期
@@ -1315,7 +1317,7 @@ class ArticleFetcher:
 
             注意：若传入的参数名不在白名单中，且不以 query- 开头，则自动视为 query 参数并添加 query. 前缀。
 
-        :return: 所有获取到的 DOI 列表
+        :return: (tuple) 所有获取到的 DOI list 与标题 list
 
         示例：
             # 搜索 Journal of Archaeological Science 最近 100 篇有全文的文章
@@ -1339,6 +1341,7 @@ class ArticleFetcher:
 
         start_time = time.time()
         all_dois = []
+        all_titles = []
 
         for issn in issn_list:
             filter_parts = []
@@ -1396,13 +1399,15 @@ class ArticleFetcher:
                 articles = data['message']['items']
 
                 for i, article in enumerate(articles):
-                    title = article.get('title', ['No Title'])[0]
                     doi = article.get('DOI', 'No DOI')
+                    title = article.get('title', ['No Title'])[0]
                     all_dois.append(doi)
+                    all_titles.append(title)
 
                     # 尝试获取出版日期（优先印刷版，其次在线版）
                     pub_date_parts = \
-                    article.get('published-print', article.get('published-online', {})).get('date-parts', [[None]])[0]
+                        article.get('published-print',
+                                    article.get('published-online', {})).get('date-parts', [[None]])[0]
                     pub_date = "-".join(str(p) for p in pub_date_parts if p is not None)
 
                     if show_result:
@@ -1421,4 +1426,5 @@ class ArticleFetcher:
             print(f'Time-consuming: \033[36m{end_time - start_time}\033[0m')
 
         self.doi_list = all_dois
-        return all_dois
+        self.title_list = all_titles
+        return all_dois, all_titles

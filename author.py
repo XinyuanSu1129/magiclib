@@ -34,6 +34,8 @@ from tqdm import tqdm
 from PIL import Image
 from docx import Document
 from docx.shared import Pt, Cm
+import argostranslate.package
+import argostranslate.translate
 from sklearn.cluster import KMeans
 from typing import Union, Tuple, Optional, List, Dict, Text
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_PARAGRAPH_ALIGNMENT
@@ -345,6 +347,49 @@ class TextEditing:
             input_text = re.sub(p, replacement, input_text)
 
         output_text = input_text
+
+        # 打印结果
+        if show_print:
+            print(output_text)
+
+        return output_text
+
+    # 文本翻译
+    def translate_text(self, from_code: str = "zh", to_code: str = "en", update: bool = False,
+                       show_print: bool = True) -> str:
+        """
+        对 text 文本进行翻译，目前仅支持“中-英”，“英-文”两种模式
+
+        :param from_code: (str) 需要翻译的语言
+        :param to_code: (str) 目标语言
+        :param update: (bool) 是否检查更新，默认为 False
+        :param show_print: (bool) 是否打印结果，默认为 True
+
+        :return output_text: (str)  翻译后的文本
+        """
+
+        # 检查赋值
+        if self.text is not None:
+            input_text = self.text
+        else:
+            class_name = self.__class__.__name__  # 获取类名
+            method_name = inspect.currentframe().f_code.co_name  # 获取方法名
+            raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                             f"The variable text should be assigned a value and be a string.")
+
+        # 检查更新
+        if update:
+            argostranslate.package.update_package_index()
+            available_packages = argostranslate.package.get_available_packages()
+            package_to_install = next(
+                filter(
+                    lambda x: x.from_code == from_code and x.to_code == to_code, available_packages
+                )
+            )
+            argostranslate.package.install_from_path(package_to_install.download())
+
+        # 翻译
+        output_text = argostranslate.translate.translate(input_text, from_code, to_code)
 
         # 打印结果
         if show_print:

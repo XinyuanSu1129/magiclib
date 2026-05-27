@@ -810,7 +810,7 @@ class Function:
         img = Image.open(image_path)
 
         # 获取图像中所有像素的列表
-        pixels = list(img.getdata())
+        pixels = list(img.getdata())  # type: ignore[arg-type]
 
         # 计算每个像素出现的频率
         pixel_freq = Counter(pixels)

@@ -371,7 +371,9 @@ MAGIC
                 have been corrected, mainly focusing on the part beginning with "data: ".
 -> 6.3.13       26-03-25 13:28 The library has been adjusted and the sound playback function in MACOS has been removed.
                 Due to an architectural update, Google's model was removed.
--> 6.3.14       26-04-16 16:00 The article search has been optimized.
+-> 6.3.14       26-04-16 16:00 The article search has been optimized. 
+                The translation function has been added to the module author.
+                26-05-27 22:10 Add the method category_scatter_analysis() to the class grapher.
 
        
  ------ Attention ------
@@ -542,6 +544,7 @@ realize_data()
 ------ Statistics ------
 Category_Index
 
+category_scatter_analysis()
 pca_analysis()
 pca_loadings()
 dendrogram_clustering()
@@ -733,6 +736,7 @@ count_words()
 compare_text()
 normalize_spaces()
 replace_text()
+translate_text()
 
 ------ Word ------
 Style

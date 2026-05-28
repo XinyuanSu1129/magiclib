@@ -81,10 +81,11 @@ class Statistics(general.Manager):
                  data_dic: Optional[dict] = None, data_df: Optional[DataFrame] = None, title: Optional[str] = None,
                  x_list: Optional[list] = None, y_list: Optional[list] = None, x_label: str = None, y_label: str = None,
 
-                 # 关键参数 (7)
+                 # 关键参数 (9)
                  txt_path: Optional[str] = None, excel_path: Optional[str] = None, json_path: Optional[str] = None,
                  keyword: Optional[str] = None, file_pattern: Optional[str] = None, save_path: Optional[str] = None,
-                 magic_database: Optional[str] = None,
+                 magic_database: Optional[str] = None, english_font: Optional[str] = None,
+                 chinese_font: Optional[str] = None
                  ):
         """
         # 接收参数 (7)
@@ -97,7 +98,7 @@ class Statistics(general.Manager):
         :param x_label: (str) x坐标的 label
         :param y_label: (str) y坐标的 label
 
-        # 文件打开路径，名称匹配，已有 dict (7)
+        # 文件打开路径，名称匹配，已有 dict (9)
         :param txt_path: (str) TXT 文件路径，可以是文件路径，也可以是目录
         :param excel_path: (str) Excel 文件路径，可以是文件路径，也可以是目录
         :param json_path: (str) JSON 文件路径，也可以是目录
@@ -105,18 +106,21 @@ class Statistics(general.Manager):
         :param file_pattern: (str) 当 path 为目录时，file_pattern 为目录下文件的正则表达式匹配，只有 path 为目录时才有意义
         :param save_path: (str) 保存路径
         :param magic_database: (str) 数据库的位置
+        :param english_font: (str) 英文字体，默认为 Times New Roman
+        :param chinese_font: (str) 中文字体，默认为简宋
         """
 
         # 超类初始化
         super().__init__(
-                         # 接收参数 (7)
-                         data_dic=data_dic, data_df=data_df,
-                         title=title, x_list=x_list, y_list=y_list, x_label=x_label, y_label=y_label,
+            # 接收参数 (7)
+            data_dic=data_dic, data_df=data_df,
+            title=title, x_list=x_list, y_list=y_list, x_label=x_label, y_label=y_label,
 
-                         # 关键参数 (6)
-                         txt_path=txt_path, excel_path=excel_path, json_path=json_path, keyword=keyword,
-                         file_pattern=file_pattern, save_path=save_path, magic_database=magic_database
-                         )
+            # 关键参数 (7)
+            txt_path=txt_path, excel_path=excel_path, json_path=json_path, keyword=keyword,
+            file_pattern=file_pattern, save_path=save_path, magic_database=magic_database,
+            english_font=english_font, chinese_font=chinese_font
+        )
 
         # 接收参数 (7)
         self.data_dic = data_dic
@@ -142,6 +146,7 @@ class Statistics(general.Manager):
         # 数据初始化分配
         if type(self) == Statistics:  # 当 self 为 Statistics 的直接实例时为真
             self.data_init()
+            self.font_init()
             # 如果有接入的 keyword
             if keyword is not None:
                 self.to_magic()  # general.Manager 及其子类需要调用以初始化属性
@@ -165,8 +170,8 @@ class Statistics(general.Manager):
                                   show_figure: bool = True, x_col: Optional[str] = None, y_col: Optional[str] = None,
                                   **kwargs) -> Dict[str, pd.DataFrame]:
         """
-        直接使用给定的类别列对数据的前两列（或指定列）绘制散点图。
-        无需 PCA 降维，适用于已有聚类标签的数据可视化。
+        直接使用给定的类别列对数据的前两列（或指定列）绘制散点图
+        无需 PCA 降维，适用于已有聚类标签的数据可视化
         Draw a scatter plot directly using the given category column for the first two columns
         (or the specified column) of the data.
         It does not require PCA dimensionality reduction and is suitable for data visualization with existing
@@ -1139,10 +1144,11 @@ class Plotter(general.Manager):
                  data_dic: Optional[dict] = None, data_df: Optional[DataFrame] = None, title: Optional[str] = None,
                  x_list: Optional[list] = None, y_list: Optional[list] = None, x_label: str = None, y_label: str = None,
 
-                 # 关键参数 (7)
+                 # 关键参数 (9)
                  txt_path: Optional[str] = None, excel_path: Optional[str] = None, json_path: Optional[str] = None,
                  keyword: Optional[str] = None, file_pattern: Optional[str] = None, save_path: Optional[str] = None,
-                 magic_database: Optional[str] = None,
+                 magic_database: Optional[str] = None, english_font: Optional[str] = None,
+                 chinese_font: Optional[str] = None
                  ):
         """
         # 接收参数 (7)
@@ -1155,7 +1161,7 @@ class Plotter(general.Manager):
         :param x_label: (str) x坐标的 label
         :param y_label: (str) y坐标的 label
 
-        # 文件打开路径，名称匹配，已有 dict (7)
+        # 文件打开路径，名称匹配，已有 dict (9)
         :param txt_path: (str) TXT 文件路径，可以是文件路径，也可以是目录
         :param excel_path: (str) Excel 文件路径，可以是文件路径，也可以是目录
         :param json_path: (str) JSON 文件路径，也可以是目录
@@ -1163,18 +1169,21 @@ class Plotter(general.Manager):
         :param file_pattern: (str) 当 path 为目录时，file_pattern 为目录下文件的正则表达式匹配，只有 path 为目录时才有意义
         :param save_path: (str) 保存路径
         :param magic_database: (str) 数据库的位置
+        :param english_font: (str) 英文字体，默认为 Times New Roman
+        :param chinese_font: (str) 中文字体，默认为简宋
         """
 
         # 超类初始化
         super().__init__(
-                         # 接收参数 (7)
-                         data_dic=data_dic, data_df=data_df,
-                         title=title, x_list=x_list, y_list=y_list, x_label=x_label, y_label=y_label,
+            # 接收参数 (7)
+            data_dic=data_dic, data_df=data_df,
+            title=title, x_list=x_list, y_list=y_list, x_label=x_label, y_label=y_label,
 
-                         # 关键参数 (6)
-                         txt_path=txt_path, excel_path=excel_path, json_path=json_path, keyword=keyword,
-                         file_pattern=file_pattern, save_path=save_path, magic_database=magic_database
-                         )
+            # 关键参数 (7)
+            txt_path=txt_path, excel_path=excel_path, json_path=json_path, keyword=keyword,
+            file_pattern=file_pattern, save_path=save_path, magic_database=magic_database,
+            english_font=english_font, chinese_font=chinese_font
+        )
 
         # 接收参数 (7)
         self.data_dic = data_dic
@@ -1200,6 +1209,7 @@ class Plotter(general.Manager):
         # 数据初始化分配
         if type(self) == Plotter:  # 当 self 为 Plotter 的直接实例时为真
             self.data_init()
+            self.font_init()
             # 如果有接入的 keyword
             if keyword is not None:
                 self.to_magic()  # general.Manager 及其子类需要调用以初始化属性
@@ -3525,10 +3535,11 @@ class Fitter(general.Manager):
                  data_dic: Optional[dict] = None, data_df: Optional[DataFrame] = None, title: Optional[str] = None,
                  x_list: Optional[list] = None, y_list: Optional[list] = None, x_label: str = None, y_label: str = None,
 
-                 # 关键参数 (7)
+                 # 关键参数 (9)
                  txt_path: Optional[str] = None, excel_path: Optional[str] = None, json_path: Optional[str] = None,
                  keyword: Optional[str] = None, file_pattern: Optional[str] = None, save_path: Optional[str] = None,
-                 magic_database: Optional[str] = None,
+                 magic_database: Optional[str] = None, english_font: Optional[str] = None,
+                 chinese_font: Optional[str] = None
                  ):
         """
         # 接收参数 (7)
@@ -3541,7 +3552,7 @@ class Fitter(general.Manager):
         :param x_label: (str) x坐标的 label
         :param y_label: (str) y坐标的 label
 
-        # 文件打开路径，名称匹配，已有 dict (7)
+        # 文件打开路径，名称匹配，已有 dict (9)
         :param txt_path: (str) TXT 文件路径，可以是文件路径，也可以是目录
         :param excel_path: (str) Excel 文件路径，可以是文件路径，也可以是目录
         :param json_path: (str) JSON 文件路径，也可以是目录
@@ -3549,6 +3560,8 @@ class Fitter(general.Manager):
         :param file_pattern: (str) 当 path 为目录时，file_pattern 为目录下文件的正则表达式匹配，只有 path 为目录时才有意义
         :param save_path: (str) 保存路径
         :param magic_database: (str) 数据库的位置
+        :param english_font: (str) 英文字体，默认为 Times New Roman
+        :param chinese_font: (str) 中文字体，默认为简宋
         """
 
         # 超类初始化
@@ -3557,9 +3570,10 @@ class Fitter(general.Manager):
             data_dic=data_dic, data_df=data_df,
             title=title, x_list=x_list, y_list=y_list, x_label=x_label, y_label=y_label,
 
-            # 关键参数 (6)
+            # 关键参数 (7)
             txt_path=txt_path, excel_path=excel_path, json_path=json_path, keyword=keyword,
-            file_pattern=file_pattern, save_path=save_path, magic_database=magic_database
+            file_pattern=file_pattern, save_path=save_path, magic_database=magic_database,
+            english_font=english_font, chinese_font=chinese_font
         )
 
         # 接收参数 (7)
@@ -3586,6 +3600,7 @@ class Fitter(general.Manager):
         # 数据初始化分配
         if type(self) == Fitter:  # 当 self 为 Fitter 的直接实例时为真
             self.data_init()
+            self.font_init()
             # 如果有接入的 keyword
             if keyword is not None:
                 self.to_magic()  # general.Manager 及其子类需要调用以初始化属性

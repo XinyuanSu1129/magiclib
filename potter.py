@@ -152,6 +152,7 @@ class PotteryBase(general.Manager):
         # 数据初始化分配
         if type(self) == PotteryBase:  # 当 self 为 PotteryBase 的直接实例时为真
             self.data_init()
+            self.font_init()
             # 如果有接入的 keyword
             if keyword is not None:
                 self.to_magic()  # general.Manager 及其子类需要调用以初始化属性
@@ -2304,6 +2305,7 @@ class Pottery(PotteryBase):
         # 数据初始化分配
         if type(self) == Pottery:  # 当 self 为 Pottery 的直接实例时为真
             self.data_init()
+            self.font_init()
             # 如果有接入的 keyword
             if keyword is not None:
                 self.to_magic()  # general.Manager 及其子类需要调用以初始化属性

@@ -373,7 +373,9 @@ MAGIC
                 Due to an architectural update, Google's model was removed.
 -> 6.3.14       26-04-16 16:00 The article search has been optimized. 
                 The translation function has been added to the module author.
-                26-05-27 22:10 Add the method category_scatter_analysis() to the class grapher.
+                26-05-27 22:10 Add the method category_scatter_analysis() to the class grapher. In addition, 
+                Settings for Chinese and Western fonts have been added, and their initializations are placed 
+                separately in the class Function.
 
        
  ------ Attention ------
@@ -450,6 +452,7 @@ interval_time
 
 ------ Function ------
 data_init()
+font_init()
 clear_data()
 change_imshow()
 detect_encodings()
@@ -492,10 +495,8 @@ merge_df_by_category()
 ------ Manager ------
 Magic_Database
 Category_Index
-font_title
-font_ticket
-font_legend
-font_mark
+English_font
+Chinese_font
 interval_time
 
 read_txt()

@@ -21,6 +21,7 @@ import shutil
 import random
 import chardet
 import inspect
+import platform
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -50,6 +51,14 @@ Magic_Database = os.path.join(database_path, 'Magic_Database')  # 魔法库路�
 Standard_Database = os.path.join(database_path, 'Standard_Database')  # 标准库路径
 Pottery_Database = os.path.join(database_path, 'Pottery_Database')  # 陶器基因库路径
 
+English_font = 'Times New Roman'
+system = platform.system()
+if system == 'Darwin':  # macOS
+    Chinese_font = 'Songti SC'  # 系统自带宋体
+elif system == 'Windows':
+    Chinese_font = 'SimSun'  # Windows 宋体
+else:  # Linux 或其他系统，可以自行指定已安装的宋体
+    Chinese_font = 'SimSun'
 Category_Index = 'category'  # 分类索引
 interval_time = 0.5  # 程序休息时间
 
@@ -66,7 +75,8 @@ class Function:
     # 初始化
     def __init__(self, data_dic: Optional[dict] = None, data_df: Optional[DataFrame] = None,
                  title: Optional[str] = None, x_list: Optional[list] = None, y_list: Optional[list] = None,
-                 x_label: str = None, y_label: str = None):
+                 x_label: str = None, y_label: str = None, english_font: Optional[str] = None,
+                 chinese_font: Optional[str] = None):
         """
         Function 函数系统为被引系统，无需赋值初始化
 
@@ -80,6 +90,8 @@ class Function:
         :param y_list: (list) y坐标的 list
         :param x_label: (str) x坐标的 label
         :param y_label: (str) y坐标的 label
+        :param english_font: (str) 英文字体，默认为 Times New Roman
+        :param chinese_font: (str) 中文字体，默认为简宋
         """
 
         # 接收参数初始化
@@ -91,9 +103,25 @@ class Function:
         self.x_label = x_label
         self.y_label = y_label
 
+        # 字体
+        if english_font is not None:
+            self.english_font = english_font
+        else:
+            self.english_font = English_font
+        if chinese_font is not None:
+            self.chinese_font = chinese_font
+        else:
+            self.chinese_font = Chinese_font
+
+        self.font_title = None
+        self.font_ticket = None
+        self.font_legend = None
+        self.font_mark = None
+
         # 数据初始化分配
         if type(self) == Function:  # 当 self 为 Function 的直接实例时为真
             self.data_init()
+            self.font_init()
 
         # 以下数据为添加填，在该类初始化中可自动生成，其它子类中无需再添加
         self.category_dic = None  # (dict) value 为包含 self.Category_Index 值的 list，不含标题
@@ -233,6 +261,38 @@ class Function:
                                               'y_max': y_max}
 
                 self.point_scale_dic = point_scale_dic
+
+        return None
+
+    # 字体初始化
+    def font_init(self) -> None:
+        """
+        对字体进行初始化
+        Initialize the font.
+
+        初始化字体格式
+        """
+
+        # 字体，大小及加粗
+        self.font_title = {'family': [self.english_font, self.chinese_font], 'weight': 'bold', 'size': 22}
+        self.font_ticket = {'family': [self.english_font, self.chinese_font], 'weight': 'bold', 'size': 18}
+        self.font_legend = {'family': [self.english_font, self.chinese_font], 'weight': 'bold', 'size': 16}
+        self.font_mark = {'family': [self.english_font, self.chinese_font], 'weight': 'bold', 'size': 12}
+
+        # 使 DataFrame 中的数据显示全
+        pd.set_option('display.max_columns', None)  # 显示所有列
+        pd.set_option('display.max_rows', None)  # 显示所有行
+        pd.set_option('display.width', 500)  # 显示宽度
+
+        # 字体修改
+        plt.rcParams['font.family'] = 'serif'
+        plt.rcParams['font.serif'] = [self.english_font, self.chinese_font]  # 优先 Times，缺字时用宋体
+        plt.rcParams['axes.unicode_minus'] = False
+
+        # 此三行目的是使角标的字体也改成 self.english_font
+        plt.rcParams["mathtext.fontset"] = "custom"  # 设置数字文本的字体，使其可以自定义
+        plt.rcParams["mathtext.rm"] = self.english_font  # 设置正常数字文本的字体为 self.english_font
+        plt.rcParams["mathtext.it"] = "Times New Roman:italic"  # 设置斜体数字文本的字体为 Times New Roman
 
         return None
 
@@ -1026,7 +1086,8 @@ class Optimizer(Function):
     # 初始化
     def __init__(self, data_dic: Optional[dict] = None, data_df: Optional[DataFrame] = None,
                  title: Optional[str] = None, x_list: Optional[list] = None, y_list: Optional[list] = None,
-                 x_label: str = None, y_label: str = None):
+                 x_label: str = None, y_label: str = None, english_font: Optional[str] = None,
+                 chinese_font: Optional[str] = None):
         """
         Function 函数系统为被引系统，无需赋值初始化
 
@@ -1040,11 +1101,13 @@ class Optimizer(Function):
         :param y_list: (list) y坐标的 list
         :param x_label: (str) x坐标的 label
         :param y_label: (str) y坐标的 label
+        :param english_font: (str) 英文字体，默认为 Times New Roman
+        :param chinese_font: (str) 中文字体，默认为简宋
         """
 
         # 超类初始化
         super().__init__(data_dic=data_dic, data_df=data_df, title=title, x_list=x_list, y_list=y_list,
-                         x_label=x_label, y_label=y_label)  # 数据初始化时自动完成数据分配
+                         x_label=x_label, y_label=y_label, english_font=english_font, chinese_font=chinese_font)
 
         # 接收参数初始化
         self.data_dic = data_dic
@@ -1080,6 +1143,7 @@ class Optimizer(Function):
         # 数据初始化分配 和 数据类型导入
         if type(self) == Optimizer:  # 当 self 为 Optimizer 的直接实例时为真
             self.data_init()
+            self.font_init()
 
     # 扩展 DataFrame 表格
     def generate_rows_to_df(self, data_dic: Optional[Dict[str, DataFrame]] = None, number: Optional[int] = None,
@@ -2633,11 +2697,9 @@ class Manager(Optimizer):
     Magic_Database = Magic_Database
     Category_Index = Category_Index
 
-    # 字体，大小及加粗
-    font_title = {'family': 'Times New Roman', 'weight': 'bold', 'size': 22}
-    font_ticket = {'family': 'Times New Roman', 'weight': 'bold', 'size': 18}
-    font_legend = {'family': 'Times New Roman', 'weight': 'bold', 'size': 16}
-    font_mark = {'family': 'Times New Roman', 'weight': 'bold', 'size': 12}
+    # 根据系统选择字体
+    English_font = English_font
+    Chinese_font = Chinese_font
 
     # 程序休息时间
     interval_time = interval_time
@@ -2649,10 +2711,11 @@ class Manager(Optimizer):
                  data_dic: Optional[dict] = None, data_df: Optional[DataFrame] = None, title: Optional[str] = None,
                  x_list: Optional[list] = None, y_list: Optional[list] = None, x_label: str = None, y_label: str = None,
 
-                 # 关键参数 (7)
+                 # 关键参数 (9)
                  txt_path: Optional[str] = None, excel_path: Optional[str] = None, json_path: Optional[str] = None,
                  keyword: Optional[str] = None, file_pattern: Optional[str] = None, save_path: Optional[str] = None,
-                 magic_database: Optional[str] = None,
+                 magic_database: Optional[str] = None, english_font: Optional[str] = None,
+                 chinese_font: Optional[str] = None
                  ):
         """
         # 接收参数 (7)
@@ -2665,7 +2728,7 @@ class Manager(Optimizer):
         :param x_label: (str) x坐标的 label
         :param y_label: (str) y坐标的 label
 
-        # 文件打开路径，名称匹配，已有 dict (7)
+        # 文件打开路径，名称匹配，已有 dict (9)
         :param txt_path: (str) TXT 文件路径，可以是文件路径，也可以是目录
         :param excel_path: (str) Excel 文件路径，可以是文件路径，也可以是目录
         :param json_path: (str) JSON 文件路径，也可以是目录
@@ -2673,11 +2736,13 @@ class Manager(Optimizer):
         :param file_pattern: (str) 当 path 为目录时，file_pattern 为目录下文件的正则表达式匹配，只有 path 为目录时才有意义
         :param save_path: (str) 保存路径
         :param magic_database: (str) 数据库的位置
+        :param english_font: (str) 英文字体，默认为 Times New Roman
+        :param chinese_font: (str) 中文字体，默认为简宋
         """
 
         # 超类初始化
         super().__init__(data_dic=data_dic, data_df=data_df, title=title, x_list=x_list, y_list=y_list,
-                         x_label=x_label, y_label=y_label)  # 数据初始化时自动完成数据分配
+                         x_label=x_label, y_label=y_label, english_font=english_font, chinese_font=chinese_font)
 
         # 接收参数 (7)
         self.data_dic = data_dic
@@ -2777,19 +2842,10 @@ class Manager(Optimizer):
         # 数据初始化分配 和 数据类型导入
         if type(self) == Manager:  # 当 self 为 Manager 的直接实例时为真
             self.data_init()
+            self.font_init()
             # 如果有接入的 keyword
             if keyword is not None:
                 self.to_magic()  # Manager 及其子类需要调用以初始化属性
-
-        # 此三行目的是使 DataFrame 中的数据显示全
-        pd.set_option('display.max_columns', None)  # 显示所有列
-        pd.set_option('display.max_rows', None)  # 显示所有行
-        pd.set_option('display.width', 500)  # 显示宽度
-
-        # 此三行目的是使角标的字体也改成 Times New Roman
-        plt.rcParams["mathtext.fontset"] = "custom"  # 设置数字文本的字体，使其可以自定义
-        plt.rcParams["mathtext.rm"] = "Times New Roman"  # 设置正常数字文本的字体为 Times New Roman
-        plt.rcParams["mathtext.it"] = "Times New Roman:italic"  # 设置斜体数字文本的字体为 Times New Roman
 
         # 1  smooth_curve()   /* 变量声明 */
         self.spline_smoothing_dic = None  # (dict) 平滑曲线的 dict，value 为 spline
@@ -4895,7 +4951,7 @@ class Manager(Optimizer):
         绘制线形统计图
         Draw a line chart.
 
-        # 关键参数 (4)
+        # 关键参数 (6)
         :param data_dic: (dict) 若被赋值，则会对该 dic 进行绘图
         :param data_df: (DataFrame) 若被赋值，则会对该 Dataframe 进行绘图
         :param save_path: (str) 保存目录，若无赋值则用初始化中的 self.save_path，若为 False 或 None 则为不保存
@@ -5574,7 +5630,7 @@ class Manager(Optimizer):
         绘制散点统计图
         Draw a scatter chart.
 
-        # 关键参数 (4)
+        # 关键参数 (6)
         :param data_dic: (dict) 若被赋值，则会对该 dic 进行绘图
         :param data_df: (DataFrame) 若被赋值，则会对该 Dataframe 进行绘图
         :param save_path: (str) 保存目录，若无赋值则用初始化中的 self.save_path，若为 False 或 None 则为不保存
@@ -6287,6 +6343,7 @@ class Module(Optimizer):
         # 数据初始化分配
         if type(self) == Module:  # 当 self 为 Module 的直接实例时为真
             self.data_init()
+            self.font_init()
 
         # custom_point()
         self.custom_dic = None  # (dict) key 为所用数据的 title，value 为标记数据的 DataFrame
@@ -7337,7 +7394,8 @@ class Magic(Manager, Module):
                  # 关键参数 (7)
                  txt_path: Optional[str] = None, excel_path: Optional[str] = None, json_path: Optional[str] = None,
                  keyword: Optional[str] = None, file_pattern: Optional[str] = None, save_path: Optional[str] = None,
-                 magic_database: Optional[str] = None,
+                 magic_database: Optional[str] = None, english_font: Optional[str] = None,
+                 chinese_font: Optional[str] = None
                  ):
         """
         # 接收参数 (7)
@@ -7350,7 +7408,7 @@ class Magic(Manager, Module):
         :param x_label: (str) x坐标的 label
         :param y_label: (str) y坐标的 label
 
-        # 文件打开路径，名称匹配，已有 dict (7)
+        # 文件打开路径，名称匹配，已有 dict (9)
         :param txt_path: (str) TXT 文件路径，可以是文件路径，也可以是目录
         :param excel_path: (str) Excel 文件路径，可以是文件路径，也可以是目录
         :param json_path: (str) JSON 文件路径，也可以是目录
@@ -7358,18 +7416,21 @@ class Magic(Manager, Module):
         :param file_pattern: (str) 当 path 为目录时，file_pattern 为目录下文件的正则表达式匹配，只有 path 为目录时才有意义
         :param save_path: (str) 保存路径
         :param magic_database: (str) 数据库的位置
+        :param english_font: (str) 英文字体，默认为 Times New Roman
+        :param chinese_font: (str) 中文字体，默认为简宋
         """
 
         # 超类初始化
         super().__init__(
-                         # 接收参数 (7)
-                         data_dic=data_dic, data_df=data_df,
-                         title=title, x_list=x_list, y_list=y_list, x_label=x_label, y_label=y_label,
+            # 接收参数 (7)
+            data_dic=data_dic, data_df=data_df,
+            title=title, x_list=x_list, y_list=y_list, x_label=x_label, y_label=y_label,
 
-                         # 关键参数 (6)
-                         txt_path=txt_path, excel_path=excel_path, json_path=json_path, keyword=keyword,
-                         file_pattern=file_pattern, save_path=save_path, magic_database=magic_database
-                         )
+            # 关键参数 (7)
+            txt_path=txt_path, excel_path=excel_path, json_path=json_path, keyword=keyword,
+            file_pattern=file_pattern, save_path=save_path, magic_database=magic_database,
+            english_font=english_font, chinese_font=chinese_font
+        )
 
         # 接收参数 (7)
         self.data_dic = data_dic
@@ -7395,6 +7456,7 @@ class Magic(Manager, Module):
         # 数据初始化分配 和 数据类型导入
         if type(self) == Magic:  # 当 self 为 Magic 的直接实例时为真
             self.data_init()
+            self.font_init()
             # 如果有接入的 keyword
             if keyword is not None:
                 self.to_magic()  # Manager 及其子类需要调用以初始化属性

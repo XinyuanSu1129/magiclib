@@ -376,6 +376,7 @@ MAGIC
                 26-05-27 22:10 Add the method plot_scatter_category() to the class Plotter. In addition, 
                 Settings for Chinese and Western fonts have been added, and their initializations are placed 
                 separately in the class Function.
+                26-06-01 13:46 Add the method plot_scatter_mark_index() to the class Plotter. 
 
        
  ------ Attention ------
@@ -566,6 +567,7 @@ peak_deconvolution()
 plot_function()
 plot_pie()
 plot_scatter_category()
+plot_scatter_mark_index()
 
 ------ Fitter ------
 polynomial_fitting()

@@ -3323,8 +3323,7 @@ class Plotter(general.Manager):
     # 散点分类绘图
     def plot_scatter_category(self, data_dic: Optional[dict] = None, save_path: Union[bool, str] = True,
                               draw_ellipse: bool = True, std: float = 2, margin_ratio: float = 0.1,
-                              dpi: int = 600,
-                              width_height: tuple = (6, 4.5), category: Optional[str] = None,
+                              dpi: int = 600, width_height: tuple = (6, 4.5), category: Optional[str] = None,
                               colors: Optional[list] = None, show_result: bool = True, show_legend: bool = True,
                               show_figure: bool = True, x_col: Optional[str] = None, y_col: Optional[str] = None,
                               **kwargs) -> None:
@@ -3350,7 +3349,6 @@ class Plotter(general.Manager):
         :param show_figure: (bool) 是否显示图像
         :param x_col: (str) x 轴列名，默认取数值列的第一列
         :param y_col: (str) y 轴列名，默认取数值列的第二列
-        :param kwargs: Ellipse 关键字参数
 
         :return: None
 
@@ -3509,6 +3507,224 @@ class Plotter(general.Manager):
                 # 也可打印各类别样本数等
                 print(
                     f"Categories: {unique_category}, Counts: {[(category_index == c).sum() 
+                                                               for c in unique_category]}\n")
+
+            # 重置需要绘制的列
+            x_col = None
+            y_col = None
+
+        return None
+
+    # 散点绘图并标记名称
+    def plot_scatter_mark_index(self, data_dic: Optional[dict] = None, save_path: Union[bool, str] = True,
+                                draw_ellipse: bool = True, std: float = 2, margin_ratio: float = 0.1,
+                                dpi: int = 600, width_height: tuple = (6, 4.5), category: Optional[str] = None,
+                                colors: Optional[list] = None, show_result: bool = True, show_legend: bool = True,
+                                show_figure: bool = True, x_col: Optional[str] = None, y_col: Optional[str] = None,
+                                index: Optional[str] = None, index_size: Optional[int] = None, **kwargs) -> None:
+        """
+        直接使用给定的类别列对数据的前两列（或指定列）绘制散点图
+        无需 PCA 降维，适用于已有聚类标签的数据可视化
+        Draw a scatter plot directly using the given category column for the first two columns
+        (or the specified column) of the data.
+        It does not require PCA dimensionality reduction and is suitable for data visualization with existing
+        clustering labels.
+
+        :param data_dic: (dict) 包含一个键值对，键为 title，值为 DataFrame，其中含 category 列和至少两个数值列
+        :param save_path: (str/bool) 图片保存路径，True 使用 self.save_path，False 不保存
+        :param draw_ellipse: (bool) 是否绘制置信椭圆
+        :param std: (float) 置信椭圆标准差范围
+        :param margin_ratio: (float) 数据距边界比例
+        :param dpi: (int) 保存图像精度
+        :param width_height: (tuple) 图像宽高
+        :param category: (str) 分类列名，默认为 Statistics.Category_Index
+        :param colors: (list) 各类别颜色列表
+        :param show_result: (bool) 是否打印结果
+        :param show_legend: (bool) 是否显示图例
+        :param show_figure: (bool) 是否显示图像
+        :param x_col: (str) x 轴列名，默认取数值列的第一列
+        :param y_col: (str) y 轴列名，默认取数值列的第二列
+        :param index: (str) 可选，用于在散点上方标注的索引列名，默认为 None，表示不标注
+        :param index_size: (int) 可选，散点上方标注的索引列名的大小，默认为 None，表示与图注释大小一样
+
+        :return: None
+
+        --- **kwargs ---
+
+        - x_min: (float) X 轴最小值
+        - x_max: (float) X 轴最大值
+        - y_min: (float) Y 轴最小值
+        - y_max: (float) Y 轴最大值
+        """
+
+        if data_dic is not None:
+            data_dic = copy.deepcopy(data_dic)
+        else:
+            data_dic = copy.deepcopy(self.data_dic)
+
+        # 保存路径处理
+        if save_path is True:
+            save_path = self.save_path
+        elif save_path is False:
+            save_path = None
+
+        # 类别列名
+        if category is None:
+            category = Statistics.Category_Index
+
+        # 颜色
+        color_palette = colors if colors is not None else self.color_palette
+
+        for title, data_df in data_dic.items():
+
+            # 提取类别标签和数据
+            if category not in data_df.columns:
+                raise ValueError(f"Column '{category}' not found in data.")
+            category_index = data_df[category]
+            data_part = data_df.drop(columns=[category])
+
+            # 检查 index 列
+            if index is not None:
+                if index not in data_df.columns:
+                    raise ValueError(f"Column '{index}' not found in data.")
+                index_values = data_df[index].values
+            else:
+                index_values = None
+
+            # 选择 x, y 列
+            numeric_cols = data_part.select_dtypes(include=[np.number]).columns.tolist()
+            if len(numeric_cols) < 2:
+                raise ValueError("At least two numeric columns are required for scatter plot.")
+
+            if x_col is None:
+                x_col = numeric_cols[0]
+            if y_col is None:
+                y_col = numeric_cols[1]
+
+            # 构建绘图 DataFrame
+            plot_df = pd.DataFrame({
+                'x': data_part[x_col],
+                'y': data_part[y_col],
+                category: category_index
+            })
+            # 将 index 列加入 plot_df
+            if index_values is not None:
+                plot_df['index'] = index_values
+
+            # 唯一类别及颜色校验
+            unique_category = np.unique(category_index)
+            if colors is None:
+                if len(unique_category) > len(color_palette):
+                    class_name = self.__class__.__name__
+                    method_name = inspect.currentframe().f_code.co_name
+                    raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                                     f"categories ({len(unique_category)}) exceed default colors ({len(color_palette)}).")
+                colors = color_palette[:len(unique_category)]
+            elif len(colors) != len(unique_category):
+                class_name = self.__class__.__name__
+                method_name = inspect.currentframe().f_code.co_name
+                raise ValueError(f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                                 f"provided colors ({len(colors)}) don't match categories ({len(unique_category)}).")
+
+            palette_dict = dict(zip(unique_category, colors))
+
+            fig, ax = plt.subplots(figsize=width_height, dpi=200, facecolor="w")
+            sns.scatterplot(data=plot_df, x='x', y='y', hue=category,
+                            palette=palette_dict, s=40, edgecolor='k', ax=ax)
+
+            # 在散点上方添加 index 文本
+            if index_values is not None:
+                for _, row in plot_df.iterrows():
+                    ax.text(row['x'], row['y'], str(int(row['index'])),  # 去除小数
+                            ha='center', va='bottom',
+                            fontfamily=self.font_legend['family'],
+                            fontweight=self.font_legend['weight'],
+                            fontsize=index_size if index_size else self.font_legend['size'],
+                            color='black', zorder=10)
+
+            # 坐标轴标签（使用实际列名）
+            plt.xlabel(xlabel=x_col, fontdict=self.font_title)
+            plt.ylabel(ylabel=y_col, fontdict=self.font_title)
+
+            # 刻度字体
+            plt.xticks(fontfamily=self.font_ticket['family'],
+                       fontweight=self.font_ticket['weight'],
+                       fontsize=self.font_ticket['size'])
+            plt.yticks(fontfamily=self.font_ticket['family'],
+                       fontweight=self.font_ticket['weight'],
+                       fontsize=self.font_ticket['size'])
+            ax.tick_params(axis='both', which='major', direction='in')
+
+            # 图例
+            if show_legend:
+                plt.legend(prop=self.font_legend)
+            else:
+                plt.legend().remove()
+
+            # 坐标轴范围
+            x_min = kwargs.pop('x_min', None)
+            x_max = kwargs.pop('x_max', None)
+            y_min = kwargs.pop('y_min', None)
+            y_max = kwargs.pop('y_max', None)
+
+            # 设置刻度限制
+            if x_min is not None or x_max is not None:
+                plt.xlim((x_min, x_max))
+            if y_min is not None or y_max is not None:
+                plt.ylim((y_min, y_max))
+
+            # 置信椭圆
+            if draw_ellipse:
+                for target, color in zip(unique_category, colors):
+                    subset = plot_df[plot_df[category] == target]
+                    if len(subset) < 2:
+                        continue
+                    cov = np.cov(subset.x, subset.y)
+                    pearson = cov[0, 1] / np.sqrt(cov[0, 0] * cov[1, 1])
+                    ell_radius_x = np.sqrt(1 + pearson)
+                    ell_radius_y = np.sqrt(1 - pearson)
+                    ellipse = Ellipse(xy=(0, 0),
+                                      width=ell_radius_x * 2,
+                                      height=ell_radius_y * 2,
+                                      facecolor=color,
+                                      alpha=0.35,
+                                      zorder=0,
+                                      **kwargs)
+                    scale_x = np.sqrt(cov[0, 0]) * std
+                    mean_x = np.mean(subset.x)
+                    scale_y = np.sqrt(cov[1, 1]) * std
+                    mean_y = np.mean(subset.y)
+                    transform = transforms.Affine2D() \
+                        .rotate_deg(45) \
+                        .scale(scale_x, scale_y) \
+                        .translate(mean_x, mean_y)
+                    ellipse.set_transform(transform + ax.transData)
+                    ax.add_patch(ellipse)
+
+            ax.margins(margin_ratio)
+            plt.tight_layout()
+
+            if save_path is not None:
+                file_name = title + "_scatter.png"
+                full_file_path = os.path.join(save_path, file_name)
+                if os.path.exists(full_file_path):
+                    count = 1
+                    while os.path.exists(full_file_path):
+                        file_name = title + "_scatter" + f"_{count}.png"
+                        full_file_path = os.path.join(save_path, file_name)
+                        count += 1
+                plt.savefig(fname=full_file_path, dpi=dpi)
+
+            if show_figure:
+                plt.show()
+            else:
+                plt.clf()
+
+            if show_result:
+                print(f"\033[34mScatter data (first 5 rows)\033[0m:\n{plot_df.head()}\n")
+                # 也可打印各类别样本数等
+                print(
+                    f"Categories: {unique_category}, Counts: {[(category_index == c).sum()
                                                                for c in unique_category]}\n")
 
             # 重置需要绘制的列

@@ -4482,9 +4482,9 @@ class Manager(Optimizer):
                     'delete_nan': False,
                     'swap_column': False,
 
-                    # read_excel() 相关参数 (2)
-                    'delimiter': r';\s*',
-                    'columns_txt': [0, 2]
+                    # read_txt() 相关参数 (2)
+                    'delimiter': r'[;\s]+',
+                    'columns_txt': [0, 1]
                 },
 
                 'line': {

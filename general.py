@@ -941,12 +941,14 @@ class Function:
         new_data = []
 
         sr, sg, sb = seek_color[:3]
+        tr, tg, tb, ta = target_color
 
         for r, g, b, a in data:
             if (abs(r - sr) <= tolerance and
                     abs(g - sg) <= tolerance and
                     abs(b - sb) <= tolerance):
-                new_data.append(target_color)
+                # 只替换 RGB，保留原 Alpha
+                new_data.append((tr, tg, tb, a))
             else:
                 new_data.append((r, g, b, a))
 

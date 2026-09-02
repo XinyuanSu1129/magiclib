@@ -19,13 +19,17 @@ import copy
 import time
 import joypy
 import inspect
+import rasterio
 import warnings
 import numpy as np
 import pandas as pd
 import seaborn as sns
+import geopandas as gpd
+from pathlib import Path
 import matplotlib.cm as cm
 import scipy.stats as stats
 from pandas import DataFrame
+from PIL import Image, ImageEnhance
 from scipy.optimize import curve_fit
 from scipy.stats import gaussian_kde
 import scipy.cluster.hierarchy as sch
@@ -3518,7 +3522,7 @@ class Plotter(general.Manager):
     # 散点绘图并标记名称
     def plot_scatter_mark_index(self, data_dic: Optional[dict] = None, save_path: Union[bool, str] = True,
                                 draw_ellipse: bool = True, std: float = 2, margin_ratio: float = 0.1,
-                                dpi: int = 600, width_height: tuple = (6, 4.5), category: Optional[str] = None,
+                                dpi: int = 600, width_height: tuple = (24, 17), category: Optional[str] = None,
                                 colors: Optional[list] = None, show_result: bool = True, show_legend: bool = True,
                                 show_figure: bool = True, x_col: Optional[str] = None, y_col: Optional[str] = None,
                                 index: Optional[str] = None, index_size: Optional[int] = None, **kwargs) -> None:
@@ -3536,7 +3540,7 @@ class Plotter(general.Manager):
         :param std: (float) 置信椭圆标准差范围
         :param margin_ratio: (float) 数据距边界比例
         :param dpi: (int) 保存图像精度
-        :param width_height: (tuple) 图像宽高
+        :param width_height: (tuple) 图像宽高，默认为 (24, 17)
         :param category: (str) 分类列名，默认为 Statistics.Category_Index
         :param colors: (list) 各类别颜色列表
         :param show_result: (bool) 是否打印结果
@@ -3562,11 +3566,15 @@ class Plotter(general.Manager):
         else:
             data_dic = copy.deepcopy(self.data_dic)
 
-        # 保存路径处理
+        # 当 save_path == True 时，沿用 self.save_path 的设置，此项为默认项
         if save_path is True:
             save_path = self.save_path
+        # 若 save_path 为 False 时，本图形不保存
         elif save_path is False:
             save_path = None
+        # 当有指定的 save_path 时，save_path 将会被其赋值，若 save_path == '' 则保存在运行的 py 文件的目录下
+        else:
+            save_path = save_path
 
         # 类别列名
         if category is None:
@@ -3730,6 +3738,342 @@ class Plotter(general.Manager):
             # 重置需要绘制的列
             x_col = None
             y_col = None
+
+        return None
+
+    # 地图绘制
+    def plot_map(self, map_path: Optional[str] = None, map_tif: Optional[str] = None,
+                 save_path: Union[bool, str] = True, lon_range: tuple = (73, 135), lat_range: tuple = (18, 54),
+                 map_width: float = 18, color_strength: float = 1.5, show_china_boundary: bool = False,
+                 show_provinces: bool = False, show_coordinates: bool = False, reinforce_rivers: bool = True) -> None:
+        """
+        绘制基于 Natural Earth 自然地表底图的中国区域地图。可设置经纬度范围、底图颜色强度、图像尺寸，并可选择是否强化河流、
+        显示省界、中国大陆与台湾边界以及经纬度坐标
+        注意：此方法的绘制与类属性 self.data_dic 无关
+        Draw a map of China based on the Natural Earth physical basemap.
+        The longitude and latitude ranges, color intensity, and figure size can be customized,
+        while rivers, provincial boundaries, the boundaries of mainland China and Taiwan,
+        and geographic coordinates can be optionally displayed.
+        Note: The drawing of this method is independent of the class attribute self.data_dic
+
+        :param map_path: (str) 地图库的基础路径
+        :param map_tif: (str) 地图 tif 图片的路径
+        :param save_path: (str / bool) 图片保存路径，True 使用 self.save_path，False 不保存
+        :param lon_range: (tuple) 经度显示范围，格式为 (min_lon, max_lon)，默认为 (73, 135)
+        :param lat_range: (tuple) 纬度显示范围，格式为 (min_lat, max_lat)，默认为 (18, 54)
+        :param map_width: (float) 地图宽度，高度将根据经纬度计算得到，默认为 18
+        :param color_strength: (float) Natural Earth 底图颜色增强强度，默认为 1.0；数值越大，饱和度和对比度越高、整体颜色越深
+        :param show_china_boundary: (bool) 是否使用黑色边界线显示中国大陆和 Taiwan，默认为 False
+        :param show_provinces: (bool) 是否显示中国省级行政区边界，默认为 False
+        :param show_coordinates: (bool) 是否显示经纬度刻度、坐标轴标题及外围边框，默认为 False
+        :param reinforce_rivers: (bool) 是否额外叠加并强化显示中国范围内的河流，默认为 True
+
+        :return: None
+        """
+
+        # 当 save_path == True 时，沿用 self.save_path 的设置，此项为默认项
+        if save_path is True:
+            save_path = self.save_path
+        # 若 save_path 为 False 时，本图形不保存
+        elif save_path is False:
+            save_path = None
+        # 当有指定的 save_path 时，save_path 将会被其赋值，若 save_path == '' 则保存在运行的 py 文件的目录下
+        else:
+            save_path = save_path
+
+        if map_path is None:
+            BASE = Path("/Users/sumiaomiao/Downloads/DataBase/MapData")
+        else:
+            BASE = map_path
+
+        # 数据路径
+        if map_tif is None:
+            NATURAL_EARTH_FILE = BASE / "NaturalEarth/NE1_HR_LC_SR_W_DR.tif"
+        else:
+            NATURAL_EARTH_FILE = map_tif
+
+        BOUNDARY_FILE = BASE / "Boundary/ne_10m_admin_0_countries.shp"
+        PROVINCE_FILE = BASE / "Province/ne_10m_admin_1_states_provinces.shp"
+        RIVER_FILE = BASE / "Rivers/ne_10m_rivers_lake_centerlines.shp"
+
+        # 读取矢量数据
+        world = gpd.read_file(BOUNDARY_FILE)
+        provinces = gpd.read_file(PROVINCE_FILE)
+        rivers = gpd.read_file(RIVER_FILE)
+
+        # 中国大陆 + Taiwan
+        china = world[
+            world["ADMIN"].isin(["China", "Taiwan"])
+        ].copy()
+
+        china_provinces = provinces[
+            provinces["admin"].isin(["China", "Taiwan"])
+        ].copy()
+
+        # 根据经纬度范围计算正确的长宽比
+        lon_span = lon_range[1] - lon_range[0]
+        lat_span = lat_range[1] - lat_range[0]
+
+        if lon_span <= 0 or lat_span <= 0:
+            class_name = self.__class__.__name__
+            method_name = inspect.currentframe().f_code.co_name
+            raise ValueError(
+                f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                "The maximum values of lon_range and lat_range must be greater than the minimum values."
+            )
+
+        if map_width <= 0:
+            class_name = self.__class__.__name__
+            method_name = inspect.currentframe().f_code.co_name
+            raise ValueError(
+                f"\033[95mIn {method_name} of {class_name}\033[0m, "
+                "map_width must be greater than 0."
+            )
+
+        # 地图宽度由 map_width 指定，高度根据经纬度比例自动计算
+        fig_width = map_width
+        fig_height = map_width * lat_span / lon_span
+
+        fig, ax = plt.subplots(
+            figsize=(fig_width, fig_height)
+        )
+
+        # 不显示经纬度时，让地图铺满整个画布
+        if not show_coordinates:
+            ax.set_position([0, 0, 1, 1])
+
+        # 自然地表 / DEM / Hillshade 底图
+        with rasterio.open(NATURAL_EARTH_FILE) as src:
+
+            # 根据当前经纬度范围，只读取对应区域
+            window = rasterio.windows.from_bounds(
+                left=lon_range[0],
+                bottom=lat_range[0],
+                right=lon_range[1],
+                top=lat_range[1],
+                transform=src.transform
+            )
+
+            # 将窗口调整到整数像素
+            window = window.round_offsets().round_lengths()
+
+            # 自动判断波段数量
+            if src.count >= 3:
+
+                # RGB / 多波段彩色 TIF
+                rgb = src.read(
+                    [1, 2, 3],
+                    window=window
+                )
+
+                rgb = np.moveaxis(rgb, 0, -1)
+
+                if rgb.dtype != np.uint8:
+                    rgb = np.clip(rgb, 0, 255).astype(np.uint8)
+
+            else:
+                # 单波段 TIF
+                band = src.read(
+                    1,
+                    window=window,
+                    masked=True
+                )
+
+                # 先检查单波段 TIF 是否自带颜色表
+                # Color Hillshade / Color Relief 很可能属于这种情况
+                try:
+                    color_map = src.colormap(1)
+
+                except ValueError:
+                    color_map = None
+
+                if color_map:
+
+                    # 根据 TIF 内置颜色表转换成真正 RGB
+                    values = band.filled(0).astype(np.int32)
+                    max_index = max(color_map.keys())
+
+                    lut = np.zeros(
+                        (max_index + 1, 4),
+                        dtype=np.uint8
+                    )
+
+                    for index, rgba in color_map.items():
+                        lut[index] = rgba
+
+                    values = np.clip(
+                        values,
+                        0,
+                        max_index
+                    )
+                    rgba = lut[values]
+                    rgb = rgba[:, :, :3]
+
+                else:
+                    # 没有颜色表才按普通 DEM / Hillshade 灰度处理
+                    gray = band.astype(np.float32)
+
+                    valid = gray.compressed()
+
+                    if valid.size > 0:
+
+                        vmin = np.percentile(valid, 1)
+
+                        vmax = np.percentile(valid, 99)
+
+                        if vmax > vmin:
+                            gray = (
+                                    (gray - vmin)
+                                    / (vmax - vmin)
+                                    * 255.0
+                            )
+
+                    gray = np.clip(
+                        gray,
+                        0,
+                        255
+                    ).filled(0).astype(np.uint8)
+
+                    rgb = np.repeat(
+                        gray[:, :, np.newaxis],
+                        3,
+                        axis=2
+                    )
+
+            # 调整颜色
+            img = Image.fromarray(rgb)
+
+            saturation = 1.0 + 0.30 * color_strength
+            contrast = 1.0 + 0.20 * color_strength
+            brightness = max(0.1, 1.0 - 0.08 * color_strength)
+
+            img = ImageEnhance.Color(img).enhance(saturation)
+            img = ImageEnhance.Contrast(img).enhance(contrast)
+            img = ImageEnhance.Brightness(img).enhance(brightness)
+
+            rgb = np.array(img)
+
+            # 获取当前读取窗口实际对应的经纬度边界
+            window_bounds = rasterio.windows.bounds(
+                window,
+                src.transform
+            )
+
+            ax.imshow(
+                rgb,
+                extent=(
+                    window_bounds[0],  # left
+                    window_bounds[2],  # right
+                    window_bounds[1],  # bottom
+                    window_bounds[3]  # top
+                ),
+                interpolation="none",
+                zorder=1
+            )
+
+        # 河流
+        if reinforce_rivers:
+            rivers.plot(
+                ax=ax,
+                color="#6F9FC7",
+                linewidth=0.45,
+                alpha=0.75,
+                zorder=3
+            )
+
+        # 省界
+        if show_provinces:
+            china_provinces.boundary.plot(
+                ax=ax,
+                color="#555555",
+                linewidth=0.45,
+                alpha=0.8,
+                zorder=4
+            )
+
+        # 中国大陆 + Taiwan 边界
+        if show_china_boundary:
+            china.boundary.plot(
+                ax=ax,
+                color="black",
+                linewidth=2,
+                zorder=5
+            )
+
+        # 地图范围
+        ax.set_xlim(lon_range)
+        ax.set_ylim(lat_range)
+
+        # GeoPandas 会自动修改 aspect，这里重新恢复
+        ax.set_aspect("auto")
+
+        # 不显示经纬度时，让地图重新铺满整个画布
+        if not show_coordinates:
+            ax.set_position([0, 0, 1, 1])
+
+        ax.margins(0)
+
+        # 经纬度
+        if show_coordinates:
+            ax.set_xlabel(
+                "Longitude (°E)",
+                fontsize=13,
+                fontfamily="Times New Roman",
+                fontweight="bold"
+            )
+
+            ax.set_ylabel(
+                "Latitude (°N)",
+                fontsize=13,
+                fontfamily="Times New Roman",
+                fontweight="bold"
+            )
+
+            ax.tick_params(
+                axis="both",
+                direction="out",
+                length=7,
+                width=1.6,
+                labelsize=11,
+                bottom=True,
+                left=True,
+                labelbottom=True,
+                labelleft=True
+            )
+
+            for label in ax.get_xticklabels():
+                label.set_fontname("Times New Roman")
+                label.set_fontweight("bold")
+
+            for label in ax.get_yticklabels():
+                label.set_fontname("Times New Roman")
+                label.set_fontweight("bold")
+
+            for spine in ax.spines.values():
+                spine.set_visible(True)
+                spine.set_linewidth(1.6)
+                spine.set_color("black")
+
+        else:
+            ax.set_axis_off()
+
+        if save_path is not None:
+            file_name = "map.png"
+            full_file_path = os.path.join(save_path, file_name)
+            if os.path.exists(full_file_path):
+                count = 1
+                while os.path.exists(full_file_path):
+                    file_name = "map" + f"_{count}.png"
+                    full_file_path = os.path.join(save_path, file_name)
+                    count += 1
+            fig.savefig(
+                full_file_path,
+                dpi=600,
+                bbox_inches=None,
+                pad_inches=0
+            )
+
+        plt.show()
 
         return None
 

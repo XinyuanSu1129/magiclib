@@ -1,5 +1,5 @@
 
-__version__ = '6.3.14'
+__version__ = '6.3.15'
 
 __all__ = ['general', 'grapher', 'projector', 'performer', 'potter', 'author', 'generator', 'learny', 'inspector']
 
@@ -377,6 +377,7 @@ MAGIC
                 Settings for Chinese and Western fonts have been added, and their initializations are placed 
                 separately in the class Function.
                 26-06-01 13:46 Add the method plot_scatter_mark_index() to the class Plotter. 
+-> 6.3.15       26-08-31 Add the method plot_map() to the class Plotter.
 
        
  ------ Attention ------
@@ -568,6 +569,7 @@ plot_function()
 plot_pie()
 plot_scatter_category()
 plot_scatter_mark_index()
+plot_map()
 
 ------ Fitter ------
 polynomial_fitting()

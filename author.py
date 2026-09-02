@@ -36,6 +36,7 @@ from docx import Document
 from docx.shared import Pt, Cm
 import argostranslate.package
 import argostranslate.translate
+from urllib.parse import unquote
 from sklearn.cluster import KMeans
 from typing import Union, Tuple, Optional, List, Dict, Text
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_PARAGRAPH_ALIGNMENT
@@ -1339,7 +1340,7 @@ class ArticleFetcher:
 
         2. query 参数（模糊搜索）：自动添加 query. 前缀，用于在特定字段中模糊匹配。
            常用字段如下：
-           - author: 作者姓名（支持部分匹配），自动转换为 query.author，例如 author="Smith"
+           - author: 作者姓名（支持部分匹配），自动转换为 query.author，例如 author="Smith"，仅支持单作者输入
            - title: 文章标题关键词，自动转换为 query.title，例如 title="bronze age"
            - affiliation: 作者机构名称，自动转换为 query.affiliation，例如 affiliation="Peking University"
            - container_title: 期刊名称（模糊匹配），自动转换为 query.container-title，例如 container_title="Archaeology"
@@ -1385,8 +1386,10 @@ class ArticleFetcher:
         self.issn_list = issn_list
 
         start_time = time.time()
+        required_author = ""
         all_dois = []
         all_titles = []
+        all_author = []
 
         for issn in issn_list:
             filter_parts = []
@@ -1410,6 +1413,11 @@ class ArticleFetcher:
                         query_param = crossref_key.replace("-", ".")
                     else:
                         query_param = f"query.{crossref_key}"
+
+                        # 对于作者的单独要求
+                        if query_param == "query.author":
+                            required_author = unquote(encoded_value)
+
                     query_parts.append(f"{query_param}={encoded_value}")
 
             # 处理显式的全局 query
@@ -1446,8 +1454,19 @@ class ArticleFetcher:
                 for i, article in enumerate(articles):
                     doi = article.get('DOI', 'No DOI')
                     title = article.get('title', ['No Title'])[0]
-                    all_dois.append(doi)
-                    all_titles.append(title)
+                    author_info = article.get('author', ['No Author'])
+
+                    # 提取姓名为 "Given Family" 格式
+                    authors_list = [f"{author['given']} {author['family']}" for author in author_info]
+
+                    # 如果 author 有输入，刚检查
+                    if required_author and required_author in authors_list:
+                        all_dois.append(doi)
+                        all_titles.append(title)
+                        all_author.append(authors_list)
+
+                    else:
+                        continue
 
                     # 尝试获取出版日期（优先印刷版，其次在线版）
                     pub_date_parts = \
